@@ -79,9 +79,9 @@ class ResponseGenerator:
 
         # 读空气模块
         if global_config.enable_kuuki_read:
-            content_check, reasoning_content_check = await self.model_v3.generate_response(prompt_check)
+            content_check, reasoning_content_check = await self.model_r1_distill.generate_response(prompt_check)
             print(f"\033[1;32m[读空气]\033[0m 读空气结果为{content_check}")
-            if 'yes' not in content_check.lower() and random.random() < 0.5:
+            if 'yes' not in content_check.lower() and random.random() < 0.8:
                 self._save_to_db(
                     message=message,
                     sender_name=sender_name,
@@ -104,17 +104,17 @@ class ResponseGenerator:
             prompt=prompt,
             prompt_check=prompt_check,
             content=content,
-            # content_check=content_check if global_config.enable_kuuki_read else "",
+            content_check=content_check if global_config.enable_kuuki_read else "",
             reasoning_content=reasoning_content,
-            # reasoning_content_check=reasoning_content_check if global_config.enable_kuuki_read else ""
+            reasoning_content_check=reasoning_content_check if global_config.enable_kuuki_read else ""
         )
         
         return content
 
-    # def _save_to_db(self, message: Message, sender_name: str, prompt: str, prompt_check: str,
-    #                 content: str, content_check: str, reasoning_content: str, reasoning_content_check: str):
     def _save_to_db(self, message: Message, sender_name: str, prompt: str, prompt_check: str,
-                content: str, reasoning_content: str,):
+                    content: str, content_check: str, reasoning_content: str, reasoning_content_check: str):
+    # def _save_to_db(self, message: Message, sender_name: str, prompt: str, prompt_check: str,
+    #             content: str, reasoning_content: str,):
         """保存对话记录到数据库"""
         self.db.db.reasoning_logs.insert_one({
             'time': time.time(),
@@ -122,8 +122,8 @@ class ResponseGenerator:
             'user': sender_name,
             'message': message.processed_plain_text,
             'model': self.current_model_type,
-            # 'reasoning_check': reasoning_content_check,
-            # 'response_check': content_check,
+            'reasoning_check': reasoning_content_check,
+            'response_check': content_check,
             'reasoning': reasoning_content,
             'response': content,
             'prompt': prompt,
