@@ -88,7 +88,9 @@ class BotConfig:
                 personality_config=toml_dict['personality']
                 personality=personality_config.get('prompt_personality')
                 if len(personality) >= 2:
+                    print(f"载入自定义人格：{personality}")
                     config.PROMPT_PERSONALITY=personality_config.get('prompt_personality')
+                print(f"载入自定义日程prompt:{personality_config.get('prompt_schedule')}")
                 config.PROMPT_SCHEDULE_GEN=personality_config.get('prompt_schedule')
 
             if "emoji" in toml_dict:
