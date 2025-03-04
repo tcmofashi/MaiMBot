@@ -41,8 +41,9 @@ class BotConfig:
     llm_normal_minor: Dict[str, str] = field(default_factory=lambda: {})
     embedding: Dict[str, str] = field(default_factory=lambda: {})
     vlm: Dict[str, str] = field(default_factory=lambda: {})
+
     topic_extract: str = 'snownlp' # 只支持jieba,snownlp,llm
-    llm_topic_extract=llm_normal_minor
+    llm_topic_extract:Dict[str, str] = field(default_factory=lambda: {})
     
     API_USING: str = "siliconflow"  # 使用的API
     API_PAID: bool = False  # 是否使用付费API
@@ -131,6 +132,7 @@ class BotConfig:
                 
                 if "llm_normal" in model_config:
                     config.llm_normal = model_config["llm_normal"]
+                    config.llm_topic_extract=config.llm_normal
                 
                 if "llm_normal_minor" in model_config:
                     config.llm_normal_minor = model_config["llm_normal_minor"]
@@ -148,7 +150,8 @@ class BotConfig:
                     print(f"载入自定义主题提取为{config.topic_extract}")
                 if config.topic_extract=='llm' and 'llm_topic' in topic_config:
                     config.llm_topic_extract=topic_config['llm_topic']
-                    print(f"载入自定义主题提取模型为{config.llm_topic_extract['name']}")
+                    print(f"载入自定义主题提取模型为{topic_config['llm_topic']}")
+                
                 
             # 消息配置
             if "message" in toml_dict:
