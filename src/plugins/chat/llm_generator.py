@@ -79,7 +79,8 @@ class ResponseGenerator:
 
         # 读空气模块
         if global_config.enable_kuuki_read:
-            content_check, reasoning_content_check = await self.model_r1_distill.generate_response(prompt_check)
+            # content_check, reasoning_content_check = await self.model_r1_distill.generate_response(prompt_check)
+            content_check, reasoning_content_check = ('yes','')
             print(f"\033[1;32m[读空气]\033[0m 读空气结果为{content_check}")
             if 'yes' not in content_check.lower() and random.random() < 0.8:
                 self._save_to_db(
