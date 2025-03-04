@@ -81,7 +81,7 @@ class ResponseGenerator:
         if global_config.enable_kuuki_read:
             content_check, reasoning_content_check = await self.model_v3.generate_response(prompt_check)
             print(f"\033[1;32m[读空气]\033[0m 读空气结果为{content_check}")
-            if 'yes' not in content_check.lower() and random.random() < 0.3:
+            if 'yes' not in content_check.lower() and random.random() < 0.5:
                 self._save_to_db(
                     message=message,
                     sender_name=sender_name,
