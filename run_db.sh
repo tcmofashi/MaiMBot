@@ -1,0 +1,1 @@
+mongod --dbpath="mongodb" --port 27017 --bind_ip_all

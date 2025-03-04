@@ -219,7 +219,7 @@ class Hippocampus:
             bar_length = 30
             filled_length = int(bar_length * i // len(memory_sample))
             bar = '█' * filled_length + '-' * (bar_length - filled_length)
-            print(f"\n进度: [{bar}] {progress:.1f}% ({i}/{len(memory_sample)})")
+            # print(f"\n进度: [{bar}] {progress:.1f}% ({i}/{len(memory_sample)})")
             if input_text:
                 # 生成压缩后记忆
                 first_memory = set()
@@ -227,7 +227,7 @@ class Hippocampus:
                 #将记忆加入到图谱中
                 for topic, memory in first_memory:
                     topics = segment_text(topic)
-                    print(f"\033[1;34m话题\033[0m: {topic},节点: {topics}, 记忆: {memory}")
+                    # print(f"\033[1;34m话题\033[0m: {topic},节点: {topics}, 记忆: {memory}")
                     for split_topic in topics:
                         self.memory_graph.add_dot(split_topic,memory)
                     for split_topic in topics:

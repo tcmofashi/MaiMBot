@@ -58,10 +58,10 @@ class WillingManager:
         if group_id in config.talk_frequency_down_groups:
             reply_probability = reply_probability / 3.5
             
-        # if is_mentioned_bot and user_id == int(1026294844):
+        # if is_mentioned_bot and user_id == int(964959351):
         #     reply_probability = 1
             
-        return reply_probability
+        return reply_probability+0.3
     
     def change_reply_willing_sent(self, group_id: int):
         """开始思考后降低群组的回复意愿"""
