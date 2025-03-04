@@ -21,9 +21,9 @@ config = driver.config
 
 class ResponseGenerator:
     def __init__(self):
-        self.model_r1 = LLM_request(model=global_config.llm_reasoning, temperature=0.7)
-        self.model_v3 = LLM_request(model=global_config.llm_normal, temperature=0.7)
-        self.model_r1_distill = LLM_request(model=global_config.llm_reasoning_minor, temperature=0.7)
+        self.model_r1 = LLM_request(model=global_config.llm_reasoning, temperature=0.7,max_tokens=1000)
+        self.model_v3 = LLM_request(model=global_config.llm_normal, temperature=0.7,max_tokens=1000)
+        self.model_r1_distill = LLM_request(model=global_config.llm_reasoning_minor, temperature=0.7,max_tokens=1000)
         self.db = Database.get_instance()
         self.current_model_type = 'r1'  # 默认使用 R1
 
@@ -104,15 +104,17 @@ class ResponseGenerator:
             prompt=prompt,
             prompt_check=prompt_check,
             content=content,
-            content_check=content_check if global_config.enable_kuuki_read else "",
+            # content_check=content_check if global_config.enable_kuuki_read else "",
             reasoning_content=reasoning_content,
-            reasoning_content_check=reasoning_content_check if global_config.enable_kuuki_read else ""
+            # reasoning_content_check=reasoning_content_check if global_config.enable_kuuki_read else ""
         )
         
         return content
 
+    # def _save_to_db(self, message: Message, sender_name: str, prompt: str, prompt_check: str,
+    #                 content: str, content_check: str, reasoning_content: str, reasoning_content_check: str):
     def _save_to_db(self, message: Message, sender_name: str, prompt: str, prompt_check: str,
-                    content: str, content_check: str, reasoning_content: str, reasoning_content_check: str):
+                content: str, reasoning_content: str,):
         """保存对话记录到数据库"""
         self.db.db.reasoning_logs.insert_one({
             'time': time.time(),
@@ -120,8 +122,8 @@ class ResponseGenerator:
             'user': sender_name,
             'message': message.processed_plain_text,
             'model': self.current_model_type,
-            'reasoning_check': reasoning_content_check,
-            'response_check': content_check,
+            # 'reasoning_check': reasoning_content_check,
+            # 'response_check': content_check,
             'reasoning': reasoning_content,
             'response': content,
             'prompt': prompt,
