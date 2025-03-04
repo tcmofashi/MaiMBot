@@ -61,7 +61,7 @@ class WillingManager:
         # if is_mentioned_bot and user_id == int(964959351):
         #     reply_probability = 1
             
-        return reply_probability+0.3
+        return reply_probability+0.2 if is_emoji else max(0,reply_probability)+0.1
     
     def change_reply_willing_sent(self, group_id: int):
         """开始思考后降低群组的回复意愿"""
