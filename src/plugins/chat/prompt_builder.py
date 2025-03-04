@@ -92,10 +92,13 @@ class PromptBuilder:
         
         
         #先禁用关系
-        if 0 > 30:
+        if relationship_value > 150:
             relation_prompt = "关系特别特别好，你很喜欢喜欢他"
-            relation_prompt_2 = "热情发言或者回复"
-        elif 0 <-20:
+            relation_prompt_2 = "非常热情发言或者回复"
+        elif relationship_value > 100:
+            relation_prompt = "关系比较好，你对他感觉不错"
+            relation_prompt_2 = "发言或者回复"
+        elif relationship_value <-20:
             relation_prompt = "关系很差，你很讨厌他"
             relation_prompt_2 = "骂他"
         else:
