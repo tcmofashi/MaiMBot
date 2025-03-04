@@ -42,8 +42,9 @@ class BotConfig:
     embedding: Dict[str, str] = field(default_factory=lambda: {})
     vlm: Dict[str, str] = field(default_factory=lambda: {})
 
+    # 主题提取配置
     topic_extract: str = 'snownlp' # 只支持jieba,snownlp,llm
-    llm_topic_extract:Dict[str, str] = field(default_factory=lambda: {})
+    llm_topic_extract: Dict[str, str] = field(default_factory=lambda: {})
     
     API_USING: str = "siliconflow"  # 使用的API
     API_PAID: bool = False  # 是否使用付费API
@@ -132,7 +133,7 @@ class BotConfig:
                 
                 if "llm_normal" in model_config:
                     config.llm_normal = model_config["llm_normal"]
-                    config.llm_topic_extract=config.llm_normal
+                    config.llm_topic_extract = config.llm_normal
                 
                 if "llm_normal_minor" in model_config:
                     config.llm_normal_minor = model_config["llm_normal_minor"]
