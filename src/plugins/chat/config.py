@@ -41,6 +41,8 @@ class BotConfig:
     llm_normal_minor: Dict[str, str] = field(default_factory=lambda: {})
     embedding: Dict[str, str] = field(default_factory=lambda: {})
     vlm: Dict[str, str] = field(default_factory=lambda: {})
+    topic_extract: str = 'snownlp' # 只支持jieba,snownlp,llm
+    llm_topic_extract=llm_normal_minor
     
     API_USING: str = "siliconflow"  # 使用的API
     API_PAID: bool = False  # 是否使用付费API
@@ -88,10 +90,10 @@ class BotConfig:
                 personality_config=toml_dict['personality']
                 personality=personality_config.get('prompt_personality')
                 if len(personality) >= 2:
-                    print(f"载入自定义人格：{personality}")
-                    config.PROMPT_PERSONALITY=personality_config.get('prompt_personality')
-                print(f"载入自定义日程prompt:{personality_config.get('prompt_schedule')}")
-                config.PROMPT_SCHEDULE_GEN=personality_config.get('prompt_schedule')
+                    print(f"载入自定义人格:{personality}")
+                    config.PROMPT_PERSONALITY=personality_config.get('prompt_personality',config.PROMPT_PERSONALITY)
+                print(f"载入自定义日程prompt:{personality_config.get('prompt_schedule',config.PROMPT_SCHEDULE_GEN)}")
+                config.PROMPT_SCHEDULE_GEN=personality_config.get('prompt_schedule',config.PROMPT_SCHEDULE_GEN)
 
             if "emoji" in toml_dict:
                 emoji_config = toml_dict["emoji"]
@@ -138,6 +140,15 @@ class BotConfig:
                     
                 if "embedding" in model_config:
                     config.embedding = model_config["embedding"]
+                
+            if 'topic' in toml_dict:
+                topic_config=toml_dict['topic']
+                if 'topic_extract' in topic_config:
+                    config.topic_extract=topic_config.get('topic_extract',config.topic_extract)
+                    print(f"载入自定义主题提取为{config.topic_extract}")
+                if config.topic_extract=='llm' and 'llm_topic' in topic_config:
+                    config.llm_topic_extract=topic_config['llm_topic']
+                    print(f"载入自定义主题提取模型为{config.llm_topic_extract['name']}")
                 
             # 消息配置
             if "message" in toml_dict:
