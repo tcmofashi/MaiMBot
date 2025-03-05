@@ -52,9 +52,9 @@ class WillingManager:
             reply_probability = reply_probability / 3.5
 
         reply_probability = min(reply_probability, 1)
-        if reply_probability < 0.1:
-            reply_probability = 0.1
-        return reply_probability
+        if reply_probability < 0.05:
+            reply_probability = 0.05
+        return reply_probability/1.2
     
     def change_reply_willing_sent(self, group_id: int):
         """开始思考后降低群组的回复意愿"""
