@@ -52,21 +52,16 @@ class Message_Sender:
         await asyncio.sleep(typing_time)
         
         # 发送消息
-        for i in range(10):
-            try:
-                await self._current_bot.send_group_msg(
-                    group_id=group_id,
-                    message=message,
-                    auto_escape=auto_escape
-                )
-                break
-            except Exception as e:
-                print(f"发生错误 {e}，重试第{i}次")
-                asyncio.sleep(2)
-                if i==9:
-                    return False
-        print(f"\033[1;34m[调试]\033[0m 发送消息{message}成功")
-        return True
+        try:
+            await self._current_bot.send_group_msg(
+                group_id=group_id,
+                message=message,
+                auto_escape=auto_escape
+            )
+            print(f"\033[1;34m[调试]\033[0m 发送消息{message}成功")
+        except Exception as e:
+            print(f"发生错误 {e}")
+            print(f"\033[1;34m[调试]\033[0m 发送消息{message}失败")
 
 
 class MessageContainer:

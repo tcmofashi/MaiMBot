@@ -7,6 +7,7 @@ from ...common.database import Database
 import zlib  # 用于 CRC32
 import base64
 from nonebot import get_driver
+from loguru import logger
 
 driver = get_driver()
 config = driver.config
@@ -213,11 +214,11 @@ def storage_image(image_data: bytes) -> bytes:
         print(f"\033[1;31m[错误]\033[0m 保存图片失败: {str(e)}")
         return image_data 
 
-def compress_base64_image_by_scale(base64_data: str, scale: float = 0.5) -> str:
-    """按比例压缩base64格式的图片
+def compress_base64_image_by_scale(base64_data: str, target_size: int = 0.8 * 1024 * 1024) -> str:
+    """压缩base64格式的图片到指定大小
     Args:
         base64_data: base64编码的图片数据
-        scale: 压缩比例（0-1之间的浮点数）
+        target_size: 目标文件大小（字节），默认0.8MB
     Returns:
         str: 压缩后的base64图片数据
     """
@@ -225,103 +226,64 @@ def compress_base64_image_by_scale(base64_data: str, scale: float = 0.5) -> str:
         # 将base64转换为字节数据
         image_data = base64.b64decode(base64_data)
         
+        # 如果已经小于目标大小，直接返回原图
+        if len(image_data) <= target_size:
+            return base64_data
+            
         # 将字节数据转换为图片对象
         img = Image.open(io.BytesIO(image_data))
         
-        # 如果是动图，直接返回原图
-        if getattr(img, 'is_animated', False):
-            return base64_data
-            
+        # 获取原始尺寸
+        original_width, original_height = img.size
+        
+        # 计算缩放比例
+        scale = min(1.0, (target_size / len(image_data)) ** 0.5)
+        
         # 计算新的尺寸
-        new_width = int(img.width * scale)
-        new_height = int(img.height * scale)
+        new_width = int(original_width * scale)
+        new_height = int(original_height * scale)
         
-        # 缩放图片
-        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        # 创建内存缓冲区
+        output_buffer = io.BytesIO()
         
-        # 转换为RGB模式（去除透明通道）
-        if img.mode in ('RGBA', 'P'):
-            img = img.convert('RGB')
+        # 如果是GIF，处理所有帧
+        if getattr(img, "is_animated", False):
+            frames = []
+            for frame_idx in range(img.n_frames):
+                img.seek(frame_idx)
+                new_frame = img.copy()
+                new_frame = new_frame.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                frames.append(new_frame)
+            
+            # 保存到缓冲区
+            frames[0].save(
+                output_buffer,
+                format='GIF',
+                save_all=True,
+                append_images=frames[1:],
+                optimize=True,
+                duration=img.info.get('duration', 100),
+                loop=img.info.get('loop', 0)
+            )
+        else:
+            # 处理静态图片
+            resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # 保存到缓冲区，保持原始格式
+            if img.format == 'PNG' and img.mode in ('RGBA', 'LA'):
+                resized_img.save(output_buffer, format='PNG', optimize=True)
+            else:
+                resized_img.save(output_buffer, format='JPEG', quality=95, optimize=True)
         
-        # 保存压缩后的图片
-        output = io.BytesIO()
-        img.save(output, format='JPEG', quality=85, optimize=True)
-        compressed_data = output.getvalue()
+        # 获取压缩后的数据并转换为base64
+        compressed_data = output_buffer.getvalue()
+        logger.success(f"压缩图片: {original_width}x{original_height} -> {new_width}x{new_height}")
+        logger.info(f"压缩前大小: {len(image_data)/1024:.1f}KB, 压缩后大小: {len(compressed_data)/1024:.1f}KB")
         
-        # 转换回base64
         return base64.b64encode(compressed_data).decode('utf-8')
         
     except Exception as e:
-        print(f"\033[1;31m[错误]\033[0m 压缩图片失败: {str(e)}")
+        logger.error(f"压缩图片失败: {str(e)}")
         import traceback
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return base64_data 
-    
-async def compress_image( image_path: str, target_size: int = 0.8 * 1024 * 1024):
-    """压缩图片并返回base64编码
-    Args:
-        image_path: 图片文件路径
-        target_size: 目标文件大小（字节），默认0.8MB
-    Returns:
-        Optional[str]: 成功返回base64编码的图片数据，失败返回None
-    """
-    try:
-        file_size = os.path.getsize(image_path)
-        if file_size <= target_size:
-            # 如果文件已经小于目标大小，直接读取并返回base64
-            with open(image_path, 'rb') as f:
-                return base64.b64encode(f.read()).decode('utf-8')
-        
-        # 打开图片
-        with Image.open(image_path) as img:
-            # 获取原始尺寸
-            original_width, original_height = img.size
-            
-            # 计算缩放比例
-            scale = min(1.0, (target_size / file_size) ** 0.5)
-            
-            # 计算新的尺寸
-            new_width = int(original_width * scale)
-            new_height = int(original_height * scale)
-            
-            # 创建内存缓冲区
-            output_buffer = io.BytesIO()
-            
-            # 如果是GIF，处理所有帧
-            if getattr(img, "is_animated", False):
-                frames = []
-                for frame_idx in range(img.n_frames):
-                    img.seek(frame_idx)
-                    new_frame = img.copy()
-                    new_frame = new_frame.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    frames.append(new_frame)
-                
-                # 保存到缓冲区
-                frames[0].save(
-                    output_buffer,
-                    format='GIF',
-                    save_all=True,
-                    append_images=frames[1:],
-                    optimize=True,
-                    duration=img.info.get('duration', 100),
-                    loop=img.info.get('loop', 0)
-                )
-            else:
-                # 处理静态图片
-                resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                
-                # 保存到缓冲区，保持原始格式
-                if img.format == 'PNG' and img.mode in ('RGBA', 'LA'):
-                    resized_img.save(output_buffer, format='PNG', optimize=True)
-                else:
-                    resized_img.save(output_buffer, format='JPEG', quality=95, optimize=True)
-            
-            # 获取压缩后的数据并转换为base64
-            compressed_data = output_buffer.getvalue()
-            print(f"\033[1;32m[成功]\033[0m 压缩图片: {os.path.basename(image_path)} ({original_width}x{original_height} -> {new_width}x{new_height})")
-            
-            return base64.b64encode(compressed_data).decode('utf-8')
-            
-    except Exception as e:
-        print(f"\033[1;31m[错误]\033[0m 压缩图片失败: {os.path.basename(image_path)}, 错误: {str(e)}")
-        return None
