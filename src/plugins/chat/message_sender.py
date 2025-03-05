@@ -47,8 +47,8 @@ class Message_Sender:
         
         
         typing_time = calculate_typing_time(message)
-        if typing_time > 2:
-            typing_time = 2
+        if typing_time > 10:
+            typing_time = 10
         await asyncio.sleep(typing_time)
         
         # 发送消息
@@ -80,21 +80,6 @@ class MessageContainer:
         
         for msg in self.messages:
             if isinstance(msg, Message_Sending):
-                if current_time - msg.thinking_start_time > self.thinking_timeout:
-                    timeout_messages.append(msg)
-                    
-        # 按thinking_start_time排序，时间早的在前面
-        timeout_messages.sort(key=lambda x: x.thinking_start_time)
-                    
-        return timeout_messages
-    
-    def get_timeout_messages_thinking(self) -> List[Message_Thinking]:
-        """获取所有超时的Message_Sending对象（思考时间超过30秒），按thinking_start_time排序"""
-        current_time = time.time()
-        timeout_messages = []
-        
-        for msg in self.messages:
-            if isinstance(msg, Message_Thinking):
                 if current_time - msg.thinking_start_time > self.thinking_timeout:
                     timeout_messages.append(msg)
                     
@@ -164,8 +149,8 @@ class MessageManager:
         
     async def process_group_messages(self, group_id: int):
         """处理群消息"""
-        if int(time.time() / 3) == time.time() / 3:
-            print(f"\033[1;34m[调试]\033[0m 开始处理群{group_id}的消息")
+        # if int(time.time() / 3) == time.time() / 3:
+            # print(f"\033[1;34m[调试]\033[0m 开始处理群{group_id}的消息")
         container = self.get_container(group_id)
         if container.has_messages():
             #最早的对象，可能是思考消息，也可能是发送消息
@@ -181,27 +166,24 @@ class MessageManager:
                 #优先等待这条消息
                 message_earliest.update_thinking_time()
                 thinking_time = message_earliest.thinking_time
-                if (int(thinking_time))%20==0:
-                    print(f"\033[1;34m[调试]\033[0m 消息正在思考中，已思考{int(thinking_time)}秒")
+                print(f"\033[1;34m[调试]\033[0m 消息正在思考中，已思考{int(thinking_time)}秒")
             else:# 如果不是message_thinking就只能是message_sending    
                 print(f"\033[1;34m[调试]\033[0m 消息'{message_earliest.processed_plain_text}'正在发送中")
                 #直接发，等什么呢
                 if message_earliest.update_thinking_time() < 30:
-                    ret=await message_sender.send_group_message(group_id, message_earliest.processed_plain_text, auto_escape=False)
+                    await message_sender.send_group_message(group_id, message_earliest.processed_plain_text, auto_escape=False)
                 else:
-                    ret=await message_sender.send_group_message(group_id, message_earliest.processed_plain_text, auto_escape=False, reply_message_id=message_earliest.reply_message_id)
+                    await message_sender.send_group_message(group_id, message_earliest.processed_plain_text, auto_escape=False, reply_message_id=message_earliest.reply_message_id)
                 
                 #移除消息
-                if ret:
-                    if message_earliest.is_emoji:
-                        message_earliest.processed_plain_text = "[表情包]"
-                    await self.storage.store_message(message_earliest, None)
-                    
-                    container.remove_message(message_earliest)
+                if message_earliest.is_emoji:
+                    message_earliest.processed_plain_text = "[表情包]"
+                await self.storage.store_message(message_earliest, None)
+                
+                container.remove_message(message_earliest)
             
             #获取并处理超时消息
             message_timeout = container.get_timeout_messages() #也许是一堆message_sending
-
             if message_timeout:
                 print(f"\033[1;34m[调试]\033[0m 发现{len(message_timeout)}条超时消息")
                 for msg in message_timeout:
@@ -211,19 +193,18 @@ class MessageManager:
                     try:
                         #发送
                         if msg.update_thinking_time() < 30:
-                            ret=await message_sender.send_group_message(group_id, msg.processed_plain_text, auto_escape=False)
+                            await message_sender.send_group_message(group_id, msg.processed_plain_text, auto_escape=False)
                         else:
-                            ret=await message_sender.send_group_message(group_id, msg.processed_plain_text, auto_escape=False, reply_message_id=msg.reply_message_id)
+                            await message_sender.send_group_message(group_id, msg.processed_plain_text, auto_escape=False, reply_message_id=msg.reply_message_id)
                         
-                        if ret:
-                            #如果是表情包，则替换为"[表情包]"
-                            if msg.is_emoji:
-                                msg.processed_plain_text = "[表情包]"
-                            await self.storage.store_message(msg, None)
-                            
-                            # 安全地移除消息
-                            if not container.remove_message(msg):
-                                print(f"\033[1;33m[警告]\033[0m 尝试删除不存在的消息")
+                        #如果是表情包，则替换为"[表情包]"
+                        if msg.is_emoji:
+                            msg.processed_plain_text = "[表情包]"
+                        await self.storage.store_message(msg, None)
+                        
+                        # 安全地移除消息
+                        if not container.remove_message(msg):
+                            print(f"\033[1;33m[警告]\033[0m 尝试删除不存在的消息")
                     except Exception as e:
                         print(f"\033[1;31m[错误]\033[0m 处理超时消息时发生错误: {e}")
                         continue
@@ -231,7 +212,7 @@ class MessageManager:
     async def start_processor(self):
         """启动消息处理器"""
         while self._running:
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(1)
             tasks = []
             for group_id in self.containers.keys():
                 tasks.append(self.process_group_messages(group_id))
