@@ -106,7 +106,7 @@ class EmojiManager:
             self._ensure_db()
             
             # 获取文本的embedding
-            text_embedding = get_embedding(text)
+            text_embedding = get_embedding(text+"，动漫风格。")
             if not text_embedding:
                 logger.error("无法获取文本的embedding")
                 return None
