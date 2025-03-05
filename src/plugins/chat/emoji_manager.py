@@ -106,7 +106,7 @@ class EmojiManager:
             self._ensure_db()
             
             # 获取文本的embedding
-            text_embedding = get_embedding(text+"，动漫风格。")
+            text_embedding = get_embedding(str(text))
             if not text_embedding:
                 logger.error("无法获取文本的embedding")
                 return None
@@ -192,7 +192,7 @@ class EmojiManager:
     async def _get_emoji_discription(self, image_base64: str) -> str:
         """获取表情包的标签"""
         try:
-            prompt = '这是一个表情包，简洁的描述一下表情包的内容和表情包所表达的情感'
+            prompt = '这是一个表情包，简洁的描述一下表情包的画面风格，内容和表情包所表达的情感'
             
             content, _ = await self.llm.generate_response_for_image(prompt, image_base64)
             logger.debug(f"输出描述: {content}")
