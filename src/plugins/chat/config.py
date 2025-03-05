@@ -35,6 +35,7 @@ class BotConfig:
     # 模型配置
     llm_reasoning: Dict[str, str] = field(default_factory=lambda: {})
     llm_reasoning_minor: Dict[str, str] = field(default_factory=lambda: {})
+    llm_reasoning_super_minor: Dict[str, str] = field(default_factory=lambda: {})
     llm_normal: Dict[str, str] = field(default_factory=lambda: {})
     llm_normal_minor: Dict[str, str] = field(default_factory=lambda: {})
     embedding: Dict[str, str] = field(default_factory=lambda: {})
@@ -128,6 +129,9 @@ class BotConfig:
                 
                 if "llm_reasoning_minor" in model_config:
                     config.llm_reasoning_minor = model_config["llm_reasoning_minor"]
+
+                if "llm_reasoning_super_minor" in model_config:
+                    config.llm_reasoning_super_minor = model_config["llm_reasoning_super_minor"]
                 
                 if "llm_normal" in model_config:
                     config.llm_normal = model_config["llm_normal"]

@@ -24,6 +24,7 @@ class ResponseGenerator:
         self.model_r1 = LLM_request(model=global_config.llm_reasoning, temperature=0.7,max_tokens=1000)
         self.model_v3 = LLM_request(model=global_config.llm_normal, temperature=0.7,max_tokens=1000)
         self.model_r1_distill = LLM_request(model=global_config.llm_reasoning_minor, temperature=0.7,max_tokens=1000)
+        self.model_r1_super_distill = LLM_request(model=global_config.llm_reasoning_super_minor, temperature=0.7,max_tokens=1000)
         self.db = Database.get_instance()
         self.current_model_type = 'r1'  # 默认使用 R1
 
@@ -79,10 +80,10 @@ class ResponseGenerator:
 
         # 读空气模块
         if global_config.enable_kuuki_read:
-            # content_check, reasoning_content_check = await self.model_r1_distill.generate_response(prompt_check)
+            # content_check, reasoning_content_check = await self.model_r1_super_distill.generate_response(prompt_check)
             content_check, reasoning_content_check = ('yes','')
             print(f"\033[1;32m[读空气]\033[0m 读空气结果为{content_check}")
-            if 'yes' not in content_check.lower() and random.random() < 0.8:
+            if 'yes' not in content_check.lower() and random.random() < 1:
                 self._save_to_db(
                     message=message,
                     sender_name=sender_name,
