@@ -47,8 +47,8 @@ class Message_Sender:
         
         
         typing_time = calculate_typing_time(message)
-        if typing_time > 10:
-            typing_time = 10
+        if typing_time > 2:
+            typing_time = 2
         await asyncio.sleep(typing_time)
         
         # 发送消息
