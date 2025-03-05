@@ -127,7 +127,7 @@ class ChatBot:
                 # thinking_message.interupt=True
             
         if response:
-            # print(f"\033[1;32m[思考结束]\033[0m 思考结束，已得到回复，开始回复")
+            print(f"\033[1;32m[思考结束]\033[0m 思考结束，已得到回复，开始回复")
             # 找到并删除对应的thinking消息
             container = message_manager.get_container(event.group_id)
             thinking_message = None

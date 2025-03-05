@@ -47,8 +47,8 @@ class Message_Sender:
         
         
         typing_time = calculate_typing_time(message)
-        if typing_time > 10:
-            typing_time = 10
+        if typing_time > 2:
+            typing_time = 2
         await asyncio.sleep(typing_time)
         
         # 发送消息
@@ -209,7 +209,7 @@ class MessageManager:
     async def start_processor(self):
         """启动消息处理器"""
         while self._running:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.3)
             tasks = []
             for group_id in self.containers.keys():
                 tasks.append(self.process_group_messages(group_id))
