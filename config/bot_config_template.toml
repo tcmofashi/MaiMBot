@@ -20,6 +20,7 @@ ban_words = [
 [emoji]
 check_interval = 120 # 检查表情包的时间间隔
 register_interval = 10 # 注册表情包的时间间隔
+check_prompt = "不要包含违反公序良俗的内容" # 表情包过滤要求
 
 [cq_code]
 enable_pic_translate = false
@@ -59,6 +60,7 @@ ban_user_id = []  #禁止回复消息的QQ号
 
 [model.llm_reasoning] #R1
 name = "Pro/deepseek-ai/DeepSeek-R1"
+# name = "Qwen/QwQ-32B"
 base_url = "SILICONFLOW_BASE_URL"
 key = "SILICONFLOW_KEY"
 
