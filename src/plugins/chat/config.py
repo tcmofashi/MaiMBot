@@ -30,6 +30,7 @@ class BotConfig:
     forget_memory_interval: int = 300  # 记忆遗忘间隔（秒）
     EMOJI_CHECK_INTERVAL: int = 120  # 表情包检查间隔（分钟）
     EMOJI_REGISTER_INTERVAL: int = 10  # 表情包注册间隔（分钟）
+    EMOJI_CHECK_PROMPT: str = "不要包含违反公序良俗的内容" # 表情包过滤要求
 
     ban_words = set()
     
@@ -41,6 +42,7 @@ class BotConfig:
     llm_normal_minor: Dict[str, str] = field(default_factory=lambda: {})
     embedding: Dict[str, str] = field(default_factory=lambda: {})
     vlm: Dict[str, str] = field(default_factory=lambda: {})
+    rerank: Dict[str, str] = field(default_factory=lambda: {})
 
     # 主题提取配置
     topic_extract: str = 'snownlp' # 只支持jieba,snownlp,llm
@@ -101,6 +103,7 @@ class BotConfig:
                 emoji_config = toml_dict["emoji"]
                 config.EMOJI_CHECK_INTERVAL = emoji_config.get("check_interval", config.EMOJI_CHECK_INTERVAL)
                 config.EMOJI_REGISTER_INTERVAL = emoji_config.get("register_interval", config.EMOJI_REGISTER_INTERVAL)
+                config.EMOJI_CHECK_PROMPT = emoji_config.get('check_prompt',config.EMOJI_CHECK_PROMPT)
             
             if "cq_code" in toml_dict:
                 cq_code_config = toml_dict["cq_code"]
@@ -146,6 +149,9 @@ class BotConfig:
                     
                 if "embedding" in model_config:
                     config.embedding = model_config["embedding"]
+                
+                if "rerank" in model_config:
+                    config.rerank = model_config["rerank"]
                 
             if 'topic' in toml_dict:
                 topic_config=toml_dict['topic']
