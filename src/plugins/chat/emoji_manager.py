@@ -41,7 +41,7 @@ class EmojiManager:
         self.db = Database.get_instance()
         self._scan_task = None
         self.llm = LLM_request(model=global_config.vlm, temperature=0.3, max_tokens=600)
-        self.lm = LLM_request(model=global_config.llm_reasoning_minor, max_tokens=3000)
+        self.lm = LLM_request(model=global_config.llm_reasoning_minor, max_tokens=2000)
         
     def _ensure_emoji_dir(self):
         """确保表情存储目录存在"""
@@ -98,6 +98,8 @@ class EmojiManager:
             
             # 获取文本的embedding
             text_for_search= await self._get_kimoji_for_text(text)
+            if text_for_search is None:
+                return None
             text_embedding = get_embedding(text_for_search)
             if not text_embedding:
                 logger.error("无法获取文本的embedding")
@@ -211,6 +213,8 @@ class EmojiManager:
             prompt = f'这是{global_config.BOT_NICKNAME}将要发送的消息内容:\n{text}\n若要为其配上表情包，请你输出这个表情包应该表达怎样的情感，应该给人什么样的感觉，不要太简洁也不要太长，注意不要输出任何对内容的分析内容，只输出\"一种什么样的感觉\"中间的形容词部分。'
             
             content, _ = await self.lm.generate_response_async(prompt)
+            if '请求失败' in content:
+                return None
             logger.info(f"输出描述: {content}")
             return content
             
