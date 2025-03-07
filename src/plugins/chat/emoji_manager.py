@@ -73,7 +73,6 @@ class EmojiManager:
         if 'emoji' not in self.db.db.list_collection_names():
             self.db.db.create_collection('emoji')
             self.db.db.emoji.create_index([('embedding', '2dsphere')])
-            self.db.db.emoji.create_index([('tags', 1)])
             self.db.db.emoji.create_index([('filename', 1)], unique=True)
             
     def record_usage(self, emoji_id: str):
@@ -87,12 +86,11 @@ class EmojiManager:
         except Exception as e:
             logger.error(f"记录表情使用失败: {str(e)}")
             
-    async def get_emoji_for_text(self, text: str) -> Optional[str]:
+    async def get_emoji_for_text(self, text: str):
         """根据文本内容获取相关表情包
         Args:
             text: 输入文本
         Returns:
-            Optional[str]: 表情包文件路径，如果没有找到则返回None
         """
         try:
             self._ensure_db()
@@ -152,7 +150,7 @@ class EmojiManager:
                         {'$inc': {'usage_count': 1}}
                     )
                     logger.success(f"找到匹配的表情包: {selected_emoji.get('discription', '无描述')} (相似度: {similarity:.4f})")
-                    return selected_emoji['path']
+                    return selected_emoji['path'],selected_emoji.get('discription', '无描述')
                     
             except Exception as search_error:
                 logger.error(f"搜索表情包失败: {str(search_error)}")
