@@ -11,7 +11,7 @@ class WillingManager:
         while True:
             await asyncio.sleep(5)
             for group_id in self.group_reply_willing:
-                self.group_reply_willing[group_id] = max(0, self.group_reply_willing[group_id] * 0.6)
+                self.group_reply_willing[group_id] = max(0, self.group_reply_willing[group_id] * 0.3)
                 
     def get_willing(self, group_id: int) -> float:
         """获取指定群组的回复意愿"""
@@ -54,7 +54,7 @@ class WillingManager:
         reply_probability = min(reply_probability, 1)
         if reply_probability < 0:
             reply_probability = 0
-        return reply_probability**2-0.15
+        return reply_probability**1.5-0.05
     
     def change_reply_willing_sent(self, group_id: int):
         """开始思考后降低群组的回复意愿"""
