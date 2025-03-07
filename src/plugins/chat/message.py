@@ -78,7 +78,7 @@ class Message:
             else f"{self.user_nickname or f'用户{self.user_id}'}"
         )
         if isinstance(self,Message_Sending) and self.is_emoji:
-            self.detailed_plain_text=f"[{time_str}] {name}: {self.detailed_plain_text}\n"
+            self.detailed_plain_text = f"[{time_str}] {name}: {self.detailed_plain_text}\n"
         else:
             self.detailed_plain_text = f"[{time_str}] {name}: {self.processed_plain_text}\n"
 
