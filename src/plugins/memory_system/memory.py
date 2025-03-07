@@ -132,8 +132,8 @@ class Memory_graph:
 class Hippocampus:
     def __init__(self,memory_graph:Memory_graph):
         self.memory_graph = memory_graph
-        self.llm_model_get_topic = LLM_request(model = global_config.llm_normal_minor,temperature=0.5)
-        self.llm_model_summary = LLM_request(model = global_config.llm_normal,temperature=0.5)
+        self.llm_topic_judge = LLM_request(model = global_config.llm_topic_judge,temperature=0.5)
+        self.llm_summary_by_topic = LLM_request(model = global_config.llm_summary_by_topic,temperature=0.5)
         
     def get_all_node_names(self) -> list:
         """获取记忆图中所有节点的名字列表
@@ -179,7 +179,7 @@ class Hippocampus:
         
         #获取topics
         topic_num = self.calculate_topic_num(input_text, compress_rate)
-        topics_response = await self.llm_model_get_topic.generate_response(self.find_topic_llm(input_text, topic_num))
+        topics_response = await self.llm_topic_judge.generate_response(self.find_topic_llm(input_text, topic_num))
         # 修改话题处理逻辑
         # 定义需要过滤的关键词
         filter_keywords = ['表情包', '图片', '回复', '聊天记录']
@@ -196,7 +196,7 @@ class Hippocampus:
         for topic in filtered_topics:
             topic_what_prompt = self.topic_what(input_text, topic)
             # 创建异步任务
-            task = self.llm_model_summary.generate_response_async(topic_what_prompt)
+            task = self.llm_summary_by_topic.generate_response_async(topic_what_prompt)
             tasks.append((topic.strip(), task))
             
         # 等待所有任务完成
@@ -506,7 +506,7 @@ class Hippocampus:
         Returns:
             list: 识别出的主题列表
         """
-        topics_response = await self.llm_model_get_topic.generate_response(self.find_topic_llm(text, 5))
+        topics_response = await self.llm_topic_judge.generate_response(self.find_topic_llm(text, 5))
         # print(f"话题: {topics_response[0]}")
         topics = [topic.strip() for topic in topics_response[0].replace("，", ",").replace("、", ",").replace(" ", ",").split(",") if topic.strip()]
         # print(f"话题: {topics}")
@@ -578,14 +578,11 @@ class Hippocampus:
 
     async def memory_activate_value(self, text: str, max_topics: int = 5, similarity_threshold: float = 0.3) -> int:
         """计算输入文本对记忆的激活程度"""
-        print(f"\033[1;32m[记忆激活]\033[0m 开始计算文本的记忆激活度: {text}")
+        print(f"\033[1;32m[记忆激活]\033[0m 识别主题: {await self._identify_topics(text)}")
         
         # 识别主题
         identified_topics = await self._identify_topics(text)
-        print(f"\033[1;32m[记忆激活]\033[0m 识别出的主题: {identified_topics}")
-        
         if not identified_topics:
-            # print(f"\033[1;32m[记忆激活]\033[0m 未识别出主题,返回0")
             return 0
             
         # 查找相似主题
@@ -596,7 +593,6 @@ class Hippocampus:
         )
         
         if not all_similar_topics:
-            print(f"\033[1;32m[记忆激活]\033[0m 未找到相似主题,返回0")
             return 0
             
         # 获取最相关的主题
@@ -605,19 +601,29 @@ class Hippocampus:
         # 如果只找到一个主题，进行惩罚
         if len(top_topics) == 1:
             topic, score = top_topics[0]
-            activation = int(score * 50)  # 单主题情况下，直接用相似度*50作为激活值
-            print(f"\033[1;32m[记忆激活]\033[0m 只找到一个主题，进行惩罚:")
-            print(f"\033[1;32m[记忆激活]\033[0m - 主题: {topic}")
-            print(f"\033[1;32m[记忆激活]\033[0m - 相似度: {score:.3f}")
-            print(f"\033[1;32m[记忆激活]\033[0m - 最终激活值: {activation}")
+            # 获取主题内容数量并计算惩罚系数
+            memory_items = self.memory_graph.G.nodes[topic].get('memory_items', [])
+            if not isinstance(memory_items, list):
+                memory_items = [memory_items] if memory_items else []
+            content_count = len(memory_items)
+            penalty = 1.0 / (1 + math.log(content_count + 1))
+            
+            activation = int(score * 50 * penalty)
+            print(f"\033[1;32m[记忆激活]\033[0m 单主题「{topic}」- 相似度: {score:.3f}, 内容数: {content_count}, 激活值: {activation}")
             return activation
             
-        # 计算关键词匹配率
+        # 计算关键词匹配率，同时考虑内容数量
         matched_topics = set()
         topic_similarities = {}
         
-        print(f"\033[1;32m[记忆激活]\033[0m 计算关键词匹配情况:")
         for memory_topic, similarity in top_topics:
+            # 计算内容数量惩罚
+            memory_items = self.memory_graph.G.nodes[memory_topic].get('memory_items', [])
+            if not isinstance(memory_items, list):
+                memory_items = [memory_items] if memory_items else []
+            content_count = len(memory_items)
+            penalty = 1.0 / (1 + math.log(content_count + 1))
+            
             # 对每个记忆主题，检查它与哪些输入主题相似
             for input_topic in identified_topics:
                 topic_vector = text_to_vector(input_topic)
@@ -628,27 +634,19 @@ class Hippocampus:
                 sim = cosine_similarity(v1, v2)
                 if sim >= similarity_threshold:
                     matched_topics.add(input_topic)
-                    topic_similarities[input_topic] = max(topic_similarities.get(input_topic, 0), sim)
-                    print(f"\033[1;32m[记忆激活]\033[0m - 输入主题「{input_topic}」匹配到记忆「{memory_topic}」, 相似度: {sim:.3f}")
+                    adjusted_sim = sim * penalty
+                    topic_similarities[input_topic] = max(topic_similarities.get(input_topic, 0), adjusted_sim)
+                    print(f"\033[1;32m[记忆激活]\033[0m 主题「{input_topic}」-> 「{memory_topic}」(内容数: {content_count}, 相似度: {adjusted_sim:.3f})")
         
-        # 计算主题匹配率
+        # 计算主题匹配率和平均相似度
         topic_match = len(matched_topics) / len(identified_topics)
-        print(f"\033[1;32m[记忆激活]\033[0m 主题匹配率:")
-        print(f"\033[1;32m[记忆激活]\033[0m - 匹配主题数: {len(matched_topics)}")
-        print(f"\033[1;32m[记忆激活]\033[0m - 总主题数: {len(identified_topics)}")
-        print(f"\033[1;32m[记忆激活]\033[0m - 匹配率: {topic_match:.3f}")
-        
-        # 计算匹配主题的平均相似度
         average_similarities = sum(topic_similarities.values()) / len(topic_similarities) if topic_similarities else 0
-        print(f"\033[1;32m[记忆激活]\033[0m 平均相似度:")
-        print(f"\033[1;32m[记忆激活]\033[0m - 各主题相似度: {[f'{k}:{v:.3f}' for k,v in topic_similarities.items()]}")
-        print(f"\033[1;32m[记忆激活]\033[0m - 平均相似度: {average_similarities:.3f}")
         
         # 计算最终激活值
-        activation = (topic_match + average_similarities) / 2 * 100
-        print(f"\033[1;32m[记忆激活]\033[0m 最终激活值: {int(activation)}")
+        activation = int((topic_match + average_similarities) / 2 * 100)
+        print(f"\033[1;32m[记忆激活]\033[0m 匹配率: {topic_match:.3f}, 平均相似度: {average_similarities:.3f}, 激活值: {activation}")
         
-        return int(activation)
+        return activation
 
     async def get_relevant_memories(self, text: str, max_topics: int = 5, similarity_threshold: float = 0.4, max_memory_num: int = 5) -> list:
         """根据输入文本获取相关的记忆内容"""
