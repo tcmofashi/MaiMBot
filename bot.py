@@ -1,11 +1,12 @@
 import os
+
 import nonebot
-from nonebot.adapters.onebot.v11 import Adapter
 from dotenv import load_dotenv
 from loguru import logger
+from nonebot.adapters.onebot.v11 import Adapter
 
 '''彩蛋'''
-from colorama import init, Fore
+from colorama import Fore, init
 
 init()
 text = "多年以后，面对AI行刑队，张三将会回想起他2023年在会议上讨论人工智能的那个下午"
@@ -20,8 +21,12 @@ print(rainbow_text)
 if not os.path.exists("config/bot_config.toml"):
     logger.warning("检测到bot_config.toml不存在，正在从模板复制")
     import shutil
+    # 检查config目录是否存在
+    if not os.path.exists("config"):
+        os.makedirs("config")
+        logger.info("创建config目录")
 
-    shutil.copy("templete/bot_config_template.toml", "config/bot_config.toml")
+    shutil.copy("template/bot_config_template.toml", "config/bot_config.toml")
     logger.info("复制完成，请修改config/bot_config.toml和.env.prod中的配置后重新启动")
 
 # 初始化.env 默认ENVIRONMENT=prod

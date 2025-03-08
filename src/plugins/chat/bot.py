@@ -1,22 +1,27 @@
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message as EventMessage, Bot
-from .message import Message, MessageSet, Message_Sending
-from .config import BotConfig, global_config
-from .storage import MessageStorage
-from .llm_generator import ResponseGenerator
-# from .message_stream import MessageStream, MessageStreamContainer
-from .topic_identifier import topic_identifier
-from random import random, choice
-from .emoji_manager import emoji_manager  # 导入表情包管理器
 import time
-import os
-from .cq_code import CQCode  # 导入CQCode模块
-from .message_sender import message_manager  # 导入新的消息管理器
-from .message import Message_Thinking  # 导入 Message_Thinking 类
-from .relationship_manager import relationship_manager
-from .willing_manager import willing_manager  # 导入意愿管理器
-from .utils import is_mentioned_bot_in_txt, calculate_typing_time
-from ..memory_system.memory import memory_graph,hippocampus
+from random import random
+
 from loguru import logger
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent
+
+from ..memory_system.memory import hippocampus
+from ..moods.moods import MoodManager  # 导入情绪管理器
+from .config import global_config
+from .cq_code import CQCode  # 导入CQCode模块
+from .emoji_manager import emoji_manager  # 导入表情包管理器
+from .llm_generator import ResponseGenerator
+from .message import (
+    Message,
+    Message_Sending,
+    Message_Thinking,  # 导入 Message_Thinking 类
+    MessageSet,
+)
+from .message_sender import message_manager  # 导入新的消息管理器
+from .relationship_manager import relationship_manager
+from .storage import MessageStorage
+from .utils import calculate_typing_time, is_mentioned_bot_in_txt
+from .willing_manager import willing_manager  # 导入意愿管理器
+
 
 class ChatBot:
     def __init__(self):
@@ -24,6 +29,8 @@ class ChatBot:
         self.gpt = ResponseGenerator()
         self.bot = None  # bot 实例引用
         self._started = False
+        self.mood_manager = MoodManager.get_instance()  # 获取情绪管理器单例
+        self.mood_manager.start_mood_update()  # 启动情绪更新
         
         self.emoji_chance = 0.2  # 发送表情包的基础概率
         # self.message_streams = MessageStreamContainer()
@@ -120,6 +127,11 @@ class ChatBot:
                     container.messages.remove(msg)
                     # print(f"\033[1;32m[思考消息删除]\033[0m 已找到思考消息对象，开始删除")
                     break
+                    
+            # 如果找不到思考消息，直接返回
+            if not thinking_message:
+                print(f"\033[1;33m[警告]\033[0m 未找到对应的思考消息，可能已超时被移除")
+                return
             
             #记录开始思考的时间，避免从思考到回复的时间太久
             thinking_start_time = thinking_message.thinking_start_time
@@ -162,8 +174,12 @@ class ChatBot:
             bot_response_time = tinking_time_point
 
             if random() < global_config.emoji_chance:
-                emoji_path,discription = await emoji_manager.get_emoji_for_text(response)
-                if emoji_path:
+                emoji_raw = await emoji_manager.get_emoji_for_text(response)
+                
+                # 检查是否 <没有找到> emoji
+                if emoji_raw != None:
+                    emoji_path,discription = emoji_raw
+
                     emoji_cq = CQCode.create_emoji_cq(emoji_path)
                     
                     if random() < 0.5:
@@ -192,9 +208,17 @@ class ChatBot:
             emotion = await self.gpt._get_emotion_tags(raw_content)
             print(f"为 '{response}' 获取到的情感标签为：{emotion}")
             valuedict={
-            'happy':0.5,'angry':-1,'sad':-0.5,'surprised':0.5,'disgusted':-1.5,'fearful':-0.25,'neutral':0.25
+                'happy': 0.5,
+                'angry': -1,
+                'sad': -0.5,
+                'surprised': 0.2,
+                'disgusted': -1.5,
+                'fearful': -0.7,
+                'neutral': 0.1
             }
             await relationship_manager.update_relationship_value(message.user_id, relationship_value=valuedict[emotion[0]])
+            # 使用情绪管理器更新情绪
+            self.mood_manager.update_mood_from_emotion(emotion[0], global_config.mood_intensity_factor)
         
         # willing_manager.change_reply_willing_after_sent(event.group_id)
 

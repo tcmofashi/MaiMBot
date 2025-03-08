@@ -1,15 +1,16 @@
-import aiohttp
 import asyncio
-import requests
-import time
+import json
 import re
+from datetime import datetime
 from typing import Tuple, Union
-from nonebot import get_driver
+
+import aiohttp
 from loguru import logger
+from nonebot import get_driver
+
+from ...common.database import Database
 from ..chat.config import global_config
 from ..chat.utils_image import compress_base64_image_by_scale
-from datetime import datetime
-from ...common.database import Database
 
 driver = get_driver()
 config = driver.config
@@ -138,7 +139,12 @@ class LLM_request:
         }
 
         api_url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
-        logger.info(f"发送请求到URL: {api_url}")
+        #判断是否为流式
+        stream_mode = self.params.get("stream", False)
+        if self.params.get("stream", False) is True:
+            logger.info(f"进入流式输出模式，发送请求到URL: {api_url}")
+        else:
+            logger.info(f"发送请求到URL: {api_url}")
         logger.info(f"使用模型: {self.model_name}")
 
         # 构建请求体
@@ -151,6 +157,9 @@ class LLM_request:
             try:
                 # 使用上下文管理器处理会话
                 headers = await self._build_headers()
+                #似乎是openai流式必须要的东西,不过阿里云的qwq-plus加了这个没有影响
+                if stream_mode:
+                    headers["Accept"] = "text/event-stream"
 
                 async with aiohttp.ClientSession() as session:
                     async with session.post(api_url, headers=headers, json=payload) as response:
@@ -173,12 +182,42 @@ class LLM_request:
                         elif response.status in policy["abort_codes"]:
                             logger.error(f"错误码: {response.status} - {error_code_mapping.get(response.status)}")
                             raise RuntimeError(f"请求被拒绝: {error_code_mapping.get(response.status)}")
-
+                            
                         response.raise_for_status()
-                        result = await response.json()
-
-                        # 使用自定义处理器或默认处理
-                        return response_handler(result) if response_handler else self._default_response_handler(result, user_id, request_type, endpoint)
+                        
+                        #将流式输出转化为非流式输出
+                        if stream_mode:
+                            accumulated_content = ""
+                            async for line_bytes in response.content:
+                                line = line_bytes.decode("utf-8").strip()
+                                if not line:
+                                    continue
+                                if line.startswith("data:"):
+                                    data_str = line[5:].strip()
+                                    if data_str == "[DONE]":
+                                        break
+                                    try:
+                                        chunk = json.loads(data_str)
+                                        delta = chunk["choices"][0]["delta"]
+                                        delta_content = delta.get("content")
+                                        if delta_content is None:
+                                            delta_content = ""
+                                        accumulated_content += delta_content
+                                    except Exception as e:
+                                        logger.error(f"解析流式输出错误: {e}")
+                            content = accumulated_content
+                            reasoning_content = ""
+                            think_match = re.search(r'<think>(.*?)</think>', content, re.DOTALL)
+                            if think_match:
+                                reasoning_content = think_match.group(1).strip()
+                            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                            # 构造一个伪result以便调用自定义响应处理器或默认处理器
+                            result = {"choices": [{"message": {"content": content, "reasoning_content": reasoning_content}}]}
+                            return response_handler(result) if response_handler else self._default_response_handler(result, user_id, request_type, endpoint)
+                        else:
+                            result = await response.json()
+                            # 使用自定义处理器或默认处理
+                            return response_handler(result) if response_handler else self._default_response_handler(result, user_id, request_type, endpoint)
 
             except Exception as e:
                 if retry < policy["max_retries"] - 1:
@@ -187,16 +226,36 @@ class LLM_request:
                     await asyncio.sleep(wait_time)
                 else:
                     logger.critical(f"请求失败: {str(e)}")
-                    logger.critical(f"请求头: {await self._build_headers()} 请求体: {payload}")
+                    logger.critical(f"请求头: {await self._build_headers(no_key=True)} 请求体: {payload}")
                     raise RuntimeError(f"API请求失败: {str(e)}")
 
         logger.error("达到最大重试次数，请求仍然失败")
         raise RuntimeError("达到最大重试次数，API请求仍然失败")
+        
+    async def _transform_parameters(self, params: dict) ->dict:
+        """
+        根据模型名称转换参数：
+        - 对于需要转换的OpenAI CoT系列模型（例如 "o3-mini"），删除 'temprature' 参数，
+        并将 'max_tokens' 重命名为 'max_completion_tokens'
+        """
+        # 复制一份参数，避免直接修改原始数据
+        new_params = dict(params)
+        # 定义需要转换的模型列表
+        models_needing_transformation = ["o3-mini", "o1-mini", "o1-preview", "o1-2024-12-17", "o1-preview-2024-09-12", "o3-mini-2025-01-31", "o1-mini-2024-09-12"]
+        if self.model_name.lower() in models_needing_transformation:
+            # 删除 'temprature' 参数（如果存在）
+            new_params.pop("temperature", None)
+            # 如果存在 'max_tokens'，则重命名为 'max_completion_tokens'
+            if "max_tokens" in new_params:
+                new_params["max_completion_tokens"] = new_params.pop("max_tokens")
+        return new_params
 
     async def _build_payload(self, prompt: str, image_base64: str = None) -> dict:
         """构建请求体"""
+        # 复制一份参数，避免直接修改 self.params
+        params_copy = await self._transform_parameters(self.params)
         if image_base64:
-            return {
+            payload = {
                 "model": self.model_name,
                 "messages": [
                     {
@@ -208,15 +267,20 @@ class LLM_request:
                     }
                 ],
                 "max_tokens": global_config.max_response_length,
-                **self.params
+                **params_copy
             }
         else:
-            return {
+            payload = {
                 "model": self.model_name,
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": global_config.max_response_length,
-                **self.params
+                **params_copy
             }
+        # 如果 payload 中依然存在 max_tokens 且需要转换，在这里进行再次检查
+        if self.model_name.lower() in ["o3-mini", "o1-mini", "o1-preview", "o1-2024-12-17", "o1-preview-2024-09-12", "o3-mini-2025-01-31", "o1-mini-2024-09-12"] and "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+        return payload
+        
 
     def _default_response_handler(self, result: dict, user_id: str = "system", 
                                 request_type: str = "chat", endpoint: str = "/chat/completions") -> Tuple:
@@ -260,12 +324,19 @@ class LLM_request:
             reasoning = ""
         return content, reasoning
 
-    async def _build_headers(self) -> dict:
+    async def _build_headers(self, no_key: bool = False) -> dict:
         """构建请求头"""
-        return {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        if no_key:
+            return {
+                "Authorization": f"Bearer **********",
+                "Content-Type": "application/json"
+            }
+        else:
+            return {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            } 
+        # 防止小朋友们截图自己的key
 
     async def generate_response(self, prompt: str) -> Tuple[str, str]:
         """根据输入的提示生成模型的异步响应"""

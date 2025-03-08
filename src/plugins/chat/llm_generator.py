@@ -1,19 +1,16 @@
-from typing import Dict, Any, List, Optional, Union, Tuple
-from openai import OpenAI
-import asyncio
-from functools import partial
-from .message import Message
-from .config import global_config
-from ...common.database import Database
 import random
 import time
-import numpy as np
-from .relationship_manager import relationship_manager
-from .prompt_builder import prompt_builder
-from .config import global_config
-from .utils import process_llm_response
+from typing import List, Optional, Tuple, Union
+
 from nonebot import get_driver
+
+from ...common.database import Database
 from ..models.utils_model import LLM_request
+from .config import global_config
+from .message import Message
+from .prompt_builder import prompt_builder
+from .relationship_manager import relationship_manager
+from .utils import process_llm_response
 
 driver = get_driver()
 config = driver.config
@@ -21,11 +18,10 @@ config = driver.config
 
 class ResponseGenerator:
     def __init__(self):
-        self.model_r1 = LLM_request(model=global_config.llm_reasoning, temperature=0.7,max_tokens=2000)
-        self.model_v3 = LLM_request(model=global_config.llm_normal, temperature=0.7,max_tokens=2000)
-        self.model_r1_distill = LLM_request(model=global_config.llm_reasoning_minor, temperature=0.7,max_tokens=2000)
-        self.model_r1_super_distill = LLM_request(model=global_config.llm_reasoning_super_minor, temperature=0.7,max_tokens=2000)
-        self.model_v25 = LLM_request(model=global_config.llm_normal_minor, temperature=0.7,max_tokens=2000)
+        self.model_r1 = LLM_request(model=global_config.llm_reasoning, temperature=0.7,max_tokens=1000,stream=True)
+        self.model_v3 = LLM_request(model=global_config.llm_normal, temperature=0.7,max_tokens=1000)
+        self.model_r1_distill = LLM_request(model=global_config.llm_reasoning_minor, temperature=0.7,max_tokens=1000)
+        self.model_v25 = LLM_request(model=global_config.llm_normal_minor, temperature=0.7,max_tokens=1000)
         self.db = Database.get_instance()
         self.current_model_type = 'r1'  # 默认使用 R1
 
@@ -196,6 +192,6 @@ class InitiativeMessageGenerate:
         prompt = prompt_builder._build_initiative_prompt(
             select_dot, prompt_template, memory
         )
-        content, reasoning = self.model_r1.generate_response(prompt)
+        content, reasoning = self.model_r1.generate_response_async(prompt)
         print(f"[DEBUG] {content} {reasoning}")
         return content
