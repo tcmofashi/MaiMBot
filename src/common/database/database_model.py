@@ -27,6 +27,23 @@ class BaseModel(Model):
         pass  # 在用户定义数据库实例之前，此处为占位符
 
 
+class AgentRecord(BaseModel):
+    """存储 Agent 配置的模型。"""
+
+    agent_id = TextField(unique=True, index=True)
+    name = TextField()
+    description = TextField(null=True)
+    tags = TextField(null=True)
+    persona = TextField()
+    bot_overrides = TextField(null=True)
+    config_overrides = TextField(null=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "agents"
+
+
 class ChatStreams(BaseModel):
     """
     用于存储流式记录数据的模型，类似于提供的 MongoDB 结构。
@@ -53,6 +70,9 @@ class ChatStreams(BaseModel):
 
     # platform: "qq" (顶层平台字段)
     platform = TextField()
+
+    # agent_id: 用于区分不同的机器人实例/人格
+    agent_id = TextField(null=True)
 
     # user_info 字段:
     #   platform: "qq"
@@ -157,6 +177,24 @@ class Messages(BaseModel):
     user_id = TextField(null=True)
     user_nickname = TextField(null=True)
     user_cardname = TextField(null=True)
+
+    # sender_info 扁平化字段（兼容新版协议，避免初始化时被当作冗余列删除）
+    sender_user_platform = TextField(null=True)
+    sender_user_id = TextField(null=True)
+    sender_user_nickname = TextField(null=True)
+    sender_user_cardname = TextField(null=True)
+    sender_group_platform = TextField(null=True)
+    sender_group_id = TextField(null=True)
+    sender_group_name = TextField(null=True)
+
+    # receiver_info 扁平化字段
+    receiver_user_platform = TextField(null=True)
+    receiver_user_id = TextField(null=True)
+    receiver_user_nickname = TextField(null=True)
+    receiver_user_cardname = TextField(null=True)
+    receiver_group_platform = TextField(null=True)
+    receiver_group_id = TextField(null=True)
+    receiver_group_name = TextField(null=True)
 
     processed_plain_text = TextField(null=True)  # 处理后的纯文本消息
     display_message = TextField(null=True)  # 显示的消息
@@ -317,6 +355,7 @@ class Expression(BaseModel):
     class Meta:
         table_name = "expression"
 
+
 class MemoryChest(BaseModel):
     """
     用于存储记忆仓库的模型
@@ -328,6 +367,7 @@ class MemoryChest(BaseModel):
 
     class Meta:
         table_name = "memory_chest"
+
 
 class MemoryConflict(BaseModel):
     """
@@ -341,40 +381,6 @@ class MemoryConflict(BaseModel):
 
     class Meta:
         table_name = "memory_conflicts"
-    
-    
-
-
-class GraphNodes(BaseModel):
-    """
-    用于存储记忆图节点的模型
-    """
-
-    concept = TextField(unique=True, index=True)  # 节点概念
-    memory_items = TextField()  # JSON格式存储的记忆列表
-    weight = FloatField(default=0.0)  # 节点权重
-    hash = TextField()  # 节点哈希值
-    created_time = FloatField()  # 创建时间戳
-    last_modified = FloatField()  # 最后修改时间戳
-
-    class Meta:
-        table_name = "graph_nodes"
-
-
-class GraphEdges(BaseModel):
-    """
-    用于存储记忆图边的模型
-    """
-
-    source = TextField(index=True)  # 源节点
-    target = TextField(index=True)  # 目标节点
-    strength = IntegerField()  # 连接强度
-    hash = TextField()  # 边哈希值
-    created_time = FloatField()  # 创建时间戳
-    last_modified = FloatField()  # 最后修改时间戳
-
-    class Meta:
-        table_name = "graph_edges"
 
 
 def create_tables():
@@ -384,6 +390,7 @@ def create_tables():
     with db:
         db.create_tables(
             [
+                AgentRecord,
                 ChatStreams,
                 LLMUsage,
                 Emoji,
@@ -413,6 +420,7 @@ def initialize_database(sync_constraints=False):
     """
 
     models = [
+        AgentRecord,
         ChatStreams,
         LLMUsage,
         Emoji,
@@ -512,6 +520,7 @@ def sync_field_constraints():
     """
 
     models = [
+        AgentRecord,
         ChatStreams,
         LLMUsage,
         Emoji,

@@ -15,7 +15,6 @@ from src.chat.heart_flow.heartflow_message_processor import HeartFCMessageReceiv
 from src.chat.utils.prompt_builder import Prompt, global_prompt_manager
 from src.plugin_system.core import component_registry, events_manager, global_announcement_manager
 from src.plugin_system.base import BaseCommand, EventType
-from src.person_info.person_info import Person
 
 # 定义日志配置
 
@@ -26,7 +25,12 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..
 logger = get_logger("chat")
 
 
-def _check_ban_words(text: str, userinfo: UserInfo, group_info: Optional[GroupInfo] = None) -> bool:
+def _check_ban_words(
+    text: str,
+    config,
+    userinfo: UserInfo,
+    group_info: Optional[GroupInfo] = None,
+) -> bool:
     """检查消息是否包含过滤词
 
     Args:
@@ -37,7 +41,7 @@ def _check_ban_words(text: str, userinfo: UserInfo, group_info: Optional[GroupIn
     Returns:
         bool: 是否包含过滤词
     """
-    for word in global_config.message_receive.ban_words:
+    for word in getattr(config.message_receive, "ban_words", []):
         if word in text:
             chat_name = group_info.group_name if group_info else "私聊"
             logger.info(f"[{chat_name}]{userinfo.user_nickname}:{text}")
@@ -46,7 +50,12 @@ def _check_ban_words(text: str, userinfo: UserInfo, group_info: Optional[GroupIn
     return False
 
 
-def _check_ban_regex(text: str, userinfo: UserInfo, group_info: Optional[GroupInfo] = None) -> bool:
+def _check_ban_regex(
+    text: str,
+    config,
+    userinfo: UserInfo,
+    group_info: Optional[GroupInfo] = None,
+) -> bool:
     """检查消息是否匹配过滤正则表达式
 
     Args:
@@ -61,7 +70,7 @@ def _check_ban_regex(text: str, userinfo: UserInfo, group_info: Optional[GroupIn
     if text is None or not text:
         return False
 
-    for pattern in global_config.message_receive.ban_msgs_regex:
+    for pattern in getattr(config.message_receive, "ban_msgs_regex", []):
         if re.search(pattern, text):
             chat_name = group_info.group_name if group_info else "私聊"
             logger.info(f"[{chat_name}]{userinfo.user_nickname}:{text}")
@@ -149,8 +158,55 @@ class ChatBot:
     async def handle_notice_message(self, message: MessageRecv):
         if message.message_info.message_id == "notice":
             message.is_notify = True
-            logger.info("notice消息")
-            print(message)
+            logger.debug("notice消息")
+            try:
+                seg = message.message_segment
+                mi = message.message_info
+                sub_type = None
+                scene = None
+                msg_id = None
+                recalled_id = None
+
+                if getattr(seg, "type", None) == "notify" and isinstance(getattr(seg, "data", None), dict):
+                    sub_type = seg.data.get("sub_type")
+                    scene = seg.data.get("scene")
+                    msg_id = seg.data.get("message_id")
+                    recalled = seg.data.get("recalled_user_info") or {}
+                    if isinstance(recalled, dict):
+                        recalled_id = recalled.get("user_id")
+
+                op = mi.user_info
+                gid = mi.group_info.group_id if mi.group_info else None
+
+                # 撤回事件打印；无法获取被撤回者则省略
+                if sub_type == "recall":
+                    op_name = (
+                        getattr(op, "user_cardname", None)
+                        or getattr(op, "user_nickname", None)
+                        or str(getattr(op, "user_id", None))
+                    )
+                    recalled_name = None
+                    try:
+                        if isinstance(recalled, dict):
+                            recalled_name = (
+                                recalled.get("user_cardname")
+                                or recalled.get("user_nickname")
+                                or str(recalled.get("user_id"))
+                            )
+                    except Exception:
+                        pass
+
+                    if recalled_name and str(recalled_id) != str(getattr(op, "user_id", None)):
+                        logger.info(f"{op_name} 撤回了 {recalled_name} 的消息")
+                    else:
+                        logger.info(f"{op_name} 撤回了消息")
+                else:
+                    logger.debug(
+                        f"[notice] sub_type={sub_type} scene={scene} op={getattr(op, 'user_nickname', None)}({getattr(op, 'user_id', None)}) "
+                        f"gid={gid} msg_id={msg_id} recalled={recalled_id}"
+                    )
+            except Exception:
+                logger.info("[notice] (简略) 收到一条通知事件")
 
             return True
 
@@ -191,20 +247,40 @@ class ChatBot:
             # 确保所有任务已启动
             await self._ensure_started()
 
+            message_info_payload = message_data.get("message_info", {})
 
-            if message_data["message_info"].get("group_info") is not None:
-                message_data["message_info"]["group_info"]["group_id"] = str(
-                    message_data["message_info"]["group_info"]["group_id"]
-                )
-            if message_data["message_info"].get("user_info") is not None:
-                message_data["message_info"]["user_info"]["user_id"] = str(
-                    message_data["message_info"]["user_info"]["user_id"]
-                )
-            # print(message_data)
-            # logger.debug(str(message_data))
-            message = MessageRecv(message_data)
-            group_info = message.message_info.group_info
-            user_info = message.message_info.user_info
+            sender_payload = message_info_payload.get("sender_info")
+            if not sender_payload and message_info_payload.get("user_info"):
+                # 兼容旧字段格式，自动补齐 sender_info
+                sender_payload = {
+                    "user_info": message_info_payload.get("user_info") or {},
+                    "group_info": message_info_payload.get("group_info") or {},
+                }
+                message_info_payload["sender_info"] = sender_payload
+
+            if sender_payload:
+                user_section = sender_payload.get("user_info")
+                if isinstance(user_section, dict) and user_section.get("user_id") is not None:
+                    user_section["user_id"] = str(user_section["user_id"])
+                group_section = sender_payload.get("group_info")
+                if isinstance(group_section, dict) and group_section.get("group_id") is not None:
+                    group_section["group_id"] = str(group_section["group_id"])
+
+            receiver_payload = message_info_payload.get("receiver_info")
+            if receiver_payload:
+                receiver_user = receiver_payload.get("user_info")
+                if isinstance(receiver_user, dict) and receiver_user.get("user_id") is not None:
+                    receiver_user["user_id"] = str(receiver_user["user_id"])
+                receiver_group = receiver_payload.get("group_info")
+                if isinstance(receiver_group, dict) and receiver_group.get("group_id") is not None:
+                    receiver_group["group_id"] = str(receiver_group["group_id"])
+
+            message = await MessageRecv.from_dict(message_data)
+            sender_info = message.message_info.sender_info
+            group_info = sender_info.group_info if sender_info else None
+            user_info = sender_info.user_info if sender_info else None
+            if user_info is None:
+                user_info = UserInfo()
 
             continue_flag, modified_message = await events_manager.handle_mai_events(
                 EventType.ON_MESSAGE_PRE_PROCESS, message
@@ -221,13 +297,20 @@ class ChatBot:
             # 处理消息内容，生成纯文本
             await message.process()
 
+            chat = message.chat_stream
+            config = chat.get_effective_config() if chat else global_config
+
+            # 平台层的 @ 检测由底层 is_mentioned_bot_in_message 统一处理；此处不做用户名硬编码匹配
+
             # 过滤检查
             if _check_ban_words(
                 message.processed_plain_text,
+                config,
                 user_info,  # type: ignore
                 group_info,
             ) or _check_ban_regex(
                 message.raw_message,  # type: ignore
+                config,
                 user_info,  # type: ignore
                 group_info,
             ):
@@ -235,16 +318,24 @@ class ChatBot:
 
             get_chat_manager().register_message(message)
 
-            chat = await get_chat_manager().get_or_create_stream(
-                platform=message.message_info.platform,  # type: ignore
-                user_info=user_info,  # type: ignore
-                group_info=group_info,
-            )
-
-            message.update_chat_stream(chat)
+            chat = message.chat_stream
+            if not chat:
+                chat = await get_chat_manager().get_or_create_stream(
+                    platform=message.message_info.platform,  # type: ignore
+                    user_info=user_info,  # type: ignore
+                    group_info=group_info,
+                )
+                message.update_chat_stream(chat)
 
             # if await self.check_ban_content(message):
-            #     logger.warning(f"检测到消息中含有违法，色情，暴力，反动，敏感内容，消息内容：{message.processed_plain_text}，发送者：{message.message_info.user_info.user_nickname}")
+            #     sender_nickname = (message.message_info.sender_info.user_info.user_nickname
+            #                        if message.message_info.sender_info and message.message_info.sender_info.user_info
+            #                        else "")
+            #     logger.warning(
+            #         "检测到消息中含有违法，色情，暴力，反动，敏感内容，消息内容：%s，发送者：%s",
+            #         message.processed_plain_text,
+            #         sender_nickname,
+            #     )
             #     return
 
             # 命令处理 - 使用新插件系统检查并处理命令

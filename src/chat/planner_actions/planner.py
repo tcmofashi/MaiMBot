@@ -28,6 +28,8 @@ from src.plugin_system.core.component_registry import component_registry
 if TYPE_CHECKING:
     from src.common.data_models.info_data_model import TargetPersonInfo
     from src.common.data_models.database_data_model import DatabaseMessages
+    from src.config.config import Config
+    from src.chat.message_receive.chat_stream import ChatStream
 
 logger = get_logger("planner")
 
@@ -134,6 +136,20 @@ class ActionPlanner:
 
         self.plan_log: List[Tuple[str, float, Union[List[ActionPlannerInfo], str]]] = []
 
+    def _get_effective_config(self) -> tuple["Config", Optional["ChatStream"]]:
+        """Return the effective config bound to current chat stream."""
+
+        chat_stream = get_chat_manager().get_stream(self.chat_id)
+        if chat_stream is None:
+            logger.debug(f"{self.log_prefix}未找到聊天流，使用全局配置")
+            return global_config, None
+
+        try:
+            return chat_stream.get_effective_config(), chat_stream
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.warning(f"{self.log_prefix}获取聊天流配置失败，回退到全局配置: {exc}")
+            return global_config, chat_stream
+
     def find_message_by_id(
         self, message_id: str, message_id_list: List[Tuple[str, "DatabaseMessages"]]
     ) -> Optional["DatabaseMessages"]:
@@ -236,10 +252,13 @@ class ActionPlanner:
         """
 
         # 获取聊天上下文
+        config, _ = self._get_effective_config()
+        max_context_size = max(int(config.chat.max_context_size), 1)
+        long_context_limit = max(int(max_context_size * 0.6), 1)
         message_list_before_now = get_raw_msg_before_timestamp_with_chat(
             chat_id=self.chat_id,
             timestamp=time.time(),
-            limit=int(global_config.chat.max_context_size * 0.6),
+            limit=long_context_limit,
         )
         message_id_list: list[Tuple[str, "DatabaseMessages"]] = []
         chat_content_block, message_id_list = build_readable_messages_with_id(
@@ -250,7 +269,8 @@ class ActionPlanner:
             show_actions=True,
         )
 
-        message_list_before_now_short = message_list_before_now[-int(global_config.chat.max_context_size * 0.3) :]
+        short_context_limit = max(int(max_context_size * 0.3), 1)
+        message_list_before_now_short = message_list_before_now[-short_context_limit:]
         chat_content_block_short, message_id_list_short = build_readable_messages_with_id(
             messages=message_list_before_now_short,
             timestamp_mode="normal_no_YMD",
@@ -275,7 +295,7 @@ class ActionPlanner:
             current_available_actions=filtered_actions,
             chat_content_block=chat_content_block,
             message_id_list=message_id_list,
-            interest=global_config.personality.interest,
+            config=config,
         )
 
         # 调用LLM获取决策
@@ -285,6 +305,7 @@ class ActionPlanner:
             filtered_actions=filtered_actions,
             available_actions=available_actions,
             loop_start_time=loop_start_time,
+            config=config,
         )
 
         self.add_plan_log(reasoning, actions)
@@ -303,13 +324,13 @@ class ActionPlanner:
 
     def get_plan_log_str(self) -> str:
         plan_log_str = ""
-        for reasoning, time, content in self.plan_log:
+        for reasoning, timestamp, content in self.plan_log:
             if isinstance(content, list) and all(isinstance(action, ActionPlannerInfo) for action in content):
-                time = datetime.fromtimestamp(time).strftime("%H:%M:%S")
-                plan_log_str += f"{time}:{reasoning}|你使用了{','.join([action.action_type for action in content])}\n"
+                formatted_time = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
+                plan_log_str += f"{formatted_time}:{reasoning}|你使用了{','.join([action.action_type for action in content])}\n"
             else:
-                time = datetime.fromtimestamp(time).strftime("%H:%M:%S")
-                plan_log_str += f"{time}:{content}\n"
+                formatted_time = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
+                plan_log_str += f"{formatted_time}:{content}\n"
                 
         return plan_log_str
 
@@ -321,7 +342,7 @@ class ActionPlanner:
         current_available_actions: Dict[str, ActionInfo],
         message_id_list: List[Tuple[str, "DatabaseMessages"]],
         chat_content_block: str = "",
-        interest: str = "",
+        config: "Config" = global_config,
     ) -> tuple[str, List[Tuple[str, "DatabaseMessages"]]]:
         """构建 Planner LLM 的提示词 (获取模板并填充数据)"""
         try:
@@ -335,12 +356,12 @@ class ActionPlanner:
             action_options_block = await self._build_action_options_block(current_available_actions)
 
             # 其他信息
-            moderation_prompt_block = "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"
+            moderation_prompt_block = getattr(
+                config.personality, "moderation_prompt", None
+            ) or "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"
             time_block = f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            bot_name = global_config.bot.nickname
-            bot_nickname = (
-                f",也有人叫你{','.join(global_config.bot.alias_names)}" if global_config.bot.alias_names else ""
-            )
+            bot_name = config.bot.nickname
+            bot_nickname = f",也有人叫你{','.join(config.bot.alias_names)}" if config.bot.alias_names else ""
             name_block = f"你的名字是{bot_name}{bot_nickname}，请注意哪些是你自己的发言。"
 
             # 获取主规划器模板并填充
@@ -353,8 +374,8 @@ class ActionPlanner:
                 action_options_text=action_options_block,
                 moderation_prompt=moderation_prompt_block,
                 name_block=name_block,
-                interest=interest,
-                plan_style=global_config.personality.plan_style,
+                interest=config.personality.interest,
+                plan_style=config.personality.plan_style,
             )
 
             return prompt, message_id_list
@@ -460,7 +481,8 @@ class ActionPlanner:
         filtered_actions: Dict[str, ActionInfo],
         available_actions: Dict[str, ActionInfo],
         loop_start_time: float,
-    ) -> Tuple[str,List[ActionPlannerInfo]]:
+        config: "Config",
+    ) -> Tuple[str, List[ActionPlannerInfo]]:
         """执行主规划器"""
         llm_content = None
         actions: List[ActionPlannerInfo] = []
@@ -472,7 +494,7 @@ class ActionPlanner:
             logger.info(f"{self.log_prefix}规划器原始提示词: {prompt}")
             logger.info(f"{self.log_prefix}规划器原始响应: {llm_content}")
 
-            if global_config.debug.show_prompt:
+            if config.debug.show_prompt:
                 logger.info(f"{self.log_prefix}规划器原始提示词: {prompt}")
                 logger.info(f"{self.log_prefix}规划器原始响应: {llm_content}")
                 if reasoning_content:

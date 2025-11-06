@@ -22,11 +22,13 @@ class ManagementCommand(BaseCommand):
 
     async def execute(self) -> Tuple[bool, str, bool]:
         # sourcery skip: merge-duplicate-blocks
+        sender_info = self.message.message_info.sender_info if self.message and self.message.message_info else None
+        sender_user = sender_info.user_info if sender_info else None
         if (
             not self.message
             or not self.message.message_info
-            or not self.message.message_info.user_info
-            or str(self.message.message_info.user_info.user_id) not in self.get_config("plugin.permission", [])  # type: ignore
+            or not sender_user
+            or str(sender_user.user_id or "") not in self.get_config("plugin.permission", [])  # type: ignore
         ):
             await self._send_message("你没有权限使用插件管理命令")
             return False, "没有权限", True

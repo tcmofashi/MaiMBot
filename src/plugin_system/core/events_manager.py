@@ -239,22 +239,26 @@ class EventsManager:
         if hasattr(message, "message_info") and message.message_info:
             if message.message_info.platform:
                 transformed_message.message_base_info["platform"] = message.message_info.platform
-            if message.message_info.group_info:
+            sender_info = message.message_info.sender_info
+            if sender_info and sender_info.group_info:
+                group_info = sender_info.group_info
                 transformed_message.is_group_message = True
                 transformed_message.message_base_info.update(
                     {
-                        "group_id": message.message_info.group_info.group_id,
-                        "group_name": message.message_info.group_info.group_name,
+                        "group_id": group_info.group_id,
+                        "group_name": group_info.group_name,
                     }
                 )
-            if message.message_info.user_info:
+
+            if sender_info and sender_info.user_info:
+                user_info = sender_info.user_info
                 if not transformed_message.is_group_message:
                     transformed_message.is_private_message = True
                 transformed_message.message_base_info.update(
                     {
-                        "user_id": message.message_info.user_info.user_id,
-                        "user_cardname": message.message_info.user_info.user_cardname,  # 用户群昵称
-                        "user_nickname": message.message_info.user_info.user_nickname,  # 用户昵称（用户名）
+                        "user_id": user_info.user_id,
+                        "user_cardname": user_info.user_cardname,  # 用户群昵称
+                        "user_nickname": user_info.user_nickname,  # 用户昵称（用户名）
                     }
                 )
 
@@ -346,9 +350,7 @@ class EventsManager:
 
             if not isinstance(result, tuple) or len(result) != 5:
                 if isinstance(result, tuple):
-                    annotated = ", ".join(
-                        f"{name}={val!r}" for name, val in zip(expected_fields, result)
-                    )
+                    annotated = ", ".join(f"{name}={val!r}" for name, val in zip(expected_fields, result, strict=True))
                     actual_desc = f"{len(result)} 个元素 ({annotated})"
                 else:
                     actual_desc = f"非 tuple 类型: {type(result)}"
@@ -379,7 +381,6 @@ class EventsManager:
         except Exception as e:
             logger.error(f"EventHandler {handler.handler_name} 发生异常: {e}", exc_info=True)
             return True, None  # 发生异常时默认不中断其他处理
-
 
     def _task_done_callback(
         self,

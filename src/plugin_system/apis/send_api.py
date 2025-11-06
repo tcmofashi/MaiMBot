@@ -25,7 +25,6 @@ from typing import Optional, Union, Dict, List, TYPE_CHECKING, Tuple
 
 from src.common.logger import get_logger
 from src.common.data_models.message_data_model import ReplyContentType
-from src.config.config import global_config
 from src.chat.message_receive.chat_stream import get_chat_manager
 from src.chat.message_receive.uni_message_sender import UniversalMessageSender
 from src.chat.message_receive.message import MessageSending, MessageRecv
@@ -90,23 +89,23 @@ async def _send_to_target(
         message_id = f"send_api_{int(current_time * 1000)}"
 
         # 构建机器人用户信息
-        bot_user_info = UserInfo(
-            user_id=global_config.bot.qq_account,
-            user_nickname=global_config.bot.nickname,
+        bot_sender_info = target_stream.build_bot_info()
+        bot_user_info = bot_sender_info.user_info or UserInfo(
+            user_id=str(target_stream.agent_id or "default"),
+            user_nickname=bot_sender_info.user_info.user_nickname if bot_sender_info.user_info else "Mai",
             platform=target_stream.platform,
         )
 
         reply_to_platform_id = ""
         anchor_message: Union["MessageRecv", None] = None
         if reply_message:
-            anchor_message = db_message_to_message_recv(reply_message)
-            logger.debug(f"[SendAPI] 找到匹配的回复消息，发送者: {anchor_message.message_info.user_info.user_id}")  # type: ignore
+            anchor_message = await db_message_to_message_recv(reply_message)
+            sender_user = anchor_message.message_info.sender_info.user_info if anchor_message else None
+            logger.debug(f"[SendAPI] 找到匹配的回复消息，发送者: {getattr(sender_user, 'user_id', 'unknown')}")
             if anchor_message:
                 anchor_message.update_chat_stream(target_stream)
-                assert anchor_message.message_info.user_info, "用户信息缺失"
-                reply_to_platform_id = (
-                    f"{anchor_message.message_info.platform}:{anchor_message.message_info.user_info.user_id}"
-                )
+                assert sender_user, "用户信息缺失"
+                reply_to_platform_id = f"{anchor_message.message_info.platform}:{sender_user.user_id}"
 
         # 构建发送消息对象
         bot_message = MessageSending(
@@ -115,7 +114,6 @@ async def _send_to_target(
             bot_user_info=bot_user_info,
             sender_info=target_stream.user_info,
             message_segment=message_segment,
-            display_message=display_message,
             reply=anchor_message,
             is_head=True,
             is_emoji=(message_segment.type == "emoji"),
@@ -146,7 +144,7 @@ async def _send_to_target(
         return False
 
 
-def db_message_to_message_recv(message_obj: "DatabaseMessages") -> MessageRecv:
+async def db_message_to_message_recv(message_obj: "DatabaseMessages") -> MessageRecv:
     """将数据库dict重建为MessageRecv对象
     Args:
         message_dict: 消息字典
@@ -155,42 +153,71 @@ def db_message_to_message_recv(message_obj: "DatabaseMessages") -> MessageRecv:
         Optional[MessageRecv]: 找到的消息，如果没找到则返回None
     """
     # 构建MessageRecv对象
-    user_info = {
-        "platform": message_obj.user_info.platform or "",
-        "user_id": message_obj.user_info.user_id or "",
-        "user_nickname": message_obj.user_info.user_nickname or "",
-        "user_cardname": message_obj.user_info.user_cardname or "",
+    sender_user = {
+        "platform": getattr(message_obj, "sender_user_platform", None) or message_obj.user_info.platform,
+        "user_id": getattr(message_obj, "sender_user_id", None) or message_obj.user_info.user_id,
+        "user_nickname": getattr(message_obj, "sender_user_nickname", None) or message_obj.user_info.user_nickname,
+        "user_cardname": getattr(message_obj, "sender_user_cardname", None) or message_obj.user_info.user_cardname,
     }
 
-    group_info = {}
-    if message_obj.chat_info.group_info:
-        group_info = {
-            "platform": message_obj.chat_info.group_info.group_platform or "",
-            "group_id": message_obj.chat_info.group_info.group_id or "",
-            "group_name": message_obj.chat_info.group_info.group_name or "",
-        }
+    sender_group = {
+        "platform": getattr(message_obj, "sender_group_platform", None)
+        or (message_obj.group_info.group_platform if message_obj.group_info else None),
+        "group_id": getattr(message_obj, "sender_group_id", None)
+        or (message_obj.group_info.group_id if message_obj.group_info else None),
+        "group_name": getattr(message_obj, "sender_group_name", None)
+        or (message_obj.group_info.group_name if message_obj.group_info else None),
+    }
 
-    format_info = {"content_format": "", "accept_format": ""}
-    template_info = {"template_items": {}}
+    receiver_user = {
+        "platform": getattr(message_obj, "receiver_user_platform", None),
+        "user_id": getattr(message_obj, "receiver_user_id", None),
+        "user_nickname": getattr(message_obj, "receiver_user_nickname", None),
+        "user_cardname": getattr(message_obj, "receiver_user_cardname", None),
+    }
+
+    receiver_group = {
+        "platform": getattr(message_obj, "receiver_group_platform", None),
+        "group_id": getattr(message_obj, "receiver_group_id", None),
+        "group_name": getattr(message_obj, "receiver_group_name", None),
+    }
+
+    def _strip_empty(data: Dict[str, Optional[str]]) -> Dict[str, Optional[str]]:
+        return {k: v for k, v in data.items() if v not in (None, "")}
+
+    sender_info = {
+        "user_info": _strip_empty(sender_user),
+        "group_info": _strip_empty(sender_group),
+    }
+    receiver_info = {
+        "user_info": _strip_empty(receiver_user),
+        "group_info": _strip_empty(receiver_group),
+    }
 
     message_info = {
         "platform": message_obj.chat_info.platform or "",
         "message_id": message_obj.message_id,
         "time": message_obj.time,
-        "group_info": group_info,
-        "user_info": user_info,
         "additional_config": message_obj.additional_config,
-        "format_info": format_info,
-        "template_info": template_info,
+    }
+    if sender_info["user_info"] or sender_info["group_info"]:
+        message_info["sender_info"] = sender_info
+    if receiver_info["user_info"] or receiver_info["group_info"]:
+        message_info["receiver_info"] = receiver_info
+
+    message_segment = {
+        "type": "text",
+        "data": message_obj.processed_plain_text or "",
     }
 
-    message_dict_recv = {
-        "message_info": message_info,
-        "raw_message": message_obj.processed_plain_text,
-        "processed_plain_text": message_obj.processed_plain_text,
-    }
-
-    return MessageRecv(message_dict_recv)
+    return await MessageRecv.from_dict(
+        {
+            "message_info": message_info,
+            "message_segment": message_segment,
+            "raw_message": message_obj.processed_plain_text,
+            "processed_plain_text": message_obj.processed_plain_text,
+        }
+    )
 
 
 # =============================================================================

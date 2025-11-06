@@ -19,6 +19,7 @@ from src.chat.message_receive.chat_stream import ChatStream
 from src.chat.utils.utils import process_llm_response
 from src.chat.replyer.replyer_manager import replyer_manager
 from src.plugin_system.base.component_types import ActionInfo
+from src.config.config import global_config
 
 if TYPE_CHECKING:
     from src.common.data_models.info_data_model import ActionPlannerInfo
@@ -85,9 +86,9 @@ async def generate_reply(
     reply_reason: str = "",
     available_actions: Optional[Dict[str, ActionInfo]] = None,
     chosen_actions: Optional[List["ActionPlannerInfo"]] = None,
-    enable_tool: bool = False,
-    enable_splitter: bool = True,
-    enable_chinese_typo: bool = True,
+    enable_tool: Optional[bool] = None,
+    enable_splitter: Optional[bool] = None,
+    enable_chinese_typo: Optional[bool] = None,
     request_type: str = "generator_api",
     from_plugin: bool = True,
 ) -> Tuple[bool, Optional["LLMGenerationDataModel"]]:
@@ -120,6 +121,16 @@ async def generate_reply(
             logger.error("[GeneratorAPI] 无法获取回复器")
             return False, None
 
+        cfg = getattr(replyer, "config", global_config)
+        try:
+            cfg = replyer.config  # type: ignore[assignment]
+        except Exception:
+            cfg = global_config
+
+        tool_enabled = cfg.tool.enable_tool if enable_tool is None else enable_tool
+        splitter_enabled = cfg.response_splitter.enable if enable_splitter is None else enable_splitter
+        typo_enabled = cfg.chinese_typo.enable if enable_chinese_typo is None else enable_chinese_typo
+
         if not extra_info and action_data:
             extra_info = action_data.get("extra_info", "")
 
@@ -131,7 +142,7 @@ async def generate_reply(
             extra_info=extra_info,
             available_actions=available_actions,
             chosen_actions=chosen_actions,
-            enable_tool=enable_tool,
+            enable_tool=tool_enabled,
             reply_message=reply_message,
             reply_reason=reply_reason,
             from_plugin=from_plugin,
@@ -142,7 +153,7 @@ async def generate_reply(
             return False, None
         reply_set: Optional[ReplySetModel] = None
         if content := llm_response.content:
-            reply_set = process_human_text(content, enable_splitter, enable_chinese_typo)
+            reply_set = process_human_text(content, splitter_enabled, typo_enabled, cfg)
         llm_response.reply_set = reply_set
         logger.debug(f"[GeneratorAPI] 回复生成成功，生成了 {len(reply_set) if reply_set else 0} 个回复项")
 
@@ -165,8 +176,8 @@ async def rewrite_reply(
     chat_stream: Optional[ChatStream] = None,
     reply_data: Optional[Dict[str, Any]] = None,
     chat_id: Optional[str] = None,
-    enable_splitter: bool = True,
-    enable_chinese_typo: bool = True,
+    enable_splitter: Optional[bool] = None,
+    enable_chinese_typo: Optional[bool] = None,
     raw_reply: str = "",
     reason: str = "",
     reply_to: str = "",
@@ -196,6 +207,15 @@ async def rewrite_reply(
             logger.error("[GeneratorAPI] 无法获取回复器")
             return False, None
 
+        cfg = getattr(replyer, "config", global_config)
+        try:
+            cfg = replyer.config  # type: ignore[assignment]
+        except Exception:
+            cfg = global_config
+
+        splitter_enabled = cfg.response_splitter.enable if enable_splitter is None else enable_splitter
+        typo_enabled = cfg.chinese_typo.enable if enable_chinese_typo is None else enable_chinese_typo
+
         logger.info("[GeneratorAPI] 开始重写回复")
 
         # 如果参数缺失，从reply_data中获取
@@ -212,7 +232,7 @@ async def rewrite_reply(
         )
         reply_set: Optional[ReplySetModel] = None
         if success and llm_response and (content := llm_response.content):
-            reply_set = process_human_text(content, enable_splitter, enable_chinese_typo)
+            reply_set = process_human_text(content, splitter_enabled, typo_enabled, cfg)
         llm_response.reply_set = reply_set
         if success:
             logger.info(f"[GeneratorAPI] 重写回复成功，生成了 {len(reply_set) if reply_set else 0} 个回复项")
@@ -229,7 +249,12 @@ async def rewrite_reply(
         return False, None
 
 
-def process_human_text(content: str, enable_splitter: bool, enable_chinese_typo: bool) -> Optional[ReplySetModel]:
+def process_human_text(
+    content: str,
+    enable_splitter: bool,
+    enable_chinese_typo: bool,
+    config=global_config,
+) -> Optional[ReplySetModel]:
     """将文本处理为更拟人化的文本
 
     Args:
@@ -241,7 +266,12 @@ def process_human_text(content: str, enable_splitter: bool, enable_chinese_typo:
         raise ValueError("content 必须是字符串类型")
     try:
         reply_set = ReplySetModel()
-        processed_response = process_llm_response(content, enable_splitter, enable_chinese_typo)
+        processed_response = process_llm_response(
+            content,
+            enable_splitter,
+            enable_chinese_typo,
+            config=config,
+        )
 
         for text in processed_response:
             reply_set.add_text_content(text)

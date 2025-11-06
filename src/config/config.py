@@ -52,10 +52,35 @@ logger = get_logger("config")
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
 TEMPLATE_DIR = os.path.join(PROJECT_ROOT, "template")
+AGENT_CONFIG_DIR = os.path.join(CONFIG_DIR, "agents")
+AGENT_TEMPLATE_DIR = os.path.join(TEMPLATE_DIR, "agents")
 
 # 考虑到，实际上配置文件中的mai_version是不会自动更新的,所以采用硬编码
 # 对该字段的更新，请严格参照语义化版本规范：https://semver.org/lang/zh-CN/
 MMC_VERSION = "0.11.0-snapshot.2"
+
+
+def ensure_agent_config_directory() -> None:
+    """Ensure the agent configuration directory exists with default templates."""
+
+    os.makedirs(AGENT_CONFIG_DIR, exist_ok=True)
+
+    if not os.path.isdir(AGENT_TEMPLATE_DIR):
+        return
+
+    existing_files = [name for name in os.listdir(AGENT_CONFIG_DIR) if name.endswith(".toml")]
+    if existing_files:
+        return
+
+    template_files = [name for name in os.listdir(AGENT_TEMPLATE_DIR) if name.endswith(".toml")]
+    for filename in template_files:
+        src_path = os.path.join(AGENT_TEMPLATE_DIR, filename)
+        dst_path = os.path.join(AGENT_CONFIG_DIR, filename)
+        try:
+            shutil.copy2(src_path, dst_path)
+            logger.info(f"已创建默认的 Agent 配置文件: {dst_path}")
+        except Exception as exc:
+            logger.warning(f"复制默认 Agent 配置文件失败 ({src_path}): {exc}")
 
 
 def get_key_comment(toml_table, key):
@@ -452,6 +477,8 @@ def api_ada_load_config(config_path: str) -> APIAdapterConfig:
 
 
 # 获取配置文件路径
+ensure_agent_config_directory()
+
 logger.info(f"MaiCore当前版本: {MMC_VERSION}")
 update_config()
 update_model_config()

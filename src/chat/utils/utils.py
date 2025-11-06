@@ -4,14 +4,11 @@ import time
 import jieba
 import json
 import ast
-import numpy as np
 
-from collections import Counter
 from typing import Optional, Tuple, List, TYPE_CHECKING
 
 from src.common.logger import get_logger
 from src.common.data_models.database_data_model import DatabaseMessages
-from src.common.message_repository import find_messages, count_messages
 from src.config.config import global_config, model_config
 from src.chat.message_receive.message import MessageRecv
 from src.chat.message_receive.chat_stream import get_chat_manager
@@ -297,12 +294,17 @@ def random_remove_punctuation(text: str) -> str:
     return result
 
 
-def process_llm_response(text: str, enable_splitter: bool = True, enable_chinese_typo: bool = True) -> list[str]:
-    if not global_config.response_post_process.enable_response_post_process:
+def process_llm_response(
+    text: str,
+    enable_splitter: bool = True,
+    enable_chinese_typo: bool = True,
+    config=global_config,
+) -> list[str]:
+    if not config.response_post_process.enable_response_post_process:
         return [text]
 
     # 先保护颜文字
-    if global_config.response_splitter.enable_kaomoji_protection:
+    if config.response_splitter.enable_kaomoji_protection:
         protected_text, kaomoji_mapping = protect_kaomoji(text)
         logger.debug(f"保护颜文字后的文本: {protected_text}")
     else:
@@ -320,28 +322,28 @@ def process_llm_response(text: str, enable_splitter: bool = True, enable_chinese
     logger.debug(f"{text}去除括号处理后的文本: {cleaned_text}")
 
     # 对清理后的文本进行进一步处理
-    max_length = global_config.response_splitter.max_length * 2
-    max_sentence_num = global_config.response_splitter.max_sentence_num
+    max_length = config.response_splitter.max_length * 2
+    max_sentence_num = config.response_splitter.max_sentence_num
     # 如果基本上是中文，则进行长度过滤
     if get_western_ratio(cleaned_text) < 0.1 and len(cleaned_text) > max_length:
         logger.warning(f"回复过长 ({len(cleaned_text)} 字符)，返回默认回复")
         return ["懒得说"]
 
     typo_generator = ChineseTypoGenerator(
-        error_rate=global_config.chinese_typo.error_rate,
-        min_freq=global_config.chinese_typo.min_freq,
-        tone_error_rate=global_config.chinese_typo.tone_error_rate,
-        word_replace_rate=global_config.chinese_typo.word_replace_rate,
+        error_rate=config.chinese_typo.error_rate,
+        min_freq=config.chinese_typo.min_freq,
+        tone_error_rate=config.chinese_typo.tone_error_rate,
+        word_replace_rate=config.chinese_typo.word_replace_rate,
     )
 
-    if global_config.response_splitter.enable and enable_splitter:
+    if config.response_splitter.enable and enable_splitter:
         split_sentences = split_into_sentences_w_remove_punctuation(cleaned_text)
     else:
         split_sentences = [cleaned_text]
 
     sentences: List[str] = []
     for sentence in split_sentences:
-        if global_config.chinese_typo.enable and enable_chinese_typo:
+        if config.chinese_typo.enable and enable_chinese_typo:
             typoed_text, typo_corrections = typo_generator.create_typo_sentence(sentence)
             sentences.append(typoed_text)
             if typo_corrections:
@@ -351,14 +353,14 @@ def process_llm_response(text: str, enable_splitter: bool = True, enable_chinese
 
     if len(sentences) > max_sentence_num:
         logger.warning(f"分割后消息数量过多 ({len(sentences)} 条)，返回默认回复")
-        return [f"{global_config.bot.nickname}不知道哦"]
+        return [f"{config.bot.nickname}不知道哦"]
 
     # if extracted_contents:
     #     for content in extracted_contents:
     #         sentences.append(content)
 
     # 在所有句子处理完毕后，对包含占位符的列表进行恢复
-    if global_config.response_splitter.enable_kaomoji_protection:
+    if config.response_splitter.enable_kaomoji_protection:
         sentences = recover_kaomoji(sentences, kaomoji_mapping)
 
     return sentences

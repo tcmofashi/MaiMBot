@@ -3,6 +3,8 @@ import json
 import traceback
 from typing import Union
 
+from maim_message import SenderInfo, ReceiverInfo, UserInfo
+
 from src.common.database.database_model import Messages, Images
 from src.common.logger import get_logger
 from .chat_stream import ChatStream
@@ -86,7 +88,19 @@ class MessageStorage:
                 selected_expressions = ""
 
             chat_info_dict = chat_stream.to_dict()
-            user_info_dict = message.message_info.user_info.to_dict()  # type: ignore
+
+            sender_info = message.message_info.sender_info or SenderInfo()
+            sender_user = sender_info.user_info or UserInfo()
+            sender_group = sender_info.group_info
+
+            receiver_info = message.message_info.receiver_info or ReceiverInfo()
+            receiver_user = receiver_info.user_info
+            receiver_group = receiver_info.group_info
+
+            sender_user_dict = sender_user.to_dict()
+            sender_group_dict = sender_group.to_dict() if sender_group else {}
+            receiver_user_dict = receiver_user.to_dict() if receiver_user else {}
+            receiver_group_dict = receiver_group.to_dict() if receiver_group else {}
 
             # message_id 现在是 TextField，直接使用字符串值
             msg_id = message.message_info.message_id
@@ -116,11 +130,25 @@ class MessageStorage:
                 chat_info_group_name=group_info_from_chat.get("group_name"),
                 chat_info_create_time=float(chat_info_dict.get("create_time", 0.0)),
                 chat_info_last_active_time=float(chat_info_dict.get("last_active_time", 0.0)),
-                # Flattened user_info (message sender)
-                user_platform=user_info_dict.get("platform"),
-                user_id=user_info_dict.get("user_id"),
-                user_nickname=user_info_dict.get("user_nickname"),
-                user_cardname=user_info_dict.get("user_cardname"),
+                # Flattened sender info
+                user_platform=sender_user_dict.get("platform"),
+                user_id=sender_user_dict.get("user_id"),
+                user_nickname=sender_user_dict.get("user_nickname"),
+                user_cardname=sender_user_dict.get("user_cardname"),
+                sender_user_platform=sender_user_dict.get("platform"),
+                sender_user_id=sender_user_dict.get("user_id"),
+                sender_user_nickname=sender_user_dict.get("user_nickname"),
+                sender_user_cardname=sender_user_dict.get("user_cardname"),
+                sender_group_platform=sender_group_dict.get("platform"),
+                sender_group_id=sender_group_dict.get("group_id"),
+                sender_group_name=sender_group_dict.get("group_name"),
+                receiver_user_platform=receiver_user_dict.get("platform"),
+                receiver_user_id=receiver_user_dict.get("user_id"),
+                receiver_user_nickname=receiver_user_dict.get("user_nickname"),
+                receiver_user_cardname=receiver_user_dict.get("user_cardname"),
+                receiver_group_platform=receiver_group_dict.get("platform"),
+                receiver_group_id=receiver_group_dict.get("group_id"),
+                receiver_group_name=receiver_group_dict.get("group_name"),
                 # Text content
                 processed_plain_text=filtered_processed_plain_text,
                 display_message=filtered_display_message,

@@ -1,0 +1,17 @@
+agent_id = "default"
+name = "Default Agent"
+description = "Default agent configuration"
+tags = ["default"]
+
+[persona]
+personality = "I am Mai, your helpful virtual assistant."
+reply_style = ""
+interest = ""
+plan_style = ""
+visual_style = ""
+private_plan_style = ""
+states = []
+state_probability = 0.0
+
+[bot_overrides]
+nickname = "Mai"

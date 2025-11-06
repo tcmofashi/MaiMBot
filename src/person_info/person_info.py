@@ -6,13 +6,34 @@ import random
 import math
 
 from json_repair import repair_json
-from typing import Union, Optional
+from typing import Union, Optional, TYPE_CHECKING
 
 from src.common.logger import get_logger
 from src.common.database.database import db
 from src.common.database.database_model import PersonInfo
 from src.llm_models.utils_model import LLMRequest
 from src.config.config import global_config, model_config
+
+if TYPE_CHECKING:  # pragma: no cover
+    from src.agent.agent import Agent
+def _resolve_agent_definition(agent_id: Optional[str]) -> Optional["Agent"]:
+    """Return registered Agent instance for the given identifier if available."""
+
+    if not agent_id:
+        return None
+    try:
+        from src.agent.registry import get_agent as registry_get_agent
+
+        agent = registry_get_agent(agent_id)
+        if agent is not None:
+            return agent
+
+        from src.agent.manager import get_agent_manager
+
+        manager = get_agent_manager()
+        return manager.get_agent(agent_id)
+    except Exception:
+        return None
 
 
 logger = get_logger("person_info")
@@ -217,6 +238,24 @@ class Person:
             self.platform = platform
             self.nickname = global_config.bot.nickname
             self.person_name = global_config.bot.nickname
+            return
+
+        agent = _resolve_agent_definition(user_id)
+        if agent is not None:
+            resolved_platform = platform or global_config.bot.platform
+            resolved_user_id = str(user_id)
+            self.is_known = True
+            self.person_id = get_person_id(resolved_platform, resolved_user_id)
+            self.user_id = resolved_user_id
+            self.platform = resolved_platform
+            nickname = agent.name or global_config.bot.nickname
+            self.nickname = nickname
+            self.person_name = nickname
+            self.name_reason = "Agent persona"
+            self.know_times = 1
+            self.know_since = time.time()
+            self.last_know = self.know_since
+            self.memory_points = []
             return
 
         self.user_id = ""

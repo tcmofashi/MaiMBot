@@ -108,21 +108,16 @@ class BaseAction(ABC):
         self.is_group = False
         self.target_id = None
 
-
         self.group_id = (
-            str(self.action_message.chat_info.group_info.group_id)
-            if self.action_message.chat_info.group_info
-            else None
+            str(self.action_message.chat_info.group_info.group_id) if self.action_message.chat_info.group_info else None
         )
         self.group_name = (
-            self.action_message.chat_info.group_info.group_name
-            if self.action_message.chat_info.group_info
-            else None
+            self.action_message.chat_info.group_info.group_name if self.action_message.chat_info.group_info else None
         )
 
         self.user_id = str(self.action_message.user_info.user_id)
         self.user_nickname = self.action_message.user_info.user_nickname
-        
+
         if self.group_id:
             self.is_group = True
             self.target_id = self.group_id
@@ -131,7 +126,6 @@ class BaseAction(ABC):
             self.is_group = False
             self.target_id = self.user_id
             self.log_prefix = f"[{self.user_nickname} 的 私聊]"
-
 
         logger.debug(
             f"{self.log_prefix} 聊天信息: 类型={'群聊' if self.is_group else '私聊'}, 平台={self.platform}, 目标={self.target_id}"
@@ -448,7 +442,6 @@ class BaseAction(ABC):
 
             wait_start_time = asyncio.get_event_loop().time()
             while True:
-
                 # 检查新消息
                 current_time = time.time()
                 new_message_count = message_api.count_new_messages(

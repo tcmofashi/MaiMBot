@@ -1,7 +1,7 @@
 import re
 import traceback
 
-from typing import Tuple, TYPE_CHECKING
+from maim_message import UserInfo
 
 from src.chat.message_receive.message import MessageRecv
 from src.chat.message_receive.storage import MessageStorage
@@ -12,34 +12,7 @@ from src.common.logger import get_logger
 from src.person_info.person_info import Person
 from src.common.database.database_model import Images
 
-if TYPE_CHECKING:
-    from src.chat.heart_flow.heartFC_chat import HeartFChatting
-
 logger = get_logger("chat")
-
-
-async def _calculate_interest(message: MessageRecv) -> Tuple[float, list[str]]:
-    """计算消息的兴趣度
-
-    Args:
-        message: 待处理的消息对象
-
-    Returns:
-        Tuple[float, bool, list[str]]: (兴趣度, 是否被提及, 关键词)
-    """
-    if message.is_picid or message.is_emoji:
-        return 0.0, []
-
-    is_mentioned, is_at, reply_probability_boost = is_mentioned_bot_in_message(message)
-    # interested_rate = 0.0
-    keywords = []
-
-    message.interest_value = 1
-    message.is_mentioned = is_mentioned
-    message.is_at = is_at
-    message.reply_probability_boost = reply_probability_boost
-
-    return 1, keywords
 
 
 class HeartFCMessageReceiver:
@@ -64,7 +37,8 @@ class HeartFCMessageReceiver:
         """
         try:
             # 1. 消息解析与初始化
-            userinfo = message.message_info.user_info
+            sender_info = message.message_info.sender_info
+            userinfo = sender_info.user_info if sender_info and sender_info.user_info else UserInfo()
             chat = message.chat_stream
 
             # 2. 兴趣度计算与更新
@@ -102,12 +76,13 @@ class HeartFCMessageReceiver:
             # if not processed_plain_text:
             # print(message)
 
-            logger.info(f"[{mes_name}]{userinfo.user_nickname}:{processed_plain_text}")  # type: ignore
+            nickname = userinfo.user_nickname or ""
+            logger.info(f"[{mes_name}]{nickname}:{processed_plain_text}")
 
             _ = Person.register_person(
                 platform=message.message_info.platform,  # type: ignore
-                user_id=message.message_info.user_info.user_id,  # type: ignore
-                nickname=userinfo.user_nickname,  # type: ignore
+                user_id=userinfo.user_id,  # type: ignore
+                nickname=nickname,  # type: ignore
             )
 
         except Exception as e:

@@ -8,6 +8,7 @@ from src.chat.utils.statistic import OnlineTimeRecordTask, StatisticOutputTask
 from src.chat.emoji_system.emoji_manager import get_emoji_manager
 from src.chat.message_receive.chat_stream import get_chat_manager
 from src.config.config import global_config
+from src.agent.manager import get_agent_manager
 from src.chat.message_receive.bot import chat_bot
 from src.common.logger import get_logger
 from src.common.server import get_global_server, Server
@@ -40,6 +41,11 @@ class MainSystem:
     async def initialize(self):
         """初始化系统组件"""
         logger.info(f"正在唤醒{global_config.bot.nickname}......")
+
+        agent_manager = get_agent_manager()
+        agent_count = agent_manager.initialize()
+        if agent_count:
+            logger.info("已加载 %d 个 Agent 配置", agent_count)
 
         # 其他初始化任务
         await asyncio.gather(self._init_components())
@@ -93,7 +99,7 @@ class MainSystem:
         asyncio.create_task(get_chat_manager()._auto_save_task())
 
         logger.info("聊天管理器初始化成功")
-        
+
         # 添加记忆管理任务
         await async_task_manager.add_task(MemoryManagementTask())
         logger.info("记忆管理任务已启动")
