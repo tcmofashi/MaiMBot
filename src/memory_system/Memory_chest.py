@@ -12,6 +12,8 @@ from src.config.config import global_config
 from src.plugin_system.apis.message_api import build_readable_messages
 from src.plugin_system.apis.message_api import get_raw_msg_by_timestamp_with_chat
 from json_repair import repair_json
+from src.memory_system.questions import global_conflict_tracker
+
 from .memory_utils import (
     find_best_matching_memory,
     check_title_exists_fuzzy,
@@ -256,23 +258,33 @@ class MemoryChest:
             format_section = "\n".join(selected_lines) + "\n......(不要包含中括号)"
 
             prompt = f"""
-以下是你的记忆内容和新的聊天记录，请你将他们整合和修改：
-记忆内容：
-<memory_content>
-{current_running_content}
-</memory_content>
+以下是一段你参与的聊天记录，请你在其中总结出记忆：
 
 <聊天记录>
 {message_str}
 </聊天记录>
-聊天记录中可能包含有效信息，也可能信息密度很低，请你根据聊天记录中的信息，修改<part1>中的内容与<part2>中的内容
+聊天记录中可能包含有效信息，也可能信息密度很低，请你根据聊天记录中的信息，总结出记忆内容
 --------------------------------
-请将上面的新聊天记录内的有用的信息进行整合到现有的记忆中
+对[图片]的处理：
+1.除非与文本有关，不要将[图片]的内容整合到记忆中
+2.如果图片与某个概念相关，将图片中的关键内容也整合到记忆中，不要写入图片原文，例如：
+
+聊天记录（与图片有关）：
+用户说：[图片1：这是一个黄色的龙形状玩偶，被一只手拿着。]
+用户说：这个玩偶看起来很可爱，是我新买的奶龙
+总结的记忆内容：
+黄色的龙形状玩偶 是 奶龙
+
+聊天记录（概念与图片无关）：
+用户说：[图片1：这是一个台电脑，屏幕上显示了某种游戏。]
+用户说：使命召唤今天发售了新一代，有没有人玩
+总结的记忆内容：
+使命召唤新一代 是 最新发售的游戏
+
 请主要关注概念和知识或者时效性较强的信息！！，而不是聊天的琐事
 1.不要关注诸如某个用户做了什么，说了什么，不要关注某个用户的行为，而是关注其中的概念性信息
 2.概念要求精确，不啰嗦，像科普读物或教育课本那样
-3.如果有图片，请只关注图片和文本结合的知识和概念性内容
-4.记忆为一段纯文本，逻辑清晰，指出概念的含义，并说明关系
+3.记忆为一段纯文本，逻辑清晰，指出概念的含义，并说明关系
 
  记忆内容的格式，你必须仿照下面的格式，但不一定全部使用:
 {format_section}
@@ -293,7 +305,7 @@ class MemoryChest:
 
             print(f"prompt: {prompt}\n记忆仓库构建运行内容: {running_content}")
 
-            # 如果有chat_id，更新对应的running_content
+            # 直接保存：每次构建后立即入库，并刷新时间戳窗口
             if chat_id and running_content:
                 await self._save_to_database_and_clear(chat_id, running_content)
 
@@ -392,7 +404,7 @@ class MemoryChest:
             str: 选择的标题
         """
         # 获取所有标题并构建格式化字符串（排除锁定的记忆）
-        titles = self.get_all_titles(exclude_locked=True)
+        titles = get_all_titles(exclude_locked=True)
         formatted_titles = ""
         for title in titles:
             formatted_titles += f"{title}\n"
@@ -414,7 +426,6 @@ class MemoryChest:
         title, (reasoning_content, model_name, tool_calls) = await self.LLMRequest.generate_response_async(prompt)
 
         # 根据 title 获取 titles 里的对应项
-        titles = self.get_all_titles()
         selected_title = None
 
         # 使用模糊查找匹配标题
@@ -489,7 +500,7 @@ class MemoryChest:
                 MemoryChestModel.create(title=title.strip(), content=content, chat_id=chat_id)
                 logger.info(f"已保存记忆仓库内容，标题: {title.strip()}, chat_id: {chat_id}")
 
-                # 清空对应chat_id的running_content
+                # 清空内容并刷新时间戳，但保留条目用于增量计算
                 if chat_id in self.running_content_list:
                     current_time = time.time()
                     self.running_content_list[chat_id] = {
@@ -506,13 +517,14 @@ class MemoryChest:
 
     async def choose_merge_target(self, memory_title: str, chat_id: str = None) -> tuple[list[str], list[str]]:
         """
-        选择与给定记忆标题相关的记忆目标
+        选择与给定记忆标题相关的记忆目标（基于文本相似度）
 
         Args:
             memory_title: 要匹配的记忆标题
+            chat_id: 聊天ID，用于筛选同chat_id的记忆
 
         Returns:
-            list[str]: 选中的记忆内容列表
+            tuple[list[str], list[str]]: (选中的记忆标题列表, 选中的记忆内容列表)
         """
         try:
             if not chat_id:
@@ -757,9 +769,6 @@ class MemoryChest:
             # 处理part2：独立记录冲突内容（无论part1是否为空）
             if part2_content and part2_content.strip() != "none":
                 logger.info(f"合并记忆part2记录冲突内容: {len(part2_content)} 字符")
-                # 导入冲突追踪器
-                from src.curiousity.questions import global_conflict_tracker
-
                 # 记录冲突到数据库
                 await global_conflict_tracker.record_memory_merge_conflict(part2_content, chat_id)
 
@@ -793,7 +802,23 @@ class MemoryChest:
         try:
             prompt = f"""
 请为以下内容生成一个描述全面的标题，要求描述内容的主要概念和事件：
+例如：
+<example>
+标题：达尔文的自然选择理论
+内容：达尔文的自然选择是生物进化理论的重要组成部分，它解释了生物进化过程中的自然选择机制。
+</example>
+<example>
+标题：麦麦的禁言插件和支持版本
+内容：
+麦麦的禁言插件是一款能够实现禁言的插件
+麦麦的禁言插件可能不支持0.10.2
+MutePlugin 是禁言插件的名称
+</example>
+
+
+需要对以下内容生成标题：
 {merged_content}
+
 
 标题不要分点，不要换行，不要输出其他内容，不要浮夸，以白话简洁的风格输出标题
 请只输出标题，不要输出其他内容：

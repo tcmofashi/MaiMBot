@@ -7,6 +7,7 @@ import re
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from src.memory_system.Memory_chest import global_memory_chest
+from src.memory_system.questions import global_conflict_tracker
 from src.common.logger import get_logger
 from src.common.data_models.database_data_model import DatabaseMessages
 from src.common.data_models.info_data_model import ActionPlannerInfo
@@ -25,7 +26,8 @@ from src.chat.utils.chat_message_builder import (
     get_raw_msg_before_timestamp_with_chat,
     replace_user_references,
 )
-from src.chat.express.expression_selector import expression_selector
+from src.express.expression_selector import expression_selector
+from src.plugin_system.apis.message_api import translate_pid_to_description
 
 # from src.memory_system.memory_activator import MemoryActivator
 from src.person_info.person_info import Person
@@ -78,6 +80,7 @@ class DefaultReplyer:
         from_plugin: bool = True,
         stream_id: Optional[str] = None,
         reply_message: Optional[DatabaseMessages] = None,
+        reply_time_point: Optional[float] = time.time(),
     ) -> Tuple[bool, LLMGenerationDataModel]:
         # sourcery skip: merge-nested-ifs
         """
@@ -111,6 +114,7 @@ class DefaultReplyer:
                     enable_tool=enable_tool,
                     reply_message=reply_message,
                     reply_reason=reply_reason,
+                    reply_time_point=reply_time_point,
                 )
             llm_response.prompt = prompt
             llm_response.selected_expressions = selected_expressions
@@ -247,8 +251,8 @@ class DefaultReplyer:
             return "", []
         style_habits = []
         # 使用从处理器传来的选中表达方式
-        # LLM模式：调用LLM选择5-10个，然后随机选5个
-        selected_expressions, selected_ids = await expression_selector.select_suitable_expressions_llm(
+        # 根据配置模式选择表达方式：exp_model模式直接使用模型预测，classic模式使用LLM选择
+        selected_expressions, selected_ids = await expression_selector.select_suitable_expressions(
             self.chat_stream.stream_id, chat_history, max_num=8, target_message=target
         )
 
@@ -557,7 +561,7 @@ class DefaultReplyer:
                     show_actions=True,
                 )
                 core_dialogue_prompt = f"""--------------------------------
-这是你和{sender}的对话，你们正在交流中：
+这是上述中你和{sender}的对话摘要，内容从上面的对话中截取，便于你理解：
 {core_dialogue_prompt_str}
 --------------------------------
 """
@@ -646,6 +650,7 @@ class DefaultReplyer:
         available_actions: Optional[Dict[str, ActionInfo]] = None,
         chosen_actions: Optional[List[ActionPlannerInfo]] = None,
         enable_tool: bool = True,
+        reply_time_point: Optional[float] = time.time(),
     ) -> Tuple[str, List[int]]:
         """
         构建回复器上下文
@@ -740,6 +745,7 @@ class DefaultReplyer:
             self._time_and_run_task(self.build_actions_prompt(available_actions, chosen_actions), "actions_info"),
             self._time_and_run_task(self.build_personality_prompt(), "personality_prompt"),
             self._time_and_run_task(self.build_mood_state_prompt(), "mood_state_prompt"),
+            self._time_and_run_task(self.build_question_block(), "question_block"),
         )
 
         # 任务名称中英文映射
@@ -753,6 +759,7 @@ class DefaultReplyer:
             "actions_info": "动作信息",
             "personality_prompt": "人格信息",
             "mood_state_prompt": "情绪状态",
+            "question_block": "问题",
         }
 
         # 处理结果
@@ -768,7 +775,7 @@ class DefaultReplyer:
                 continue
 
             timing_logs.append(f"{chinese_name}: {duration:.1f}s")
-            if duration > 8:
+            if duration > 12:
                 logger.warning(f"回复生成前信息获取耗时过长: {chinese_name} 耗时: {duration:.1f}s，请使用更快的模型")
         logger.info(f"回复准备: {'; '.join(timing_logs)}; {almost_zero_str} <0.1s")
 
@@ -782,6 +789,7 @@ class DefaultReplyer:
         prompt_info: str = results_dict["prompt_info"]  # 直接使用格式化后的结果
         actions_info: str = results_dict["actions_info"]
         personality_prompt: str = results_dict["personality_prompt"]
+        question_block: str = results_dict["question_block"]
         keywords_reaction_prompt = await self.build_keywords_reaction_prompt(target)
         mood_state_prompt: str = results_dict["mood_state_prompt"]
 
@@ -795,18 +803,30 @@ class DefaultReplyer:
         moderation_prompt_block = "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"
 
         if sender:
-            if is_group_chat:
-                reply_target_block = f"现在{sender}说的:{target}。引起了你的注意"
-            else:  # private chat
-                reply_target_block = f"现在{sender}说的:{target}。引起了你的注意"
+            # 使用预先分析的内容类型结果
+            if has_only_pics and not has_text:
+                # 只包含图片
+                reply_target_block = f"现在{sender}发送的图片：{pic_part}。引起了你的注意"
+            elif has_text and pic_part:
+                # 既有图片又有文字
+                reply_target_block = f"现在{sender}发送了图片：{pic_part}，并说：{text_part}。引起了你的注意"
+            elif has_text:
+                # 只包含文字
+                reply_target_block = f"现在{sender}说的：{text_part}。引起了你的注意"
+            else:
+                # 其他情况（空内容等）
+                reply_target_block = f"现在{sender}说的：{target}。引起了你的注意"
         else:
             reply_target_block = ""
 
         # 构建分离的对话 prompt
-        core_dialogue_prompt, background_dialogue_prompt = self.build_chat_history_prompts(
-            message_list_before_now_long, user_id, sender
-        )
+        dialogue_prompt = self.build_chat_history_prompts(message_list_before_now_long, user_id, sender)
 
+        # 获取匹配的额外prompt
+        chat_prompt_content = self.get_chat_prompt_for_chat(chat_id)
+        chat_prompt_block = f"{chat_prompt_content}\n" if chat_prompt_content else ""
+
+        # 固定使用群聊回复模板
         return await global_prompt_manager.format_prompt(
             "replyer_prompt",
             expression_habits_block=expression_habits_block,
@@ -827,6 +847,7 @@ class DefaultReplyer:
             keywords_reaction_prompt=keywords_reaction_prompt,
             moderation_prompt=moderation_prompt_block,
             question_block=question_block,
+            chat_prompt=chat_prompt_block,
         ), selected_expressions
 
     async def build_prompt_rewrite_context(
@@ -864,7 +885,6 @@ class DefaultReplyer:
         # 并行执行2个构建任务
         (expression_habits_block, _), personality_prompt = await asyncio.gather(
             self.build_expression_habits(chat_talking_prompt_half, target),
-            # self.build_relation_info(chat_talking_prompt_half, sender, []),
             self.build_personality_prompt(),
         )
 
@@ -877,6 +897,7 @@ class DefaultReplyer:
         )
 
         if sender and target:
+            # 使用预先分析的内容类型结果
             if is_group_chat:
                 if sender:
                     if has_only_pics and not has_text:
@@ -988,7 +1009,7 @@ class DefaultReplyer:
     async def llm_generate_content(self, prompt: str):
         with Timer("LLM生成", {}):  # 内部计时器，可选保留
             # 直接使用已初始化的模型实例
-            logger.info(f"\n{prompt}\n")
+            # logger.info(f"\n{prompt}\n")
 
             if self.config.debug.show_prompt:
                 logger.info(f"\n{prompt}\n")
@@ -998,6 +1019,9 @@ class DefaultReplyer:
             content, (reasoning_content, model_name, tool_calls) = await self.express_model.generate_response_async(
                 prompt
             )
+
+            # 移除 content 前后的换行符和空格
+            content = content.strip()
 
             logger.info(f"使用 {model_name} 生成回复内容: {content}")
         return content, reasoning_content, model_name, tool_calls

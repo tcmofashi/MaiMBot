@@ -1,14 +1,18 @@
-from typing import Tuple
+import asyncio
+from datetime import datetime
+from typing import Any, Tuple
 
 from src.common.logger import get_logger
-from src.config.config import global_config
-from src.chat.utils.prompt_builder import Prompt
+from src.config.config import model_config
 from src.llm_models.payload_content.tool_option import ToolParamType
-from src.plugin_system import BaseAction, ActionActivationType
-from src.chat.utils.utils import cut_key_words
+from src.llm_models.utils_model import LLMRequest
 from src.memory_system.Memory_chest import global_memory_chest
+from src.plugin_system import ActionActivationType, BaseAction
+from src.plugin_system.apis.message_api import (
+    build_readable_messages,
+    get_messages_by_time_in_chat,
+)
 from src.plugin_system.base.base_tool import BaseTool
-from typing import Any
 
 logger = get_logger("memory")
 
@@ -65,7 +69,7 @@ class GetMemoryTool(BaseTool):
     """获取用户信息"""
 
     name = "get_memory"
-    description = "在记忆中搜索，获取某个问题的答案"
+    description = "在记忆中搜索，获取某个问题的答案，可以指定搜索的时间范围或时间点"
     parameters = [
         ("question", ToolParamType.STRING, "需要获取答案的问题", True, None),
         ("time_point", ToolParamType.STRING, "需要获取记忆的时间点，格式为YYYY-MM-DD HH:MM:SS", False, None),
@@ -81,7 +85,7 @@ class GetMemoryTool(BaseTool):
     available_for_llm = True
 
     async def execute(self, function_args: dict[str, Any]) -> dict[str, Any]:
-        """执行比较两个数的大小
+        """执行记忆搜索
 
         Args:
             function_args: 工具参数

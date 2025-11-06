@@ -341,15 +341,11 @@ class Expression(BaseModel):
 
     situation = TextField()
     style = TextField()
-    count = FloatField()
-
-    # new mode fields
     context = TextField(null=True)
-    context_words = TextField(null=True)
+    up_content = TextField(null=True)
 
     last_active_time = FloatField()
     chat_id = TextField(index=True)
-    type = TextField()
     create_date = FloatField(null=True)  # 创建日期，允许为空以兼容老数据
 
     class Meta:
@@ -363,6 +359,7 @@ class MemoryChest(BaseModel):
 
     title = TextField()  # 标题
     content = TextField()  # 内容
+    chat_id = TextField(null=True)  # 聊天ID
     locked = BooleanField(default=False)  # 是否锁定
 
     class Meta:
@@ -378,9 +375,80 @@ class MemoryConflict(BaseModel):
     answer = TextField(null=True)  # 回答内容
     create_time = FloatField()  # 创建时间
     update_time = FloatField()  # 更新时间
+    context = TextField(null=True)  # 上下文
+    chat_id = TextField(null=True)  # 聊天ID
+    raise_time = FloatField(null=True)  # 触发次数
 
     class Meta:
         table_name = "memory_conflicts"
+
+
+class GraphNodes(BaseModel):
+    """
+    用于存储记忆图节点的模型
+    """
+
+    concept = TextField(unique=True, index=True)  # 节点概念
+    memory_items = TextField()  # JSON格式存储的记忆列表
+    weight = FloatField(default=0.0)  # 节点权重
+    hash = TextField()  # 节点哈希值
+    created_time = FloatField()  # 创建时间戳
+    last_modified = FloatField()  # 最后修改时间戳
+
+    class Meta:
+        table_name = "graph_nodes"
+
+
+class GraphEdges(BaseModel):
+    """
+    用于存储记忆图边的模型
+    """
+
+    source = TextField(index=True)  # 源节点
+    target = TextField(index=True)  # 目标节点
+    strength = IntegerField()  # 连接强度
+    hash = TextField()  # 边哈希值
+    created_time = FloatField()  # 创建时间戳
+    last_modified = FloatField()  # 最后修改时间戳
+
+    class Meta:
+        table_name = "graph_edges"
+
+
+class Jargon(BaseModel):
+    """用于存储黑话与俚语的模型。"""
+
+    content = TextField()
+    raw_content = TextField(null=True)
+    type = TextField(null=True)
+    translation = TextField(null=True)
+    meaning = TextField(null=True)
+    chat_id = TextField(index=True)
+    is_global = BooleanField(default=False)
+    count = IntegerField(default=0)
+
+    class Meta:
+        table_name = "jargon"
+
+
+MODELS = [
+    AgentRecord,
+    ChatStreams,
+    LLMUsage,
+    Emoji,
+    Messages,
+    Images,
+    ImageDescriptions,
+    OnlineTime,
+    PersonInfo,
+    Expression,
+    GraphNodes,
+    GraphEdges,
+    ActionRecords,
+    MemoryChest,
+    MemoryConflict,
+    Jargon,
+]
 
 
 def create_tables():
@@ -388,25 +456,7 @@ def create_tables():
     创建所有在模型中定义的数据库表。
     """
     with db:
-        db.create_tables(
-            [
-                AgentRecord,
-                ChatStreams,
-                LLMUsage,
-                Emoji,
-                Messages,
-                Images,
-                ImageDescriptions,
-                OnlineTime,
-                PersonInfo,
-                Expression,
-                GraphNodes,  # 添加图节点表
-                GraphEdges,  # 添加图边表
-                ActionRecords,  # 添加 ActionRecords 到初始化列表
-                MemoryChest,
-                MemoryConflict,  # 添加记忆冲突表
-            ]
-        )
+        db.create_tables(MODELS)
 
 
 def initialize_database(sync_constraints=False):
@@ -418,28 +468,9 @@ def initialize_database(sync_constraints=False):
         sync_constraints (bool): 是否同步字段约束。默认为 False。
                                如果为 True，会检查并修复字段的 NULL 约束不一致问题。
     """
-
-    models = [
-        AgentRecord,
-        ChatStreams,
-        LLMUsage,
-        Emoji,
-        Messages,
-        Images,
-        ImageDescriptions,
-        OnlineTime,
-        PersonInfo,
-        Expression,
-        GraphNodes,
-        GraphEdges,
-        ActionRecords,  # 添加 ActionRecords 到初始化列表
-        MemoryChest,
-        MemoryConflict,
-    ]
-
     try:
         with db:  # 管理 table_exists 检查的连接
-            for model in models:
+            for model in MODELS:
                 table_name = model._meta.table_name
                 if not db.table_exists(model):
                     logger.warning(f"表 '{table_name}' 未找到，正在创建...")
@@ -519,27 +550,9 @@ def sync_field_constraints():
     如果发现不一致，会自动修复字段约束。
     """
 
-    models = [
-        AgentRecord,
-        ChatStreams,
-        LLMUsage,
-        Emoji,
-        Messages,
-        Images,
-        ImageDescriptions,
-        OnlineTime,
-        PersonInfo,
-        Expression,
-        GraphNodes,
-        GraphEdges,
-        ActionRecords,
-        MemoryChest,
-        MemoryConflict,
-    ]
-
     try:
         with db:
-            for model in models:
+            for model in MODELS:
                 table_name = model._meta.table_name
                 if not db.table_exists(model):
                     logger.warning(f"表 '{table_name}' 不存在，跳过约束检查")
@@ -706,28 +719,11 @@ def check_field_constraints():
     用于在修复前预览需要修复的内容。
     """
 
-    models = [
-        ChatStreams,
-        LLMUsage,
-        Emoji,
-        Messages,
-        Images,
-        ImageDescriptions,
-        OnlineTime,
-        PersonInfo,
-        Expression,
-        GraphNodes,
-        GraphEdges,
-        ActionRecords,
-        MemoryChest,
-        MemoryConflict,
-    ]
-
     inconsistencies = {}
 
     try:
         with db:
-            for model in models:
+            for model in MODELS:
                 table_name = model._meta.table_name
                 if not db.table_exists(model):
                     continue

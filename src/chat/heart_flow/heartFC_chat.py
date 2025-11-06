@@ -18,6 +18,10 @@ from src.chat.planner_actions.action_manager import ActionManager
 from src.chat.heart_flow.hfc_utils import CycleDetail
 from src.express.expression_learner import expression_learner_manager
 from src.chat.frequency_control.frequency_control import frequency_control_manager
+from src.memory_system.question_maker import QuestionMaker
+from src.memory_system.questions import global_conflict_tracker
+from src.memory_system.curious import check_and_make_question
+from src.jargon import extract_and_store_jargon
 from src.person_info.person_info import Person
 from src.plugin_system.base.component_types import EventType, ActionInfo
 from src.plugin_system.core import events_manager
@@ -102,6 +106,7 @@ class HeartFChatting:
 
         self.last_active_time = time.time()  # 记录上一次非noreply时间
 
+        self.question_probability_multiplier = 1
         self.questioned = False
 
         self._fallback_config = default_config
@@ -199,7 +204,9 @@ class HeartFChatting:
             question_probability = 0.00003
 
         cfg = self.config
-        question_probability = question_probability * cfg.chat.get_auto_chat_value(self.stream_id)
+        question_probability = (
+            question_probability * cfg.chat.get_auto_chat_value(self.stream_id) * self.question_probability_multiplier
+        )
 
         # print(f"{self.log_prefix}  questioned: {self.questioned},len: {len(global_conflict_tracker.get_questions_by_chat_id(self.stream_id))}")
         if (
@@ -227,7 +234,6 @@ class HeartFChatting:
                 except Exception as e:
                     logger.error(f"{self.log_prefix} 主动提问失败: {e}")
                     print(traceback.format_exc())
-
         if len(recent_messages_list) >= 1:
             # for message in recent_messages_list:
             # print(message.processed_plain_text)
@@ -344,7 +350,9 @@ class HeartFChatting:
             )
 
             # 添加curious检测任务 - 检测聊天记录中的矛盾、冲突或需要提问的内容
-            asyncio.create_task(check_and_make_question(self.stream_id, recent_messages_list))
+            asyncio.create_task(check_and_make_question(self.stream_id))
+            # 添加jargon提取任务 - 提取聊天中的黑话/俚语并入库（内部自行取消息并带冷却）
+            asyncio.create_task(extract_and_store_jargon(self.stream_id))
 
             cycle_timers, thinking_id = self.start_cycle()
             logger.info(f"{self.log_prefix} 开始第{self._cycle_counter}次思考")
@@ -574,6 +582,7 @@ class HeartFChatting:
             loop_start_time=time.time(),
             action_reasoning=reason,
         )
+
         self.action_planner.add_plan_log(
             reasoning=f'你对问题"{question}"感到好奇，想要和群友讨论', actions=[reply_action_info]
         )
@@ -641,7 +650,7 @@ class HeartFChatting:
             chat_id=self.chat_stream.stream_id, start_time=self.last_read_time, end_time=time.time()
         )
 
-        need_reply = new_message_count >= random.randint(2, 4)
+        need_reply = new_message_count >= random.randint(2, 3)
 
         if need_reply:
             logger.info(f"{self.log_prefix} 从思考到回复，共有{new_message_count}条新消息，使用引用回复")
@@ -730,6 +739,8 @@ class HeartFChatting:
 
                 elif action_planner_info.action_type == "reply":
                     # 直接当场执行reply逻辑
+                    self.questioned = False
+                    # 刷新主动发言状态
 
                     reason = action_planner_info.reasoning or "选择回复"
                     await database_api.store_action_info(
@@ -775,6 +786,7 @@ class HeartFChatting:
                         actions=chosen_action_plan_infos,
                         selected_expressions=selected_expressions,
                     )
+                    self.last_active_time = time.time()
                     return {
                         "action_type": "reply",
                         "success": True,
@@ -792,6 +804,8 @@ class HeartFChatting:
                             thinking_id=thinking_id,
                             action_message=action_planner_info.action_message,
                         )
+
+                    self.last_active_time = time.time()
                     return {
                         "action_type": action_planner_info.action_type,
                         "success": success,

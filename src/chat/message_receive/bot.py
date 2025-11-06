@@ -291,14 +291,10 @@ class ChatBot:
                 message.message_segment = Seg(type="seglist", data=modified_message.message_segments)
 
             if await self.handle_notice_message(message):
-                # return
-                pass
+                return
 
             # 处理消息内容，生成纯文本
             await message.process()
-
-            chat = message.chat_stream
-            config = chat.get_effective_config() if chat else global_config
 
             # 平台层的 @ 检测由底层 is_mentioned_bot_in_message 统一处理；此处不做用户名硬编码匹配
 

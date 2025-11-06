@@ -14,8 +14,6 @@ from src.common.logger import get_logger
 from src.common.data_models.info_data_model import ActionPlannerInfo
 from src.chat.utils.prompt_builder import Prompt, global_prompt_manager
 from src.chat.utils.chat_message_builder import (
-    build_readable_actions,
-    get_actions_by_timestamp_with_chat,
     build_readable_messages_with_id,
     get_raw_msg_before_timestamp_with_chat,
 )
@@ -51,6 +49,8 @@ reply
 动作描述：
 1.你可以选择呼叫了你的名字，但是你没有做出回应的消息进行回复
 2.你可以自然的顺着正在进行的聊天内容进行回复或自然的提出一个问题
+3.不要回复你自己发送的消息
+4.不要单独对表情包进行回复
 {{
     "action": "reply",
     "target_message_id":"想要回复的消息id",
@@ -69,6 +69,7 @@ no_reply_until_call
 动作描述：
 保持沉默，直到有人直接叫你的名字
 当前话题不感兴趣时使用，或有人不喜欢你的发言时使用
+当你频繁选择no_reply时使用，表示话题暂时与你无关
 {{
     "action": "no_reply_until_call",
 }}
@@ -79,6 +80,7 @@ no_reply_until_call
 {actions_before_now_block}
 
 请选择**可选的**且符合使用条件的action，并说明触发action的消息id(消息id格式:m+数字)
+不要回复你自己发送的消息
 先输出你的选择思考理由，再输出你选择的action，理由是一段平文本，不要分点，精简。
 **动作选择要求**
 请你根据聊天内容,用户的最新消息和以下标准选择合适的动作:
@@ -308,6 +310,8 @@ class ActionPlanner:
             config=config,
         )
 
+        logger.info(f"{self.log_prefix}Planner:{reasoning}。选择了{len(actions)}个动作: {' '.join([a.action_type for a in actions])}")
+
         self.add_plan_log(reasoning, actions)
 
         return actions
@@ -434,7 +438,6 @@ class ActionPlanner:
         return filtered_actions
 
     async def _build_action_options_block(self, current_available_actions: Dict[str, ActionInfo]) -> str:
-        # sourcery skip: use-join
         """构建动作选项块"""
         if not current_available_actions:
             return ""
@@ -491,8 +494,8 @@ class ActionPlanner:
             # 调用LLM
             llm_content, (reasoning_content, _, _) = await self.planner_llm.generate_response_async(prompt=prompt)
 
-            logger.info(f"{self.log_prefix}规划器原始提示词: {prompt}")
-            logger.info(f"{self.log_prefix}规划器原始响应: {llm_content}")
+            # logger.info(f"{self.log_prefix}规划器原始提示词: {prompt}")
+            # logger.info(f"{self.log_prefix}规划器原始响应: {llm_content}")
 
             if config.debug.show_prompt:
                 logger.info(f"{self.log_prefix}规划器原始提示词: {prompt}")
@@ -518,6 +521,7 @@ class ActionPlanner:
             ]
 
         # 解析LLM响应
+        extracted_reasoning = ""
         if llm_content:
             try:
                 json_objects, extracted_reasoning = self._extract_json_from_markdown(llm_content)
@@ -529,13 +533,16 @@ class ActionPlanner:
                 else:
                     # 尝试解析为直接的JSON
                     logger.warning(f"{self.log_prefix}LLM没有返回可用动作: {llm_content}")
+                    extracted_reasoning = "LLM没有返回可用动作"
                     actions = self._create_no_reply("LLM没有返回可用动作", available_actions)
 
             except Exception as json_e:
                 logger.warning(f"{self.log_prefix}解析LLM响应JSON失败 {json_e}. LLM原始输出: '{llm_content}'")
+                extracted_reasoning = f"解析LLM响应JSON失败: {json_e}"
                 actions = self._create_no_reply(f"解析LLM响应JSON失败: {json_e}", available_actions)
                 traceback.print_exc()
         else:
+            extracted_reasoning = "规划器没有获得LLM响应"
             actions = self._create_no_reply("规划器没有获得LLM响应", available_actions)
 
         # 添加循环开始时间到所有非no_reply动作

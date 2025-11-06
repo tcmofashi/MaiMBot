@@ -24,7 +24,8 @@ from src.chat.utils.chat_message_builder import (
     get_raw_msg_before_timestamp_with_chat,
     replace_user_references,
 )
-from src.chat.express.expression_selector import expression_selector
+from src.express.expression_selector import expression_selector
+from src.plugin_system.apis.message_api import translate_pid_to_description
 from src.mood.mood_manager import mood_manager
 
 # from src.memory_system.memory_activator import MemoryActivator
@@ -71,6 +72,7 @@ class PrivateReplyer:
         from_plugin: bool = True,
         stream_id: Optional[str] = None,
         reply_message: Optional[DatabaseMessages] = None,
+        reply_time_point: Optional[float] = time.time(),
     ) -> Tuple[bool, LLMGenerationDataModel]:
         # sourcery skip: merge-nested-ifs
         """
@@ -255,8 +257,8 @@ class PrivateReplyer:
             return "", []
         style_habits = []
         # 使用从处理器传来的选中表达方式
-        # LLM模式：调用LLM选择5-10个，然后随机选5个
-        selected_expressions, selected_ids = await expression_selector.select_suitable_expressions_llm(
+        # 根据配置模式选择表达方式：exp_model模式直接使用模型预测，classic模式使用LLM选择
+        selected_expressions, selected_ids = await expression_selector.select_suitable_expressions(
             self.chat_stream.stream_id, chat_history, max_num=8, target_message=target
         )
 
@@ -584,6 +586,13 @@ class PrivateReplyer:
         has_only_pics, has_text, pic_part, text_part = self._analyze_target_content(target)
 
         # 将[picid:xxx]替换为具体的图片描述
+
+        target = replace_user_references(target, chat_stream.platform, replace_bot_name=True)
+
+        # 在picid替换之前分析内容类型（防止prompt注入）
+        has_only_pics, has_text, pic_part, text_part = self._analyze_target_content(target)
+
+        # 将[picid:xxx]替换为具体的图片描述
         target = self._replace_picids_with_descriptions(target)
 
         message_list_before_now_long = get_raw_msg_before_timestamp_with_chat(
@@ -676,7 +685,7 @@ class PrivateReplyer:
                 continue
 
             timing_logs.append(f"{chinese_name}: {duration:.1f}s")
-            if duration > 8:
+            if duration > 12:
                 logger.warning(f"回复生成前信息获取耗时过长: {chinese_name} 耗时: {duration:.1f}s，请使用更快的模型")
         logger.info(f"回复准备: {'; '.join(timing_logs)}; {almost_zero_str} <0.1s")
 
@@ -701,7 +710,23 @@ class PrivateReplyer:
 
         moderation_prompt_block = "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"
 
-        reply_target_block = f"现在对方说的:{target}。引起了你的注意"
+        # 使用预先分析的内容类型结果
+        if has_only_pics and not has_text:
+            # 只包含图片
+            reply_target_block = f"现在对方发送的图片：{pic_part}。引起了你的注意"
+        elif has_text and pic_part:
+            # 既有图片又有文字
+            reply_target_block = f"现在对方发送了图片：{pic_part}，并说：{text_part}。引起了你的注意"
+        elif has_text:
+            # 只包含文字
+            reply_target_block = f"现在对方说的：{text_part}。引起了你的注意"
+        else:
+            # 其他情况（空内容等）
+            reply_target_block = f"现在对方说的:{target}。引起了你的注意"
+
+        # 获取匹配的额外prompt
+        chat_prompt_content = self.get_chat_prompt_for_chat(chat_id)
+        chat_prompt_block = f"{chat_prompt_content}\n" if chat_prompt_content else ""
 
         if global_config.bot.qq_account == user_id and platform == global_config.bot.platform:
             return await global_prompt_manager.format_prompt(
@@ -723,6 +748,7 @@ class PrivateReplyer:
                 reply_style=global_config.personality.reply_style,
                 keywords_reaction_prompt=keywords_reaction_prompt,
                 moderation_prompt=moderation_prompt_block,
+                chat_prompt=chat_prompt_block,
             ), selected_expressions
         else:
             return await global_prompt_manager.format_prompt(
@@ -743,6 +769,7 @@ class PrivateReplyer:
                 keywords_reaction_prompt=keywords_reaction_prompt,
                 moderation_prompt=moderation_prompt_block,
                 sender_name=sender,
+                chat_prompt=chat_prompt_block,
             ), selected_expressions
 
     async def build_prompt_rewrite_context(
@@ -757,6 +784,12 @@ class PrivateReplyer:
 
         sender, target = self._parse_reply_target(reply_to)
         target = replace_user_references(target, chat_stream.platform, replace_bot_name=True)
+
+        # 在picid替换之前分析内容类型（防止prompt注入）
+        has_only_pics, has_text, pic_part, text_part = self._analyze_target_content(target)
+
+        # 将[picid:xxx]替换为具体的图片描述
+        target = self._replace_picids_with_descriptions(target)
 
         # 在picid替换之前分析内容类型（防止prompt注入）
         has_only_pics, has_text, pic_part, text_part = self._analyze_target_content(target)
@@ -793,6 +826,7 @@ class PrivateReplyer:
         )
 
         if sender and target:
+            # 使用预先分析的内容类型结果
             if is_group_chat:
                 if sender:
                     if has_only_pics and not has_text:
@@ -906,7 +940,7 @@ class PrivateReplyer:
             # 直接使用已初始化的模型实例
             logger.info(f"\n{prompt}\n")
 
-            if global_config.debug.show_prompt:
+            if global_config.debug.show_replyer_prompt:
                 logger.info(f"\n{prompt}\n")
             else:
                 logger.debug(f"\n{prompt}\n")
@@ -918,6 +952,8 @@ class PrivateReplyer:
             content = content.strip()
 
             logger.info(f"使用 {model_name} 生成回复内容: {content}")
+            if global_config.debug.show_replyer_reasoning:
+                logger.info(f"使用 {model_name} 生成回复推理:\n{reasoning_content}")
         return content, reasoning_content, model_name, tool_calls
 
     async def get_prompt_info(self, message: str, sender: str, target: str):

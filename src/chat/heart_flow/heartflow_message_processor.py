@@ -2,6 +2,7 @@ import re
 import traceback
 
 from maim_message import UserInfo
+from typing import TYPE_CHECKING
 
 from src.chat.message_receive.message import MessageRecv
 from src.chat.message_receive.storage import MessageStorage
@@ -41,12 +42,16 @@ class HeartFCMessageReceiver:
             userinfo = sender_info.user_info if sender_info and sender_info.user_info else UserInfo()
             chat = message.chat_stream
 
-            # 2. 兴趣度计算与更新
-            _, keywords = await _calculate_interest(message)
+            # 2. 计算at信息
+            is_mentioned, is_at, reply_probability_boost = is_mentioned_bot_in_message(message)
+            # print(f"is_mentioned: {is_mentioned}, is_at: {is_at}, reply_probability_boost: {reply_probability_boost}")
+            message.is_mentioned = is_mentioned
+            message.is_at = is_at
+            message.reply_probability_boost = reply_probability_boost
 
             await self.storage.store_message(message, chat)
 
-            _heartflow_chat: HeartFChatting = await heartflow.get_or_create_heartflow_chat(chat.stream_id)  # type: ignore
+            await heartflow.get_or_create_heartflow_chat(chat.stream_id)  # type: ignore
 
             # 3. 日志记录
             mes_name = chat.group_info.group_name if chat.group_info else "私聊"

@@ -27,6 +27,9 @@ class BotConfig(ConfigBase):
 
     nickname: str
     """昵称"""
+    
+    platforms: list[str] = field(default_factory=lambda: [])
+    """其他平台列表"""
 
     alias_names: list[str] = field(default_factory=lambda: [])
     """别名列表"""
@@ -54,6 +57,12 @@ class PersonalityConfig(ConfigBase):
     private_plan_style: str = ""
     """私聊说话规则，行为风格"""
 
+    states: list[str] = field(default_factory=lambda: [])
+    """状态列表，用于随机替换personality"""
+
+    state_probability: float = 0.0
+    """状态概率，每次构建人格时替换personality的概率"""
+
 
 @dataclass
 class RelationshipConfig(ConfigBase):
@@ -79,6 +88,12 @@ class ChatConfig(ConfigBase):
     mentioned_bot_reply: bool = True
     """是否启用提及必回复"""
 
+    auto_chat_value: float = 1
+    """自动聊天，越小，麦麦主动聊天的概率越低"""
+
+    enable_auto_chat_value_rules: bool = True
+    """是否启用动态自动聊天频率规则"""
+
     at_bot_inevitable_reply: float = 1
     """@bot 必然回复，1为100%回复，0为不额外增幅"""
 
@@ -88,9 +103,29 @@ class ChatConfig(ConfigBase):
     talk_value: float = 1
     """思考频率"""
 
+    enable_talk_value_rules: bool = True
+    """是否启用动态发言频率规则"""
+
     talk_value_rules: list[dict] = field(default_factory=lambda: [])
     """
     思考频率规则列表，支持按聊天流/按日内时段配置。
+    规则格式：{ target="platform:id:type" 或 "", time="HH:MM-HH:MM", value=0.5 }
+
+    示例:
+    [
+        ["", "00:00-08:59", 0.2],                 # 全局规则：凌晨到早上更安静
+        ["", "09:00-22:59", 1.0],                 # 全局规则：白天正常
+        ["qq:1919810:group", "20:00-23:59", 0.6], # 指定群在晚高峰降低发言
+        ["qq:114514:private", "00:00-23:59", 0.3],# 指定私聊全时段较安静
+    ]
+
+    匹配优先级: 先匹配指定 chat 流规则，再匹配全局规则(\"\").
+    时间区间支持跨夜，例如 "23:00-02:00"。
+    """
+
+    auto_chat_value_rules: list[dict] = field(default_factory=lambda: [])
+    """
+    自动聊天频率规则列表，支持按聊天流/按日内时段配置。
     规则格式：{ target="platform:id:type" 或 "", time="HH:MM-HH:MM", value=0.5 }
 
     示例:
@@ -157,7 +192,7 @@ class ChatConfig(ConfigBase):
 
     def get_talk_value(self, chat_id: Optional[str]) -> float:
         """根据规则返回当前 chat 的动态 talk_value，未匹配则回退到基础值。"""
-        if not self.talk_value_rules:
+        if not self.enable_talk_value_rules or not self.talk_value_rules:
             return self.talk_value
 
         now_min = self._now_minutes()
@@ -210,6 +245,61 @@ class ChatConfig(ConfigBase):
         # 3) 未命中规则返回基础值
         return self.talk_value
 
+    def get_auto_chat_value(self, chat_id: Optional[str]) -> float:
+        """根据规则返回当前 chat 的动态 auto_chat_value，未匹配则回退到基础值。"""
+        if not self.enable_auto_chat_value_rules or not self.auto_chat_value_rules:
+            return self.auto_chat_value
+
+        now_min = self._now_minutes()
+
+        # 1) 先尝试匹配指定 chat 的规则
+        if chat_id:
+            for rule in self.auto_chat_value_rules:
+                if not isinstance(rule, dict):
+                    continue
+                target = rule.get("target", "")
+                time_range = rule.get("time", "")
+                value = rule.get("value", None)
+                if not isinstance(time_range, str):
+                    continue
+                # 跳过全局
+                if target == "":
+                    continue
+                config_chat_id = self._parse_stream_config_to_chat_id(str(target))
+                if config_chat_id is None or config_chat_id != chat_id:
+                    continue
+                parsed = self._parse_range(time_range)
+                if not parsed:
+                    continue
+                start_min, end_min = parsed
+                if self._in_range(now_min, start_min, end_min):
+                    try:
+                        return float(value)
+                    except Exception:
+                        continue
+
+        # 2) 再匹配全局规则("")
+        for rule in self.auto_chat_value_rules:
+            if not isinstance(rule, dict):
+                continue
+            target = rule.get("target", None)
+            time_range = rule.get("time", "")
+            value = rule.get("value", None)
+            if target != "" or not isinstance(time_range, str):
+                continue
+            parsed = self._parse_range(time_range)
+            if not parsed:
+                continue
+            start_min, end_min = parsed
+            if self._in_range(now_min, start_min, end_min):
+                try:
+                    return float(value)
+                except Exception:
+                    continue
+
+        # 3) 未命中规则返回基础值
+        return self.auto_chat_value
+
 
 @dataclass
 class MessageReceiveConfig(ConfigBase):
@@ -228,15 +318,15 @@ class MemoryConfig(ConfigBase):
     max_memory_number: int = 100
     """记忆最大数量"""
     
-    max_memory_size: int = 2048
-    """记忆最大大小"""
+    memory_build_frequency: int = 1
+    """记忆构建频率"""
 
 @dataclass
 class ExpressionConfig(ConfigBase):
     """表达配置类"""
 
-    mode: Literal["llm", "context", "full-context"] = "context"
-    """表达方式模式，可选：llm模式，context上下文模式，full-context 完整上下文嵌入模式"""
+    mode: str = "classic"
+    """表达方式模式，可选：classic经典模式，exp_model 表达模型模式"""
 
     learning_list: list[list] = field(default_factory=lambda: [])
     """
@@ -551,6 +641,12 @@ class DebugConfig(ConfigBase):
 
     show_prompt: bool = False
     """是否显示prompt"""
+    
+    show_replyer_prompt: bool = True
+    """是否显示回复器prompt"""
+    
+    show_replyer_reasoning: bool = True
+    """是否显示回复器推理"""
 
 
 @dataclass
@@ -559,6 +655,25 @@ class ExperimentalConfig(ConfigBase):
 
     enable_friend_chat: bool = False
     """是否启用好友聊天"""
+
+    chat_prompts: list[str] = field(default_factory=lambda: [])
+    """
+    为指定聊天添加额外的prompt配置列表
+    格式: ["platform:id:type:prompt内容", ...]
+    
+    示例:
+    [
+        "qq:114514:group:这是一个摄影群，你精通摄影知识",
+        "qq:19198:group:这是一个二次元交流群",
+        "qq:114514:private:这是你与好朋友的私聊"
+    ]
+    
+    说明:
+    - platform: 平台名称，如 "qq"
+    - id: 群ID或用户ID
+    - type: "group" 或 "private"
+    - prompt内容: 要添加的额外prompt文本
+    """
 
 
 @dataclass

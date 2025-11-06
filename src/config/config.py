@@ -57,7 +57,7 @@ AGENT_TEMPLATE_DIR = os.path.join(TEMPLATE_DIR, "agents")
 
 # 考虑到，实际上配置文件中的mai_version是不会自动更新的,所以采用硬编码
 # 对该字段的更新，请严格参照语义化版本规范：https://semver.org/lang/zh-CN/
-MMC_VERSION = "0.11.0-snapshot.2"
+MMC_VERSION = "0.11.1-snapshot.1"
 
 
 def ensure_agent_config_directory() -> None:

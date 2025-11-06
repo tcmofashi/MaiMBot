@@ -1,5 +1,5 @@
 [inner]
-version = "6.18.1"
+version = "6.20.1"
 
 #----以下是给开发人员阅读的，如果你只是部署了麦麦，不需要阅读----
 #如果你想要修改配置文件，请递增version的值
@@ -14,6 +14,9 @@ version = "6.18.1"
 [bot]
 platform = "qq" 
 qq_account = "1145141919810" # 麦麦的QQ账号
+
+platforms = ["wx:114514","xx:1919810"] # 麦麦的其他平台账号
+
 nickname = "麦麦" # 麦麦的昵称
 alias_names = ["麦叠", "牢麦"] # 麦麦的别名
 
@@ -38,17 +41,26 @@ plan_style = """
 # 麦麦识图规则，不建议修改
 visual_style = "请用中文描述这张图片的内容。如果有文字，请把文字描述概括出来，请留意其主题，直观感受，输出为一段平文本，最多30字，请注意不要分点，就输出一段文本"
 
-
 # 麦麦私聊的说话规则，行为风格:
 private_plan_style = """
 1.思考**所有**的可用的action中的**每个动作**是否符合当下条件，如果动作使用条件符合聊天内容就使用
 2.如果相同的内容已经被执行，请不要重复执行
 3.某句话如果已经被回复过，不要重复回复"""
 
+# 状态，可以理解为人格多样性，会随机替换人格
+states = [
+    "是一个女大学生，喜欢上网聊天，会刷小红书。" ,
+    "是一个大二心理学生，会刷贴吧和中国知网。" ,
+    "是一个赛博网友，最近很想吐槽人。" 
+]
+
+# 替换概率，每次构建人格时替换personality的概率（0.0-1.0）
+state_probability = 0.3
+
 [expression]
 # 表达方式模式
-mode = "context"
-# 可选：llm模式，context上下文模式，full-context 完整上下文嵌入模式
+mode = "classic"
+# 可选：classic经典模式，exp_model 表达模型模式，这个模式需要一定时间学习才会有比较好的效果
 
 # 表达学习配置
 learning_list = [ # 表达学习配置列表，支持按聊天流配置
@@ -77,7 +89,11 @@ expression_groups = [
 talk_value = 1 #聊天频率，越小越沉默，范围0-1
 mentioned_bot_reply = true # 是否启用提及必回复
 max_context_size = 30 # 上下文长度
+auto_chat_value = 1 # 自动聊天，越小，麦麦主动聊天的概率越低
 planner_smooth = 5 #规划器平滑，增大数值会减小planner负荷，略微降低反应速度，推荐2-8，0为关闭，必须大于等于0
+
+enable_talk_value_rules = true # 是否启用动态发言频率规则
+enable_auto_chat_value_rules = false # 是否启用动态自动聊天频率规则
 
 # 动态发言频率规则：按时段/按chat_id调整 talk_value（优先匹配具体chat，再匹配全局）
 # 推荐格式（对象数组）：{ target="platform:id:type" 或 "", time="HH:MM-HH:MM", value=0.5 }
@@ -91,12 +107,23 @@ talk_value_rules = [
     { target = "qq:114514:private", time = "00:00-23:59", value = 0.3 },
 ]
 
+# 动态自动聊天频率规则：按时段/按chat_id调整 auto_chat_value（优先匹配具体chat，再匹配全局）
+# 推荐格式（对象数组）：{ target="platform:id:type" 或 "", time="HH:MM-HH:MM", value=0.5 }
+# 说明:
+# - target 为空字符串表示全局；type 为 group/private，例如："qq:1919810:group" 或 "qq:114514:private"；
+# - 支持跨夜区间，例如 "23:00-02:00"；数值范围建议 0-1。
+auto_chat_value_rules = [
+    { target = "", time = "00:00-08:59", value = 0.3 },
+    { target = "", time = "09:00-22:59", value = 1.0 },
+    { target = "qq:1919810:group", time = "20:00-23:59", value = 0.8 },
+    { target = "qq:114514:private", time = "00:00-23:59", value = 0.5 },
+]
+
 [memory]
 max_memory_number = 100 # 记忆最大数量
 max_memory_size = 2048 # 记忆最大大小
+memory_build_frequency = 1 # 记忆构建频率
 
-[relationship]
-enable_relationship = true # 是否启用关系系统
 
 [tool]
 enable_tool = true # 是否启用工具
@@ -194,6 +221,8 @@ library_log_levels = { aiohttp = "WARNING"} # 设置特定库的日志级别
 
 [debug]
 show_prompt = false # 是否显示prompt
+show_replyer_prompt = false # 是否显示回复器prompt
+show_replyer_reasoning = false # 是否显示回复器推理
 
 [maim_message]
 auth_token = [] # 认证令牌，用于API验证，为空则不启用验证
@@ -210,4 +239,17 @@ key_file = "" # SSL密钥文件路径，仅在use_wss=true时有效
 enable = true
 
 [experimental] #实验性功能
-none = false # 暂无
+# 为指定聊天添加额外的prompt配置
+# 格式: ["platform:id:type:prompt内容", ...]
+# 示例:
+# chat_prompts = [
+#     "qq:114514:group:这是一个摄影群，你精通摄影知识",
+#     "qq:19198:group:这是一个二次元交流群",
+#     "qq:114514:private:这是你与好朋友的私聊"
+# ]
+chat_prompts = []
+
+
+#此系统暂时移除，无效配置
+[relationship]
+enable_relationship = true # 是否启用关系系统

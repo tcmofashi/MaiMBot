@@ -55,19 +55,19 @@ class MemoryManagementTask(AsyncTask):
             current_count = self._get_memory_count()
             percentage = current_count / self.max_memory_number
             
-            if percentage < 0.5:
+            if percentage < 0.6:
                 # 小于50%，每600秒执行一次
                 return 3600
-            elif percentage < 0.7:
+            elif percentage < 1:
                 # 大于等于50%，每300秒执行一次
                 return 1800
-            elif percentage < 0.9:
-                # 大于等于70%，每120秒执行一次
-                return 300
-            elif percentage < 1.2:
-                return 30
+            elif percentage < 1.5:
+                # 大于等于100%，每120秒执行一次
+                return 600
+            elif percentage < 1.8:
+                return 120
             else:
-                return 10
+                return 30
             
         except Exception as e:
             logger.error(f"[记忆管理] 计算执行间隔时出错: {e}")
@@ -92,26 +92,42 @@ class MemoryManagementTask(AsyncTask):
             percentage = current_count / self.max_memory_number
             logger.info(f"当前记忆数量: {current_count}/{self.max_memory_number} ({percentage:.1%})")
             
+            # 当占比 > 1.6 时，持续删除直到占比 <= 1.6（越老/越新更易被删）
+            if percentage > 2:
+                logger.info("记忆过多，开始遗忘记忆")
+                while True:
+                    if percentage <= 1.8:
+                        break
+                    removed = global_memory_chest.remove_one_memory_by_age_weight()
+                    if not removed:
+                        logger.warning("没有可删除的记忆，停止连续删除")
+                        break
+                    # 重新计算占比
+                    current_count = self._get_memory_count()
+                    percentage = current_count / self.max_memory_number
+                    logger.info(f"遗忘进度: 当前 {current_count}/{self.max_memory_number} ({percentage:.1%})")
+                logger.info("遗忘记忆结束")
+
             # 如果记忆数量为0，跳过执行
             if current_count < 10:
                 return
             
-            # 随机选择一个记忆标题
-            selected_title = self._get_random_memory_title()
+            # 随机选择一个记忆标题和chat_id
+            selected_title, selected_chat_id = self._get_random_memory_title()
             if not selected_title:
                 logger.warning("无法获取随机记忆标题，跳过执行")
                 return
             
             # 执行choose_merge_target获取相关记忆（标题与内容）
-            related_titles, related_contents = await global_memory_chest.choose_merge_target(selected_title)
+            related_titles, related_contents = await global_memory_chest.choose_merge_target(selected_title, selected_chat_id)
             if not related_titles or not related_contents:
                 logger.info("无合适合并内容，跳过本次合并")
                 return
             
-            logger.info(f"为 [{selected_title}] 找到 {len(related_contents)} 条相关记忆:{related_titles}")
+            logger.info(f"{selected_chat_id} 为 [{selected_title}] 找到 {len(related_contents)} 条相关记忆:{related_titles}")
             
             # 执行merge_memory合并记忆
-            merged_title, merged_content = await global_memory_chest.merge_memory(related_contents)
+            merged_title, merged_content = await global_memory_chest.merge_memory(related_contents,selected_chat_id)
             if not merged_title or not merged_content:
                 logger.warning("[记忆管理] 记忆合并失败，跳过删除")
                 return
@@ -126,21 +142,21 @@ class MemoryManagementTask(AsyncTask):
         except Exception as e:
             logger.error(f"[记忆管理] 执行记忆管理任务时发生错误: {e}", exc_info=True)
     
-    def _get_random_memory_title(self) -> str:
-        """随机获取一个记忆标题"""
+    def _get_random_memory_title(self) -> tuple[str, str]:
+        """随机获取一个记忆标题和对应的chat_id"""
         try:
-            # 获取所有记忆标题
-            all_titles = global_memory_chest.get_all_titles()
-            if not all_titles:
-                return ""
+            # 获取所有记忆记录
+            all_memories = MemoryChestModel.select()
+            if not all_memories:
+                return "", ""
             
-            # 随机选择一个标题
-            selected_title = random.choice(all_titles)
-            return selected_title
+            # 随机选择一个记忆
+            selected_memory = random.choice(list(all_memories))
+            return selected_memory.title, selected_memory.chat_id or ""
             
         except Exception as e:
             logger.error(f"[记忆管理] 获取随机记忆标题时发生错误: {e}")
-            return ""
+            return "", ""
     
     def _delete_original_memories(self, related_titles: List[str]) -> int:
         """按标题删除原始记忆"""
