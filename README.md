@@ -30,6 +30,7 @@
 - 🧠 **表达学习功能**：学习群友的说话风格和表达方式
 - 💝 **情感表达系统**：情绪系统和表情包系统。
 - 🔌 **强大插件系统**：提供API和事件系统，可编写强大插件。
+- 🏢 **企业级多租户支持** ✨ **NEW**: 支持T+A+C+P四维隔离的多租户架构。
 
 <div style="text-align: center">
 <a href="https://www.bilibili.com/video/BV1amAneGE3P" target="_blank">
@@ -55,6 +56,55 @@
 
 ### 最新版本部署教程
 - [🚀 最新版本部署教程](https://docs.mai-mai.org/manual/deployment/mmc_deploy_windows.html) - 基于 MaiCore 的新版本部署方式(与旧版本不兼容)
+
+### 🏢 多租户架构支持 (NEW!)
+
+MaiBot现已支持企业级多租户隔离架构！
+
+#### ✨ 核心特性
+- **四维隔离体系** (T+A+C+P): 租户 + 智能体 + 聊天流 + 平台
+- **数据完全隔离**: 不同租户间数据100%隔离，确保数据安全
+- **高可扩展性**: 支持无限租户和智能体
+- **向后兼容**: 完全兼容现有功能和配置
+- **企业级性能**: 优化的查询性能，支持高并发访问
+
+#### 🚀 快速开始
+```bash
+# 1. 执行数据库迁移
+python scripts/run_multi_tenant_migration.py --migrate
+
+# 2. 启用多租户模式
+# 在配置文件中设置:
+# MULTI_TENANT_ENABLED=true
+
+# 3. 启动应用
+python bot.py
+```
+
+#### 📚 多租户文档
+- [📖 多租户迁移指南](docs/MULTI_TENANT_MIGRATION.md)
+- [🚀 部署指南](docs/DEPLOYMENT_GUIDE.md)
+- [📋 API参考文档](docs/API_REFERENCE.md)
+- [🧪 测试报告](docs/TEST_REPORT.md)
+- [📊 项目总结](docs/MULTI_TENANT_MIGRATION_SUMMARY.md)
+
+#### 💡 使用示例
+```python
+# 创建隔离上下文
+from src.isolation.isolation_context import create_isolation_context
+
+context = create_isolation_context(
+    tenant_id="your_tenant",
+    agent_id="your_agent",
+    platform="qq"
+)
+
+# 使用隔离化API
+from src.chat.heart_flow.isolated_heartflow_api import create_isolated_heartflow_processor
+
+processor = create_isolated_heartflow_processor("tenant_001", "agent_001")
+response = await processor.process_message(message)
+```
 
 > [!WARNING]
 > - 项目处于活跃开发阶段，功能和 API 可能随时调整。
@@ -86,6 +136,19 @@
 **部分内容可能更新不够及时，请注意版本对应**
 
 - [📚 核心 Wiki 文档](https://docs.mai-mai.org) - 项目最全面的文档中心，你可以了解麦麦有关的一切。
+
+### 📖 多租户架构文档 (v1.0.0)
+- [📊 项目完成总结](docs/MULTI_TENANT_MIGRATION_SUMMARY.md) - 多租户改造项目完整总结
+- [🔧 数据库迁移指南](docs/MULTI_TENANT_MIGRATION.md) - 详细的数据库迁移步骤
+- [🚀 部署指南](docs/DEPLOYMENT_GUIDE.md) - 生产环境部署完整指南
+- [📋 API参考文档](docs/API_REFERENCE.md) - 完整的API接口文档
+- [🧪 测试报告](docs/TEST_REPORT.md) - 全面的测试结果报告
+- [📝 重构方案](refactor.md) - 完整的多租户改造技术方案
+
+### 开发文档
+- [🔌 插件开发指南](docs/plugins/) - 插件开发完整教程
+- [⚙️ 配置说明](docs/config/) - 详细的配置选项说明
+- [🛠️ 开发环境搭建](https://docs.mai-mai.org/develop/) - 开发环境配置指南
 
 ### 设计理念(原始时代的火花)
 

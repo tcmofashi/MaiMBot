@@ -16,6 +16,8 @@ from src.config.config import global_config, model_config
 
 if TYPE_CHECKING:  # pragma: no cover
     from src.agent.agent import Agent
+
+
 def _resolve_agent_definition(agent_id: Optional[str]) -> Optional["Agent"]:
     """Return registered Agent instance for the given identifier if available."""
 

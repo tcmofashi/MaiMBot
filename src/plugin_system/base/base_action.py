@@ -77,7 +77,7 @@ class BaseAction(ABC):
         self.action_require: list[str] = getattr(self.__class__, "action_require", []).copy()
 
         """NORMAL模式下的激活类型"""
-        self.activation_type = getattr(self.__class__, "activation_type")
+        self.activation_type = self.__class__.activation_type
         """激活类型"""
         self.random_activation_probability: float = getattr(self.__class__, "random_activation_probability", 0.0)
         """当激活类型为RANDOM时的概率"""
@@ -490,7 +490,7 @@ class BaseAction(ABC):
             raise ValueError(f"Action名称 '{name}' 包含非法字符 '.'，请使用下划线替代")
         # 获取focus_activation_type和normal_activation_type
         focus_activation_type = getattr(cls, "focus_activation_type", ActionActivationType.ALWAYS)
-        normal_activation_type = getattr(cls, "normal_activation_type", ActionActivationType.ALWAYS)
+        getattr(cls, "normal_activation_type", ActionActivationType.ALWAYS)
 
         # 处理activation_type：如果插件中声明了就用插件的值，否则默认使用focus_activation_type
         activation_type = getattr(cls, "activation_type", focus_activation_type)

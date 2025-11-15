@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  memory-service-test:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: memory-service-test
+    ports:
+      - "8002:8000"
+    environment:
+      # 测试数据库配置
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_pass@db-test:5432/memory_test_db
+      - DB_POOL_SIZE=5
+      - DB_MAX_OVERFLOW=10
+
+      # 测试Redis配置
+      - REDIS_URL=redis://redis-test:6379/1
+      - REDIS_POOL_SIZE=5
+
+      # 服务配置
+      - PORT=8000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=DEBUG
+      - ENVIRONMENT=test
+      - DEBUG=true
+
+      # 测试特定配置
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - CORS_ORIGINS=*
+
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    volumes:
+      - ./tests:/app/tests
+      - ./test-logs:/app/logs
+      - ./test-data:/app/data
+    restart: "no"
+    networks:
+      - memory-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  db-test:
+    image: postgres:15-alpine
+    container_name: memory-db-test
+    environment:
+      - POSTGRES_DB=memory_test_db
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_pass
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - memory_test_db_data:/var/lib/postgresql/data
+      - ./test-init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5434:5432"
+    restart: "no"
+    networks:
+      - memory-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d memory_test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: memory-redis-test
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_test_data:/data
+    ports:
+      - "6381:6379"
+    restart: "no"
+    networks:
+      - memory-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # 测试运行器
+  test-runner:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: memory-test-runner
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_pass@db-test:5432/memory_test_db
+      - REDIS_URL=redis://redis-test:6379/1
+      - LOG_LEVEL=DEBUG
+      - ENVIRONMENT=test
+      - TESTING=true
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    volumes:
+      - ./tests:/app/tests
+      - ./test-reports:/app/test-reports
+    networks:
+      - memory-test-network
+    command: >
+      sh -c "
+        echo 'Waiting for services to be ready...' &&
+        sleep 10 &&
+        echo 'Running unit tests...' &&
+        python -m pytest tests/unit/ -v --html=test-reports/unit.html --self-contained-html &&
+        echo 'Running integration tests...' &&
+        python -m pytest tests/integration/ -v --html=test-reports/integration.html --self-contained-html &&
+        echo 'All tests completed!'
+      "
+    profiles:
+      - test-full
+
+  # 性能测试
+  performance-test:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: memory-performance-test
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_pass@db-test:5432/memory_test_db
+      - REDIS_URL=redis://redis-test:6379/1
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=test
+    depends_on:
+      - memory-service-test
+    volumes:
+      - ./tests/performance:/app/tests/performance
+      - ./test-reports:/app/test-reports
+    networks:
+      - memory-test-network
+    command: >
+      sh -c "
+        echo 'Running performance tests...' &&
+        python -m pytest tests/performance/ -v --html=test-reports/performance.html --self-contained-html &&
+        echo 'Performance tests completed!'
+      "
+    profiles:
+      - test-performance
+
+  # 端到端测试
+  e2e-test:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: memory-e2e-test
+    environment:
+      - MEMORY_SERVICE_URL=http://memory-service-test:8000
+      - LOG_LEVEL=DEBUG
+      - ENVIRONMENT=test
+    depends_on:
+      - memory-service-test
+    volumes:
+      - ./tests/e2e:/app/tests/e2e
+      - ./test-reports:/app/test-reports
+    networks:
+      - memory-test-network
+    command: >
+      sh -c "
+        echo 'Running E2E tests...' &&
+        python -m pytest tests/e2e/ -v --html=test-reports/e2e.html --self-contained-html &&
+        echo 'E2E tests completed!'
+      "
+    profiles:
+      - test-e2e
+
+volumes:
+  memory_test_db_data:
+    driver: local
+  redis_test_data:
+    driver: local
+
+networks:
+  memory-test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

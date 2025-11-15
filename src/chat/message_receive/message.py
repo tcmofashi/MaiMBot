@@ -3,6 +3,7 @@ import urllib3
 
 from rich.traceback import install
 from typing import Optional, Any, List, Dict
+from dataclasses import dataclass
 from maim_message import (
     Seg,
     UserInfo,
@@ -12,6 +13,22 @@ from maim_message import (
     SenderInfo,
     ReceiverInfo,
 )
+
+# 导入隔离上下文
+try:
+    from ..isolation import IsolationContext, create_isolation_context, IsolationLevel
+except ImportError:
+    # 兼容性处理，如果隔离模块不可用
+    class IsolationContext:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    def create_isolation_context(*args, **kwargs):
+        return None
+
+    class IsolationLevel:
+        pass
+
 
 from src.common.logger import get_logger
 from src.chat.utils.utils_image import get_image_manager
@@ -108,6 +125,10 @@ class MessageRecv(MaiMessageBase):
         chat_stream: ChatStream,
         raw_message: Optional[str] = None,
         processed_plain_text: str = "",
+        # 新增隔离字段
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        isolation_context: Optional[IsolationContext] = None,
     ):
         super().__init__(
             message_info=message_info,
@@ -116,6 +137,35 @@ class MessageRecv(MaiMessageBase):
             raw_message=raw_message,
             processed_plain_text=processed_plain_text,
         )
+
+        # 隔离字段
+        self.tenant_id = tenant_id  # T: 租户标识
+        self.agent_id = agent_id  # A: 智能体标识
+        self.isolation_context = isolation_context  # 隔离上下文对象
+
+        # 如果提供了隔离上下文，从中提取信息
+        if self.isolation_context:
+            self.tenant_id = self.tenant_id or self.isolation_context.tenant_id
+            self.agent_id = self.agent_id or self.isolation_context.agent_id
+        elif chat_stream and hasattr(chat_stream, "agent_id"):
+            # 从chat_stream中提取agent_id作为fallback
+            self.agent_id = self.agent_id or chat_stream.agent_id
+
+        # 如果仍然缺少agent_id，尝试从message_info中提取
+        if not self.agent_id:
+            self.agent_id = self._extract_agent_id(message_info, {}) or "default"
+
+        # 如果仍然缺少tenant_id，使用默认值
+        if not self.tenant_id:
+            self.tenant_id = "default"
+
+        # 创建隔离上下文（如果还没有）
+        if not self.isolation_context and self.tenant_id and self.agent_id:
+            platform = getattr(chat_stream, "platform", None) if chat_stream else None
+            chat_stream_id = getattr(chat_stream, "stream_id", None) if chat_stream else None
+            self.isolation_context = create_isolation_context(
+                tenant_id=self.tenant_id, agent_id=self.agent_id, platform=platform, chat_stream_id=chat_stream_id
+            )
 
         self.is_emoji = False
         self.has_emoji = False
@@ -134,6 +184,88 @@ class MessageRecv(MaiMessageBase):
         self.key_words_lite: List[str] = []
 
         self._ensure_legacy_fields()
+
+    # 隔离相关方法
+    def get_isolation_level(self) -> str:
+        """获取隔离级别"""
+        if self.isolation_context:
+            return self.isolation_context.get_isolation_level().value
+        elif self.chat_stream_id:
+            return "chat"
+        elif hasattr(self.chat_stream, "platform") and self.chat_stream.platform:
+            return "platform"
+        elif self.agent_id:
+            return "agent"
+        else:
+            return "tenant"
+
+    def get_isolation_scope(self) -> str:
+        """获取隔离范围字符串"""
+        if self.isolation_context:
+            return str(self.isolation_context.scope)
+        else:
+            components = [self.tenant_id or "unknown", self.agent_id or "unknown"]
+            if hasattr(self.chat_stream, "platform") and self.chat_stream.platform:
+                components.append(self.chat_stream.platform)
+            if self.chat_stream_id:
+                components.append(self.chat_stream_id)
+            return ":".join(components)
+
+    def ensure_isolation_context(self) -> IsolationContext:
+        """确保有隔离上下文"""
+        if not self.isolation_context and self.tenant_id and self.agent_id:
+            platform = getattr(self.chat_stream, "platform", None) if self.chat_stream else None
+            chat_stream_id = getattr(self.chat_stream, "stream_id", None) if self.chat_stream else None
+            self.isolation_context = create_isolation_context(
+                tenant_id=self.tenant_id, agent_id=self.agent_id, platform=platform, chat_stream_id=chat_stream_id
+            )
+        return self.isolation_context
+
+    def get_isolation_info(self) -> Dict[str, Any]:
+        """获取完整的隔离信息"""
+        return {
+            "tenant_id": self.tenant_id,
+            "agent_id": self.agent_id,
+            "platform": getattr(self.chat_stream, "platform", None) if self.chat_stream else None,
+            "chat_stream_id": getattr(self.chat_stream, "stream_id", None) if self.chat_stream else None,
+            "isolation_level": self.get_isolation_level(),
+            "isolation_scope": self.get_isolation_scope(),
+            "has_isolation_context": self.isolation_context is not None,
+        }
+
+    def validate_isolation_context(self) -> bool:
+        """验证隔离上下文的有效性"""
+        if not self.tenant_id or not self.agent_id:
+            return False
+
+        if self.isolation_context:
+            return (
+                self.isolation_context.tenant_id == self.tenant_id and self.isolation_context.agent_id == self.agent_id
+            )
+
+        return True
+
+    def clone_with_isolation(self, tenant_id: str = None, agent_id: str = None) -> "MessageRecv":
+        """克隆消息并更新隔离信息"""
+        import copy
+
+        # 创建新的消息实例
+        cloned = copy.deepcopy(self)
+
+        # 更新隔离信息
+        if tenant_id:
+            cloned.tenant_id = tenant_id
+        if agent_id:
+            cloned.agent_id = agent_id
+
+        # 重新创建隔离上下文
+        platform = getattr(cloned.chat_stream, "platform", None) if cloned.chat_stream else None
+        chat_stream_id = getattr(cloned.chat_stream, "stream_id", None) if cloned.chat_stream else None
+        cloned.isolation_context = create_isolation_context(
+            tenant_id=cloned.tenant_id, agent_id=cloned.agent_id, platform=platform, chat_stream_id=chat_stream_id
+        )
+
+        return cloned
 
     def _ensure_legacy_fields(self) -> None:
         """为仍依赖旧字段的模块补齐 user_info/group_info。"""
@@ -187,6 +319,11 @@ class MessageRecv(MaiMessageBase):
         message_segment = Seg.from_dict(message_dict.get("message_segment", {}))
         raw_message = message_dict.get("raw_message")
 
+        # 提取隔离字段
+        tenant_id = message_dict.get("tenant_id")
+        agent_id = message_dict.get("agent_id")
+        isolation_context = message_dict.get("isolation_context")
+
         if not message_info.sender_info and (message_info.user_info or message_info.group_info):
             message_info.sender_info = SenderInfo(
                 user_info=message_info.user_info,
@@ -197,7 +334,9 @@ class MessageRecv(MaiMessageBase):
         sender_user = sender.user_info or message_info.user_info or UserInfo()
         sender_group = sender.group_info or message_info.group_info
 
-        agent_id = cls._extract_agent_id(message_info, message_dict)
+        # 提取agent_id（多个可能的来源）
+        if not agent_id:
+            agent_id = cls._extract_agent_id(message_info, message_dict)
 
         from .chat_stream import get_chat_manager
 
@@ -259,6 +398,10 @@ class MessageRecv(MaiMessageBase):
             chat_stream=chat_stream,
             raw_message=raw_message,
             processed_plain_text=message_dict.get("processed_plain_text", ""),
+            # 传递隔离字段
+            tenant_id=tenant_id,
+            agent_id=agent_id,
+            isolation_context=isolation_context,
         )
         instance._apply_initial_payload(message_dict)
         return instance

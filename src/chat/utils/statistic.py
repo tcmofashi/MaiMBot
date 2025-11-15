@@ -541,7 +541,9 @@ class StatisticOutputTask(AsyncTask):
                         continue
                 last_all_time_stat = last_stat["stat_data"]  # 上次完整统计的统计数据
                 last_stat_timestamp = datetime.fromtimestamp(last_stat["timestamp"])  # 上次完整统计数据的时间戳
-                self.stat_period = [item for item in self.stat_period if item[0] != "all_time"]  # 删除"所有时间"的统计时段
+                self.stat_period = [
+                    item for item in self.stat_period if item[0] != "all_time"
+                ]  # 删除"所有时间"的统计时段
                 self.stat_period.append(("all_time", now - last_stat_timestamp, "自部署以来的"))
         except Exception as e:
             logger.warning(f"加载上次完整统计数据失败，进行全量统计，错误信息：{e}")
@@ -593,12 +595,12 @@ class StatisticOutputTask(AsyncTask):
         # 更新上次完整统计数据的时间戳
         # 将所有defaultdict转换为普通dict以避免类型冲突
         clean_stat_data = self._convert_defaultdict_to_dict(stat["all_time"])
-        
+
         # 将 name_mapping 中的元组转换为列表，因为JSON不支持元组
         json_safe_name_mapping = {}
         for chat_id, (chat_name, timestamp) in self.name_mapping.items():
             json_safe_name_mapping[chat_id] = [chat_name, timestamp]
-        
+
         local_storage["last_full_statistics"] = {
             "name_mapping": json_safe_name_mapping,
             "stat_data": clean_stat_data,
@@ -809,8 +811,12 @@ class StatisticOutputTask(AsyncTask):
                 except (IndexError, TypeError) as e:
                     logger.warning(f"生成HTML聊天统计时发生错误，chat_id: {chat_id}, 错误: {e}")
                     chat_rows.append(f"<tr><td>未知聊天</td><td>{count}</td></tr>")
-            
-            chat_rows_html = "\n".join(chat_rows) if chat_rows else "<tr><td colspan='2' style='text-align: center; color: #999;'>暂无数据</td></tr>"
+
+            chat_rows_html = (
+                "\n".join(chat_rows)
+                if chat_rows
+                else "<tr><td colspan='2' style='text-align: center; color: #999;'>暂无数据</td></tr>"
+            )
             # 生成HTML
             return f"""
             <div id=\"{div_id}\" class=\"tab-content\">

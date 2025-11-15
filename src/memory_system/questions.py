@@ -13,6 +13,7 @@ from src.memory_system.memory_utils import parse_md_json
 
 logger = get_logger("conflict_tracker")
 
+
 class QuestionTracker:
     """
     用于跟踪一个问题在后续聊天中的解答情况
@@ -34,32 +35,32 @@ class QuestionTracker:
 
     def stop(self) -> None:
         self.active = False
-    
+
     def should_judge_now(self) -> bool:
         """
         检查是否应该进行判定（防抖检查）
-        
+
         Returns:
             bool: 是否可以判定
         """
         now = time.time()
         # 检查是否已经过了10秒的防抖间隔
         return (now - self.last_judge_time) >= self.judge_debounce_interval
-    
+
     def __eq__(self, other) -> bool:
         """比较两个追踪器是否相等（基于问题内容和聊天ID）"""
         if not isinstance(other, QuestionTracker):
             return False
         return self.question == other.question and self.chat_id == other.chat_id
-    
+
     def __hash__(self) -> int:
         """为对象提供哈希值，支持集合操作"""
         return hash((self.question, self.chat_id))
 
-    async def judge_answer(self, conversation_text: str,chat_len: int) -> tuple[bool, str, str]:
+    async def judge_answer(self, conversation_text: str, chat_len: int) -> tuple[bool, str, str]:
         """
         使用模型判定问题是否已得到解答。
-        
+
         Returns:
             tuple[bool, str, str]: (是否结束跟踪, 结束原因或答案, 判定类型)
             - True: 结束跟踪（已解答、话题转向等）
@@ -93,12 +94,12 @@ class QuestionTracker:
             logger.debug("已发送判定提示词")
 
         result_text, _ = await self.llm_request.generate_response_async(prompt, temperature=0.5)
-        
+
         logger.info(f"判定结果: {prompt}\n{result_text}")
-        
+
         # 更新上次判定时间
         self.last_judge_time = time.time()
-        
+
         if not result_text:
             return False, "", "CONTINUE"
 
@@ -115,14 +116,16 @@ class QuestionTracker:
             return True, "话题已转向其他方向，放弃该问题思考", "END"
         return False, "", "CONTINUE"
 
+
 class ConflictTracker:
     """
     记忆整合冲突追踪器
 
     用于记录和存储记忆整合过程中的冲突内容
     """
+
     def __init__(self):
-        self.question_tracker_list:List[QuestionTracker] = []
+        self.question_tracker_list: List[QuestionTracker] = []
 
         self.LLMRequest_tracker = LLMRequest(
             model_set=model_config.model_task_config.utils,
@@ -132,7 +135,9 @@ class ConflictTracker:
     def get_questions_by_chat_id(self, chat_id: str) -> List[QuestionTracker]:
         return [tracker for tracker in self.question_tracker_list if tracker.chat_id == chat_id]
 
-    async def track_conflict(self, question: str, context: str = "",start_following: bool = False,chat_id: str = "") -> bool:
+    async def track_conflict(
+        self, question: str, context: str = "", start_following: bool = False, chat_id: str = ""
+    ) -> bool:
         """
         跟踪冲突内容
         """
@@ -140,8 +145,10 @@ class ConflictTracker:
         self.question_tracker_list.append(tracker)
         asyncio.create_task(self._follow_and_record(tracker, question.strip()))
         return True
-        
-    async def record_conflict(self, conflict_content: str, context: str = "",start_following: bool = False,chat_id: str = "") -> bool:
+
+    async def record_conflict(
+        self, conflict_content: str, context: str = "", start_following: bool = False, chat_id: str = ""
+    ) -> bool:
         """
         记录冲突内容
 
@@ -185,8 +192,8 @@ class ConflictTracker:
         """
         try:
             max_duration = 10 * 60  # 30 分钟
-            max_messages = 50      # 最多 100 条消息
-            poll_interval = 2.0     # 秒
+            max_messages = 50  # 最多 100 条消息
+            poll_interval = 2.0  # 秒
             logger.info(f"开始跟踪问题: {original_question}")
             while tracker.active:
                 now_ts = time.time()
@@ -239,8 +246,8 @@ class ConflictTracker:
                     )
                     chat_len = len(all_msgs)
                     # 让小模型判断是否有答案
-                    answered, answer_text, judge_type = await tracker.judge_answer(chat_text,chat_len)
-                    
+                    answered, answer_text, judge_type = await tracker.judge_answer(chat_text, chat_len)
+
                     if judge_type == "ANSWERED":
                         # 问题已解答，直接结束跟踪
                         logger.info("问题已得到解答，结束跟踪并写入答案")
@@ -256,7 +263,7 @@ class ConflictTracker:
                         # 话题转向，增加END计数
                         tracker.consecutive_end_count += 1
                         logger.info(f"话题已转向，连续END次数: {tracker.consecutive_end_count}")
-                        
+
                         if tracker.consecutive_end_count >= 2:
                             # 连续两次END，结束跟踪
                             logger.info("连续两次END，结束跟踪")
@@ -281,10 +288,9 @@ class ConflictTracker:
             # 未获取到答案，检查是否需要删除记录
             # 查找现有的冲突记录
             existing_conflict = MemoryConflict.get_or_none(
-                MemoryConflict.conflict_content == original_question,
-                MemoryConflict.chat_id == tracker.chat_id
+                MemoryConflict.conflict_content == original_question, MemoryConflict.chat_id == tracker.chat_id
             )
-            
+
             if existing_conflict:
                 # 检查raise_time是否大于3且没有答案
                 current_raise_time = getattr(existing_conflict, "raise_time", 0) or 0
@@ -312,7 +318,7 @@ class ConflictTracker:
                     chat_id=tracker.chat_id,
                 )
                 logger.info(f"记录冲突内容(未解答): {len(original_question)} 字符")
-            
+
             logger.info(f"问题跟踪结束：{original_question}")
         except Exception as e:
             logger.error(f"后台问题跟踪任务异常: {e}")
@@ -320,11 +326,11 @@ class ConflictTracker:
             # 无论任务成功还是失败，都要从追踪列表中移除
             tracker.stop()
             self.remove_tracker(tracker)
-    
+
     def remove_tracker(self, tracker: QuestionTracker) -> None:
         """
         从追踪列表中移除指定的追踪器
-        
+
         Args:
             tracker: 要移除的追踪器对象
         """
@@ -344,7 +350,7 @@ class ConflictTracker:
         update_time: float,
         answer: str = "",
         context: str = "",
-        chat_id: str = None
+        chat_id: str = None,
     ) -> bool:
         """
         根据conflict_content匹配数据库内容，如果找到相同的就更新update_time和answer，
@@ -353,10 +359,9 @@ class ConflictTracker:
         try:
             # 尝试根据conflict_content查找现有记录
             existing_conflict = MemoryConflict.get_or_none(
-                MemoryConflict.conflict_content == conflict_content,
-                MemoryConflict.chat_id == chat_id
+                MemoryConflict.conflict_content == conflict_content, MemoryConflict.chat_id == chat_id
             )
-            
+
             if existing_conflict:
                 # 如果找到相同的conflict_content，更新update_time和answer
                 existing_conflict.update_time = update_time
@@ -417,18 +422,21 @@ class ConflictTracker:
 ```
 ...提问数量在1-3个之间，不要重复，现在请输出："""
 
-        question_response, (reasoning_content, model_name, tool_calls) = await self.LLMRequest_tracker.generate_response_async(prompt)
-            
+        (
+            question_response,
+            (reasoning_content, model_name, tool_calls),
+        ) = await self.LLMRequest_tracker.generate_response_async(prompt)
+
         # 解析JSON响应
-        questions, reasoning_content = parse_md_json(question_response)   
+        questions, reasoning_content = parse_md_json(question_response)
 
         print(prompt)
         print(question_response)
 
         for question in questions:
             await self.record_conflict(
-                conflict_content=question["question"], 
-                context=reasoning_content, 
+                conflict_content=question["question"],
+                context=reasoning_content,
                 start_following=False,
                 chat_id=chat_id,
             )
@@ -460,10 +468,9 @@ class ConflictTracker:
         """
         try:
             conflict = MemoryConflict.get_or_none(
-                MemoryConflict.conflict_content == conflict_content,
-                MemoryConflict.chat_id == chat_id
+                MemoryConflict.conflict_content == conflict_content, MemoryConflict.chat_id == chat_id
             )
-            
+
             if conflict:
                 conflict.delete_instance()
                 logger.info(f"已删除冲突记录: {conflict_content}")
@@ -475,5 +482,8 @@ class ConflictTracker:
             logger.error(f"删除冲突记录时出错: {e}")
             return False
 
+
 # 全局冲突追踪器实例
 global_conflict_tracker = ConflictTracker()
+
+# 隔离化系统导入（向后兼容）

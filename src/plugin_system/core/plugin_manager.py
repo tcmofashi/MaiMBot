@@ -1,5 +1,7 @@
 import os
 import traceback
+import threading
+import weakref
 
 from typing import Dict, List, Optional, Tuple, Type, Any
 from importlib.util import spec_from_file_location, module_from_spec
@@ -485,6 +487,314 @@ class PluginManager:
             )
         else:
             logger.info(f"✅ 插件加载成功: {plugin_name}")
+
+
+class IsolatedPluginManager:
+    """
+    隔离化插件管理器
+
+    支持T+A维度的租户级别插件配置和权限控制
+    插件管理器可以全局共享，但插件执行需要隔离上下文
+    """
+
+    def __init__(self, tenant_id: str):
+        self.tenant_id = tenant_id  # T: 租户隔离
+
+        # 插件配置和权限管理
+        self._tenant_plugin_configs: Dict[str, Dict[str, Any]] = {}  # plugin_name -> config
+        self._plugin_permissions: Dict[str, Dict[str, bool]] = {}  # plugin_name -> permissions
+        self._plugin_priorities: Dict[str, int] = {}  # plugin_name -> priority
+
+        # 执行配置
+        self._default_execution_config = {
+            "timeout": 30.0,
+            "security_level": "medium",
+            "max_memory_mb": 512,
+            "allow_network_access": False,
+            "allow_file_access": False,
+        }
+
+        # 统计信息
+        self._stats = {
+            "total_plugin_executions": 0,
+            "successful_executions": 0,
+            "failed_executions": 0,
+            "active_plugins": set(),
+            "disabled_plugins": set(),
+        }
+
+        # 线程安全锁
+        self._lock = threading.RLock()
+
+        logger.debug(f"隔离化插件管理器初始化完成: {tenant_id}")
+
+    def set_plugin_config(self, plugin_name: str, config: Dict[str, Any]) -> bool:
+        """设置插件配置"""
+        with self._lock:
+            self._tenant_plugin_configs[plugin_name] = config.copy()
+            logger.debug(f"租户 {self.tenant_id} 设置插件 {plugin_name} 配置")
+            return True
+
+    def get_plugin_config(self, plugin_name: str) -> Dict[str, Any]:
+        """获取插件配置"""
+        with self._lock:
+            # 租户级别配置优先，其次使用默认配置
+            tenant_config = self._tenant_plugin_configs.get(plugin_name, {})
+            return {**self._default_execution_config, **tenant_config}
+
+    def set_plugin_permissions(self, plugin_name: str, permissions: Dict[str, bool]) -> bool:
+        """设置插件权限"""
+        with self._lock:
+            self._plugin_permissions[plugin_name] = permissions.copy()
+            logger.debug(f"租户 {self.tenant_id} 设置插件 {plugin_name} 权限")
+            return True
+
+    def get_plugin_permissions(self, plugin_name: str) -> Dict[str, bool]:
+        """获取插件权限"""
+        with self._lock:
+            return self._plugin_permissions.get(
+                plugin_name,
+                {
+                    "can_execute": True,
+                    "can_access_network": False,
+                    "can_access_filesystem": False,
+                    "can_access_system": False,
+                },
+            )
+
+    def set_plugin_priority(self, plugin_name: str, priority: int) -> bool:
+        """设置插件优先级"""
+        with self._lock:
+            self._plugin_priorities[plugin_name] = priority
+            logger.debug(f"租户 {self.tenant_id} 设置插件 {plugin_name} 优先级: {priority}")
+            return True
+
+    def get_plugin_priority(self, plugin_name: str) -> int:
+        """获取插件优先级"""
+        with self._lock:
+            return self._plugin_priorities.get(plugin_name, 0)
+
+    def enable_plugin(self, plugin_name: str) -> bool:
+        """启用插件"""
+        with self._lock:
+            if plugin_name in self._stats["disabled_plugins"]:
+                self._stats["disabled_plugins"].remove(plugin_name)
+            self._stats["active_plugins"].add(plugin_name)
+            logger.info(f"租户 {self.tenant_id} 启用插件: {plugin_name}")
+            return True
+
+    def disable_plugin(self, plugin_name: str) -> bool:
+        """禁用插件"""
+        with self._lock:
+            if plugin_name in self._stats["active_plugins"]:
+                self._stats["active_plugins"].remove(plugin_name)
+            self._stats["disabled_plugins"].add(plugin_name)
+            logger.info(f"租户 {self.tenant_id} 禁用插件: {plugin_name}")
+            return True
+
+    def is_plugin_enabled(self, plugin_name: str) -> bool:
+        """检查插件是否启用"""
+        with self._lock:
+            return plugin_name in self._stats["active_plugins"] and plugin_name not in self._stats["disabled_plugins"]
+
+    def get_enabled_plugins(self) -> List[str]:
+        """获取启用的插件列表"""
+        with self._lock:
+            return list(self._stats["active_plugins"])
+
+    def can_execute_plugin(self, plugin_name: str, agent_id: str = None, platform: str = None) -> bool:
+        """检查是否可以执行插件"""
+        if not self.is_plugin_enabled(plugin_name):
+            return False
+
+        permissions = self.get_plugin_permissions(plugin_name)
+        if not permissions.get("can_execute", True):
+            return False
+
+        # 检查智能体级别权限
+        if agent_id:
+            plugin_config = self.get_plugin_config(plugin_name)
+            allowed_agents = plugin_config.get("allowed_agents", [])
+            if allowed_agents and agent_id not in allowed_agents:
+                return False
+
+        # 检查平台级别权限
+        if platform:
+            plugin_config = self.get_plugin_config(plugin_name)
+            allowed_platforms = plugin_config.get("allowed_platforms", [])
+            if allowed_platforms and platform not in allowed_platforms:
+                return False
+
+        return True
+
+    def update_execution_stats(self, plugin_name: str, success: bool):
+        """更新执行统计"""
+        with self._lock:
+            self._stats["total_plugin_executions"] += 1
+            if success:
+                self._stats["successful_executions"] += 1
+            else:
+                self._stats["failed_executions"] += 1
+
+    def get_stats(self) -> Dict[str, Any]:
+        """获取统计信息"""
+        with self._lock:
+            stats = self._stats.copy()
+            stats["active_plugins"] = list(stats["active_plugins"])
+            stats["disabled_plugins"] = list(stats["disabled_plugins"])
+
+            if stats["total_plugin_executions"] > 0:
+                stats["success_rate"] = stats["successful_executions"] / stats["total_plugin_executions"]
+            else:
+                stats["success_rate"] = 0.0
+
+            return stats
+
+    def get_plugin_info_summary(self) -> Dict[str, Any]:
+        """获取插件信息摘要"""
+        with self._lock:
+            summary = {
+                "tenant_id": self.tenant_id,
+                "total_configs": len(self._tenant_plugin_configs),
+                "total_permissions": len(self._plugin_permissions),
+                "total_priorities": len(self._plugin_priorities),
+                "enabled_plugins": len(self._stats["active_plugins"]),
+                "disabled_plugins": len(self._stats["disabled_plugins"]),
+                "stats": self.get_stats(),
+            }
+            return summary
+
+
+class IsolatedPluginManagerManager:
+    """
+    隔离化插件管理器管理器
+
+    管理多个租户的插件管理器实例
+    """
+
+    def __init__(self):
+        self._managers: Dict[str, IsolatedPluginManager] = {}
+        self._lock = threading.RLock()
+        self._weak_refs: Dict[str, weakref.ref] = {}
+
+        logger.info("隔离化插件管理器管理器初始化完成")
+
+    def get_manager(self, tenant_id: str) -> IsolatedPluginManager:
+        """获取或创建租户的插件管理器"""
+        with self._lock:
+            # 检查弱引用是否仍然有效
+            if tenant_id in self._weak_refs:
+                manager_ref = self._weak_refs[tenant_id]
+                manager = manager_ref()
+                if manager is not None:
+                    return manager
+
+            # 创建新的管理器
+            manager = IsolatedPluginManager(tenant_id)
+            self._weak_refs[tenant_id] = weakref.ref(manager)
+
+            logger.debug(f"创建新的隔离化插件管理器: {tenant_id}")
+            return manager
+
+    def remove_manager(self, tenant_id: str) -> bool:
+        """移除租户的插件管理器"""
+        with self._lock:
+            if tenant_id in self._weak_refs:
+                del self._weak_refs[tenant_id]
+                logger.info(f"移除租户 {tenant_id} 的插件管理器")
+                return True
+            return False
+
+    def get_all_manager_stats(self) -> Dict[str, Any]:
+        """获取所有管理器的统计信息"""
+        with self._lock:
+            stats = {"total_managers": len(self._weak_refs), "active_managers": 0, "manager_details": {}}
+
+            for tenant_id, ref in self._weak_refs.items():
+                manager = ref()
+                if manager is not None:
+                    stats["active_managers"] += 1
+                    manager_stats = manager.get_stats()
+                    stats["manager_details"][tenant_id] = {
+                        "stats": manager_stats,
+                        "summary": manager.get_plugin_info_summary(),
+                    }
+
+            return stats
+
+    def cleanup_expired_managers(self):
+        """清理已过期的管理器引用"""
+        with self._lock:
+            expired_tenants = []
+            for tenant_id, ref in self._weak_refs.items():
+                if ref() is None:
+                    expired_tenants.append(tenant_id)
+
+            for tenant_id in expired_tenants:
+                del self._weak_refs[tenant_id]
+
+            if expired_tenants:
+                logger.debug(f"清理了 {len(expired_tenants)} 个过期的插件管理器引用")
+
+
+# 全局管理器实例
+_global_plugin_manager_manager = IsolatedPluginManagerManager()
+
+
+def get_isolated_plugin_manager(tenant_id: str) -> IsolatedPluginManager:
+    """获取隔离化插件管理器的便捷函数"""
+    return _global_plugin_manager_manager.get_manager(tenant_id)
+
+
+def get_global_plugin_manager_manager() -> IsolatedPluginManagerManager:
+    """获取全局插件管理器管理器"""
+    return _global_plugin_manager_manager
+
+
+# 便捷函数
+def configure_tenant_plugin(
+    tenant_id: str,
+    plugin_name: str,
+    config: Dict[str, Any] = None,
+    permissions: Dict[str, bool] = None,
+    priority: int = 0,
+) -> bool:
+    """配置租户插件的便捷函数"""
+    manager = get_isolated_plugin_manager(tenant_id)
+
+    success = True
+    if config is not None:
+        success &= manager.set_plugin_config(plugin_name, config)
+    if permissions is not None:
+        success &= manager.set_plugin_permissions(plugin_name, permissions)
+    if priority != 0:
+        success &= manager.set_plugin_priority(plugin_name, priority)
+
+    return success
+
+
+def enable_tenant_plugin(tenant_id: str, plugin_name: str) -> bool:
+    """启用租户插件的便捷函数"""
+    manager = get_isolated_plugin_manager(tenant_id)
+    return manager.enable_plugin(plugin_name)
+
+
+def disable_tenant_plugin(tenant_id: str, plugin_name: str) -> bool:
+    """禁用租户插件的便捷函数"""
+    manager = get_isolated_plugin_manager(tenant_id)
+    return manager.disable_plugin(plugin_name)
+
+
+def can_tenant_execute_plugin(tenant_id: str, plugin_name: str, agent_id: str = None, platform: str = None) -> bool:
+    """检查租户是否可以执行插件的便捷函数"""
+    manager = get_isolated_plugin_manager(tenant_id)
+    return manager.can_execute_plugin(plugin_name, agent_id, platform)
+
+
+def get_tenant_plugin_stats(tenant_id: str) -> Dict[str, Any]:
+    """获取租户插件统计信息的便捷函数"""
+    manager = get_isolated_plugin_manager(tenant_id)
+    return manager.get_stats()
 
 
 # 全局插件管理器实例

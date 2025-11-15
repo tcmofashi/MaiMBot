@@ -56,7 +56,7 @@ class JargonMiner:
         self.last_learning_time: float = time.time()
         # 频率控制，可按需调整
         self.min_messages_for_learning: int = 20
-        self.min_learning_interval: float = 30  
+        self.min_learning_interval: float = 30
 
         self.llm = LLMRequest(
             model_set=model_config.model_task_config.utils,
@@ -107,7 +107,7 @@ class JargonMiner:
             response, _ = await self.llm.generate_response_async(prompt, temperature=0.2)
             if not response:
                 return
-            
+
             logger.info(f"jargon提取提示词: {prompt}")
             logger.info(f"jargon提取结果: {response}")
 
@@ -137,17 +137,13 @@ class JargonMiner:
                     content = str(item.get("content", "")).strip()
                     raw_content = str(item.get("raw_content", "")).strip()
                     type_str = str(item.get("type", "")).strip().lower()
-                    
+
                     # 验证type是否为有效值
                     if type_str not in ["p", "c", "e"]:
                         type_str = "p"  # 默认值
-                    
+
                     if content:
-                        entries.append({
-                            "content": content,
-                            "raw_content": raw_content,
-                            "type": type_str
-                        })
+                        entries.append({"content": content, "raw_content": raw_content, "type": type_str})
             except Exception as e:
                 logger.error(f"解析jargon JSON失败: {e}; 原始: {response}")
                 return
@@ -164,7 +160,7 @@ class JargonMiner:
                 if content_key not in seen:
                     seen.add(content_key)
                     uniq_entries.append(entry)
-            
+
             saved = 0
             updated = 0
             for entry in uniq_entries:
@@ -172,10 +168,7 @@ class JargonMiner:
                 raw_content = entry["raw_content"]
                 type_str = entry["type"]
                 try:
-                    query = (
-                        Jargon.select()
-                        .where((Jargon.chat_id == self.chat_id) & (Jargon.content == content))
-                    )
+                    query = Jargon.select().where((Jargon.chat_id == self.chat_id) & (Jargon.content == content))
                     if query.exists():
                         obj = query.get()
                         try:
@@ -196,7 +189,7 @@ class JargonMiner:
                             type=type_str,
                             chat_id=self.chat_id,
                             is_global=False,
-                            count=1
+                            count=1,
                         )
                         saved += 1
                 except Exception as e:
@@ -226,5 +219,3 @@ miner_manager = JargonMinerManager()
 async def extract_and_store_jargon(chat_id: str) -> None:
     miner = miner_manager.get_miner(chat_id)
     await miner.run_once()
-
-

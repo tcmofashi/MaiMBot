@@ -41,6 +41,14 @@ from .api_ada_configs import (
     APIProvider,
 )
 
+# 导入多租户配置系统（可选）
+try:
+    from .isolated_config_system import initialize_isolated_config_system, get_isolated_config_system
+
+    _multi_tenant_available = True
+except ImportError:
+    _multi_tenant_available = False
+
 
 install(extra_lines=3)
 

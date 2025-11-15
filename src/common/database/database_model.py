@@ -1,6 +1,9 @@
 from peewee import Model, DoubleField, IntegerField, BooleanField, TextField, FloatField, DateTimeField
 from .database import db
 import datetime
+import json
+import hashlib
+import secrets
 from src.common.logger import get_logger
 
 logger = get_logger("database_model")
@@ -28,9 +31,13 @@ class BaseModel(Model):
 
 
 class AgentRecord(BaseModel):
-    """存储 Agent 配置的模型。"""
+    """存储 Agent 配置的模型，支持多租户隔离。"""
 
-    agent_id = TextField(unique=True, index=True)
+    # T+A 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+
+    # tenant_id + agent_id 组合唯一约束
     name = TextField()
     description = TextField(null=True)
     tags = TextField(null=True)
@@ -46,12 +53,14 @@ class AgentRecord(BaseModel):
 
 class ChatStreams(BaseModel):
     """
-    用于存储流式记录数据的模型，类似于提供的 MongoDB 结构。
+    用于存储流式记录数据的模型，支持多租户T+A+C+P四维隔离。
     """
 
-    # stream_id: "a544edeb1a9b73e3e1d77dff36e41264"
-    # 假设 stream_id 是唯一的，并为其创建索引以提高查询性能。
-    stream_id = TextField(unique=True, index=True)
+    # T+A+C+P 四维隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    platform = TextField(index=True)  # P: 平台隔离
+    chat_stream_id = TextField(unique=True, index=True)  # C: 聊天流隔离
 
     # create_time: 1746096761.4490178 (时间戳，精确到小数点后7位)
     # DoubleField 用于存储浮点数，适合此类时间戳。
@@ -68,12 +77,6 @@ class ChatStreams(BaseModel):
     # last_active_time: 1746623771.4825106 (时间戳，精确到小数点后7位)
     last_active_time = DoubleField()
 
-    # platform: "qq" (顶层平台字段)
-    platform = TextField()
-
-    # agent_id: 用于区分不同的机器人实例/人格
-    agent_id = TextField(null=True)
-
     # user_info 字段:
     #   platform: "qq"
     #   user_id: "1787882683"
@@ -85,6 +88,10 @@ class ChatStreams(BaseModel):
     # user_cardname 可能为空字符串或不存在，设置 null=True 更具灵活性。
     user_cardname = TextField(null=True)
 
+    # 兼容性字段 - 保持原有stream_id字段用于向后兼容
+    # 实际使用chat_stream_id作为新的唯一标识符
+    stream_id = TextField(unique=True, index=True, null=True)  # 向后兼容字段
+
     class Meta:
         # 如果 BaseModel.Meta.database 已设置，则此模型将继承该数据库配置。
         # 如果不使用带有数据库实例的 BaseModel，或者想覆盖它，
@@ -95,8 +102,13 @@ class ChatStreams(BaseModel):
 
 class LLMUsage(BaseModel):
     """
-    用于存储 API 使用日志数据的模型。
+    用于存储 API 使用日志数据的模型，支持租户隔离。
     """
+
+    # T+A 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离 (用于配额和计费)
+    agent_id = TextField(index=True)  # A: 智能体隔离 (用于配置选择)
+    platform = TextField(index=True)  # P: 平台隔离
 
     model_name = TextField(index=True)  # 添加索引
     model_assign_name = TextField(null=True)  # 添加索引
@@ -142,13 +154,20 @@ class Emoji(BaseModel):
 
 class Messages(BaseModel):
     """
-    用于存储消息数据的模型。
+    用于存储消息数据的模型，支持多租户T+A+C+P四维隔离。
     """
+
+    # T+A+C+P 四维隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    platform = TextField(index=True)  # P: 平台隔离
+    chat_stream_id = TextField(index=True)  # C: 聊天流隔离
 
     message_id = TextField(index=True)  # 消息 ID (更改自 IntegerField)
     time = DoubleField()  # 消息时间戳
 
-    chat_id = TextField(index=True)  # 对应的 ChatStreams stream_id
+    # 兼容性字段 - 保持原有chat_id字段用于向后兼容
+    chat_id = TextField(index=True, null=True)  # 对应的 ChatStreams stream_id (向后兼容)
 
     reply_to = TextField(null=True)
 
@@ -217,8 +236,13 @@ class Messages(BaseModel):
 
 class ActionRecords(BaseModel):
     """
-    用于存储动作记录数据的模型。
+    用于存储动作记录数据的模型，支持多租户隔离。
     """
+
+    # T+A+C 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    chat_stream_id = TextField(index=True)  # C: 聊天流隔离
 
     action_id = TextField(index=True)  # 消息 ID (更改自 IntegerField)
     time = DoubleField()  # 消息时间戳
@@ -232,9 +256,10 @@ class ActionRecords(BaseModel):
     action_build_into_prompt = BooleanField(default=False)
     action_prompt_display = TextField()
 
-    chat_id = TextField(index=True)  # 对应的 ChatStreams stream_id
-    chat_info_stream_id = TextField()
-    chat_info_platform = TextField()
+    # 兼容性字段
+    chat_id = TextField(index=True, null=True)  # 对应的 ChatStreams stream_id (向后兼容)
+    chat_info_stream_id = TextField(null=True)
+    chat_info_platform = TextField(null=True)
 
     class Meta:
         # database = db # 继承自 BaseModel
@@ -293,8 +318,11 @@ class OnlineTime(BaseModel):
 
 class PersonInfo(BaseModel):
     """
-    用于存储个人信息数据的模型。
+    用于存储个人信息数据的模型，支持租户隔离。
     """
+
+    # T 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
 
     is_known = BooleanField(default=False)  # 是否已认识
     person_id = TextField(unique=True, index=True)  # 个人唯一ID
@@ -315,8 +343,11 @@ class PersonInfo(BaseModel):
 
 class GroupInfo(BaseModel):
     """
-    用于存储群组信息数据的模型。
+    用于存储群组信息数据的模型，支持租户隔离。
     """
+
+    # T 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
 
     group_id = TextField(unique=True, index=True)  # 群组唯一ID
     group_name = TextField(null=True)  # 群组名称 (允许为空)
@@ -336,8 +367,13 @@ class GroupInfo(BaseModel):
 
 class Expression(BaseModel):
     """
-    用于存储表达风格的模型。
+    用于存储表达风格的模型，支持多租户隔离。
     """
+
+    # T+A+C 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    chat_stream_id = TextField(index=True)  # C: 聊天流隔离
 
     situation = TextField()
     style = TextField()
@@ -345,7 +381,8 @@ class Expression(BaseModel):
     up_content = TextField(null=True)
 
     last_active_time = FloatField()
-    chat_id = TextField(index=True)
+    # 兼容性字段
+    chat_id = TextField(index=True, null=True)  # 向后兼容字段
     create_date = FloatField(null=True)  # 创建日期，允许为空以兼容老数据
 
     class Meta:
@@ -354,12 +391,22 @@ class Expression(BaseModel):
 
 class MemoryChest(BaseModel):
     """
-    用于存储记忆仓库的模型
+    用于存储记忆仓库的模型，支持T+A+C+P四维隔离和多层次记忆管理。
     """
+
+    # T+A+C+P 四维隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    platform = TextField(null=True, index=True)  # P: 平台隔离 (可为空，支持智能体级别记忆)
+    chat_stream_id = TextField(null=True, index=True)  # C: 聊天流隔离 (可为空，支持智能体级别记忆)
+
+    # 记忆级别管理字段
+    memory_level = TextField(index=True)  # 记忆级别: "agent", "platform", "chat"
+    memory_scope = TextField(index=True)  # 记忆域标识: "{tenant_id}:{agent_id}:{platform}:{chat_stream_id or 'global'}"
 
     title = TextField()  # 标题
     content = TextField()  # 内容
-    chat_id = TextField(null=True)  # 聊天ID
+    chat_id = TextField(null=True)  # 聊天ID (向后兼容字段)
     locked = BooleanField(default=False)  # 是否锁定
 
     class Meta:
@@ -416,19 +463,101 @@ class GraphEdges(BaseModel):
 
 
 class Jargon(BaseModel):
-    """用于存储黑话与俚语的模型。"""
+    """用于存储黑话与俚语的模型，支持多租户隔离。"""
+
+    # T+A+C 维度隔离字段
+    tenant_id = TextField(index=True)  # T: 租户隔离
+    agent_id = TextField(index=True)  # A: 智能体隔离
+    chat_stream_id = TextField(index=True)  # C: 聊天流隔离
 
     content = TextField()
     raw_content = TextField(null=True)
     type = TextField(null=True)
     translation = TextField(null=True)
     meaning = TextField(null=True)
-    chat_id = TextField(index=True)
+    # 兼容性字段
+    chat_id = TextField(index=True, null=True)  # 向后兼容字段
     is_global = BooleanField(default=False)
     count = IntegerField(default=0)
 
     class Meta:
         table_name = "jargon"
+
+
+class TenantUsers(BaseModel):
+    """租户用户管理模型 - 支持多租户单用户模式"""
+
+    tenant_id = TextField(unique=True, index=True)  # 租户ID（唯一）
+    user_id = TextField(unique=True, index=True)  # 用户ID（唯一）
+    username = TextField()  # 用户名
+    email = TextField(null=True)  # 邮箱
+    phone = TextField(null=True)  # 手机号
+    password_hash = TextField()  # 密码哈希
+    salt = TextField()  # 密码盐值
+    api_key = TextField(unique=True, index=True)  # API密钥
+    status = TextField(default="active")  # 用户状态: active, suspended, deleted
+    tenant_type = TextField(default="personal")  # 租户类型: personal, enterprise
+    tenant_name = TextField()  # 租户名称
+    tenant_config = TextField(null=True)  # 租户配置（JSON格式）
+    permissions = TextField(default="[]")  # 权限列表（JSON数组）
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+    last_login_at = DateTimeField(null=True)  # 最后登录时间
+    login_count = IntegerField(default=0)  # 登录次数
+
+    class Meta:
+        table_name = "tenant_users"
+
+
+class AgentTemplates(BaseModel):
+    """Agent模板模型 - 用于快速创建Agent配置"""
+
+    template_id = TextField(unique=True, index=True)  # 模板ID
+    name = TextField()  # 模板名称
+    description = TextField(null=True)  # 模板描述
+    category = TextField(default="general")  # 模板分类: general, professional, entertainment
+    tags = TextField(null=True)  # 标签（JSON数组）
+    is_active = BooleanField(default=True)  # 是否启用
+    is_system = BooleanField(default=False)  # 是否系统模板
+    usage_count = IntegerField(default=0)  # 使用次数
+
+    # Agent核心配置
+    persona = TextField()  # 人格描述
+    personality_traits = TextField(null=True)  # 人格特征（JSON对象）
+    response_style = TextField(null=True)  # 回复风格
+    memory_config = TextField(null=True)  # 记忆配置（JSON对象）
+    plugin_config = TextField(default="[]")  # 插件配置（JSON数组）
+
+    # 模板配置参数
+    config_schema = TextField(null=True)  # 配置模式（JSON Schema）
+    default_config = TextField(null=True)  # 默认配置（JSON对象）
+
+    created_by = TextField(null=True)  # 创建者
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "agent_templates"
+
+
+class UserSessions(BaseModel):
+    """用户会话管理模型"""
+
+    session_id = TextField(unique=True, index=True)  # 会话ID
+    user_id = TextField(index=True)  # 用户ID
+    tenant_id = TextField(index=True)  # 租户ID
+    jwt_token = TextField(unique=True, index=True)  # JWT令牌
+    token_hash = TextField(index=True)  # 令牌哈希
+    refresh_token = TextField(unique=True, null=True)  # 刷新令牌
+    expires_at = DateTimeField(index=True)  # 过期时间
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    last_accessed_at = DateTimeField(default=datetime.datetime.utcnow)
+    ip_address = TextField(null=True)  # IP地址
+    user_agent = TextField(null=True)  # 用户代理
+    is_active = BooleanField(default=True)  # 是否活跃
+
+    class Meta:
+        table_name = "user_sessions"
 
 
 MODELS = [
@@ -441,6 +570,7 @@ MODELS = [
     ImageDescriptions,
     OnlineTime,
     PersonInfo,
+    GroupInfo,
     Expression,
     GraphNodes,
     GraphEdges,
@@ -448,6 +578,9 @@ MODELS = [
     MemoryChest,
     MemoryConflict,
     Jargon,
+    TenantUsers,
+    AgentTemplates,
+    UserSessions,
 ]
 
 
@@ -512,6 +645,16 @@ def initialize_database(sync_constraints=False):
                                 alter_sql += f" DEFAULT {int(default_value)}"
                             else:
                                 alter_sql += f" DEFAULT {default_value}"
+                        elif field_name in ["tenant_id", "agent_id", "platform", "chat_stream_id"]:
+                            # 为隔离字段提供默认值
+                            if field_name == "tenant_id":
+                                alter_sql += " DEFAULT 'default'"
+                            elif field_name == "agent_id":
+                                alter_sql += " DEFAULT 'default'"
+                            elif field_name == "platform":
+                                alter_sql += " DEFAULT 'unknown'"
+                            elif field_name == "chat_stream_id":
+                                alter_sql += " DEFAULT 'unknown'"
                         try:
                             db.execute_sql(alter_sql)
                             logger.info(f"字段 '{field_name}' 添加成功")
@@ -586,7 +729,7 @@ def sync_field_constraints():
                                 "target_constraint": "NULL",
                             }
                         )
-                        logger.warning(f"字段 '{field_name}' 约束不一致: 模型允许NULL，但数据库为NOT NULL")
+                        logger.debug(f"字段 '{field_name}' 约束不一致: 模型允许NULL，但数据库为NOT NULL")
 
                     # 如果模型不允许 null 但数据库字段允许 null，也需要修复（但要小心）
                     elif not model_allows_null and not current_notnull:
@@ -599,7 +742,7 @@ def sync_field_constraints():
                                 "target_constraint": "NOT NULL",
                             }
                         )
-                        logger.warning(f"字段 '{field_name}' 约束不一致: 模型不允许NULL，但数据库允许NULL")
+                        logger.debug(f"字段 '{field_name}' 约束不一致: 模型不允许NULL，但数据库允许NULL")
 
                 # 修复约束不一致的字段
                 if constraints_to_fix:
@@ -789,6 +932,184 @@ def fix_image_id():
                     logger.info(f"已为表情包 {img.id} 生成新的 image_id: {img.image_id}")
     except Exception as e:
         logger.exception(f"修复 image_id 时出错: {e}")
+
+
+def hash_password(password: str, salt: str = None) -> tuple:
+    """
+    密码哈希函数
+
+    Args:
+        password: 明文密码
+        salt: 盐值，如果为None则自动生成
+
+    Returns:
+        tuple: (salt, password_hash)
+    """
+    if salt is None:
+        salt = secrets.token_hex(32)
+
+    password_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
+    return salt, password_hash
+
+
+def verify_password(password: str, salt: str, password_hash: str) -> bool:
+    """
+    验证密码
+
+    Args:
+        password: 明文密码
+        salt: 盐值
+        password_hash: 存储的密码哈希
+
+    Returns:
+        bool: 验证结果
+    """
+    computed_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
+    return computed_hash == password_hash
+
+
+def generate_api_key() -> str:
+    """生成API密钥"""
+    return f"mb_{secrets.token_urlsafe(32)}"
+
+
+def generate_session_id() -> str:
+    """生成会话ID"""
+    return secrets.token_urlsafe(32)
+
+
+def create_tenant_user(
+    tenant_id: str,
+    user_id: str,
+    username: str,
+    password: str,
+    tenant_name: str = None,
+    email: str = None,
+    phone: str = None,
+    tenant_type: str = "personal",
+) -> TenantUsers:
+    """
+    创建租户用户
+
+    Args:
+        tenant_id: 租户ID
+        user_id: 用户ID
+        username: 用户名
+        password: 密码
+        tenant_name: 租户名称
+        email: 邮箱
+        phone: 手机号
+        tenant_type: 租户类型
+
+    Returns:
+        TenantUsers: 创建的用户记录
+    """
+    salt, password_hash = hash_password(password)
+    api_key = generate_api_key()
+
+    if tenant_name is None:
+        tenant_name = f"{username}的租户"
+
+    return TenantUsers.create(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        username=username,
+        email=email,
+        phone=phone,
+        password_hash=password_hash,
+        salt=salt,
+        api_key=api_key,
+        tenant_name=tenant_name,
+        tenant_type=tenant_type,
+    )
+
+
+def create_agent_template(
+    template_id: str,
+    name: str,
+    persona: str,
+    description: str = None,
+    category: str = "general",
+    personality_traits: dict = None,
+    response_style: str = None,
+    memory_config: dict = None,
+    plugin_config: list = None,
+    is_system: bool = False,
+    created_by: str = None,
+) -> AgentTemplates:
+    """
+    创建Agent模板
+
+    Args:
+        template_id: 模板ID
+        name: 模板名称
+        persona: 人格描述
+        description: 模板描述
+        category: 模板分类
+        personality_traits: 人格特征
+        response_style: 回复风格
+        memory_config: 记忆配置
+        plugin_config: 插件配置
+        is_system: 是否系统模板
+        created_by: 创建者
+
+    Returns:
+        AgentTemplates: 创建的模板记录
+    """
+    return AgentTemplates.create(
+        template_id=template_id,
+        name=name,
+        description=description,
+        category=category,
+        personality_traits=json.dumps(personality_traits) if personality_traits else None,
+        response_style=response_style,
+        memory_config=json.dumps(memory_config) if memory_config else None,
+        plugin_config=json.dumps(plugin_config) if plugin_config else "[]",
+        is_system=is_system,
+        created_by=created_by,
+        persona=persona,
+    )
+
+
+def create_user_session(
+    user_id: str,
+    tenant_id: str,
+    jwt_token: str,
+    expires_at: datetime.datetime,
+    ip_address: str = None,
+    user_agent: str = None,
+) -> UserSessions:
+    """
+    创建用户会话
+
+    Args:
+        user_id: 用户ID
+        tenant_id: 租户ID
+        jwt_token: JWT令牌
+        expires_at: 过期时间
+        ip_address: IP地址
+        user_agent: 用户代理
+
+    Returns:
+        UserSessions: 创建的会话记录
+    """
+    session_id = generate_session_id()
+    token_hash = hashlib.sha256(jwt_token.encode()).hexdigest()
+    refresh_token = (
+        secrets.token_urlsafe(32) if expires_at > datetime.datetime.utcnow() + datetime.timedelta(days=7) else None
+    )
+
+    return UserSessions.create(
+        session_id=session_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        jwt_token=jwt_token,
+        token_hash=token_hash,
+        refresh_token=refresh_token,
+        expires_at=expires_at,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
 
 
 # 模块加载时调用初始化函数

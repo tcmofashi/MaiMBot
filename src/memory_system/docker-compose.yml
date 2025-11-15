@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  memory-service:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: memory-service
+    ports:
+      - "8001:8000"
+    environment:
+      # 数据库配置
+      - DATABASE_URL=postgresql+asyncpg://memory_user:memory_pass@db:5432/memory_db
+      - DB_POOL_SIZE=10
+      - DB_MAX_OVERFLOW=20
+
+      # Redis配置
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_POOL_SIZE=10
+
+      # 服务配置
+      - PORT=8000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+
+      # 嵌入模型配置
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+      # 安全配置
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - memory-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: memory-db
+    environment:
+      - POSTGRES_DB=memory_db
+      - POSTGRES_USER=memory_user
+      - POSTGRES_PASSWORD=memory_pass
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - memory_db_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # 映射到宿主机不同端口避免冲突
+    restart: unless-stopped
+    networks:
+      - memory-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memory_user -d memory_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: memory-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6380:6379"  # 映射到宿主机不同端口避免冲突
+    restart: unless-stopped
+    networks:
+      - memory-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 可选：监控服务
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: memory-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - memory-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: memory-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    networks:
+      - memory-network
+    profiles:
+      - monitoring
+
+  # 可选：负载均衡器
+  nginx:
+    image: nginx:alpine
+    container_name: memory-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - memory-service
+    restart: unless-stopped
+    networks:
+      - memory-network
+    profiles:
+      - production
+
+volumes:
+  memory_db_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  memory-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

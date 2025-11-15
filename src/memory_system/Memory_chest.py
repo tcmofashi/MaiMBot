@@ -13,6 +13,7 @@ from src.plugin_system.apis.message_api import build_readable_messages
 from src.plugin_system.apis.message_api import get_raw_msg_by_timestamp_with_chat
 from json_repair import repair_json
 from src.memory_system.questions import global_conflict_tracker
+from src.memory_system.isolated_memory_chest import get_isolated_memory_chest_simple, get_memory_system_stats
 
 from .memory_utils import (
     find_best_matching_memory,
@@ -38,6 +39,44 @@ class MemoryChest:
 
         self.running_content_list = {}  # {chat_id: {"content": running_content, "last_update_time": timestamp, "create_time": timestamp}}
         self.fetched_memory_list = []  # [(chat_id, (question, answer, timestamp)), ...]
+
+        # 向后兼容性：使用默认租户的隔离化记忆系统
+        self._isolated_memory = None  # 延迟初始化
+
+    def _get_isolated_memory(self):
+        """获取隔离化记忆系统实例（向后兼容）"""
+        if self._isolated_memory is None:
+            # 使用默认租户设置
+            self._isolated_memory = get_isolated_memory_chest_simple(tenant_id="default", agent_id="default")
+        return self._isolated_memory
+
+    def _forward_to_isolated(self, method_name, *args, **kwargs):
+        """转发方法调用到隔离化系统"""
+        isolated = self._get_isolated_memory()
+        if hasattr(isolated, method_name):
+            method = getattr(isolated, method_name)
+            return method(*args, **kwargs)
+        else:
+            logger.warning(f"隔离化记忆系统不支持方法: {method_name}")
+            return None
+
+    def query_isolated_memories(self, query_scope: str = "agent", scope_id: str = None, limit: int = 10):
+        """新增：查询隔离化记忆（新API）"""
+        return self._get_isolated_memory().query_memories(query_scope, scope_id, limit)
+
+    def add_isolated_memory(self, title: str, content: str, memory_context: str = "agent", scope_id: str = None):
+        """新增：添加隔离化记忆（新API）"""
+        import asyncio
+
+        return asyncio.run(self._get_isolated_memory().add_memory(title, content, memory_context, scope_id))
+
+    def get_isolated_memory_stats(self):
+        """新增：获取隔离化记忆统计（新API）"""
+        return self._get_isolated_memory().get_memory_statistics()
+
+    def get_memory_system_stats(self):
+        """新增：获取整个记忆系统统计（新API）"""
+        return get_memory_system_stats()
 
     def remove_one_memory_by_age_weight(self) -> bool:
         """
@@ -376,7 +415,7 @@ class MemoryChest:
             memories = []
 
             # 从fetched_memory_list中获取该chat_id的所有记忆
-            for cid, (question, answer, timestamp) in self.fetched_memory_list:
+            for cid, (question, answer, _timestamp) in self.fetched_memory_list:
                 if cid == chat_id:
                     memories.append(f"问题：{question},答案:{answer}")
 

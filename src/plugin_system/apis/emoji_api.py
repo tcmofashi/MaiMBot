@@ -15,10 +15,18 @@ import uuid
 
 from typing import Optional, Tuple, List, Dict, Any
 from src.common.logger import get_logger
-from src.chat.emoji_system.emoji_manager import get_emoji_manager, EMOJI_DIR
+
+EMOJI_DIR = os.path.join("data", "emoji")
 from src.chat.utils.utils_image import image_path_to_base64, base64_to_image
 
 logger = get_logger("emoji_api")
+
+
+def _get_emoji_manager():
+    """延迟导入emoji manager以避免循环导入"""
+    from src.chat.emoji_system.emoji_manager import get_emoji_manager
+
+    return get_emoji_manager()
 
 
 # =============================================================================
@@ -46,7 +54,7 @@ async def get_by_description(description: str) -> Optional[Tuple[str, str, str]]
     try:
         logger.debug(f"[EmojiAPI] 根据描述获取表情包: {description}")
 
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         emoji_result = await emoji_manager.get_emoji_for_text(description)
 
         if not emoji_result:
@@ -90,7 +98,7 @@ async def get_random(count: Optional[int] = 1) -> List[Tuple[str, str, str]]:
         return []
 
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         all_emojis = emoji_manager.emoji_objects
 
         if not all_emojis:
@@ -158,7 +166,7 @@ async def get_by_emotion(emotion: str) -> Optional[Tuple[str, str, str]]:
     try:
         logger.info(f"[EmojiAPI] 根据情感获取表情包: {emotion}")
 
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         all_emojis = emoji_manager.emoji_objects
 
         # 筛选匹配情感的表情包
@@ -203,7 +211,7 @@ def get_count() -> int:
         int: 当前可用的表情包数量
     """
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         return emoji_manager.emoji_num
     except Exception as e:
         logger.error(f"[EmojiAPI] 获取表情包数量失败: {e}")
@@ -217,7 +225,7 @@ def get_info():
         dict: 包含表情包数量、最大数量、可用数量信息
     """
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         return {
             "current_count": emoji_manager.emoji_num,
             "max_count": emoji_manager.emoji_num_max,
@@ -235,7 +243,7 @@ def get_emotions() -> List[str]:
         list: 所有表情包的情感标签列表（去重）
     """
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         emotions = set()
 
         for emoji_obj in emoji_manager.emoji_objects:
@@ -255,7 +263,7 @@ async def get_all() -> List[Tuple[str, str, str]]:
         List[Tuple[str, str, str]]: 包含(base64编码, 表情包描述, 随机情感标签)的元组列表
     """
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         all_emojis = emoji_manager.emoji_objects
 
         if not all_emojis:
@@ -291,7 +299,7 @@ def get_descriptions() -> List[str]:
         list: 所有可用表情包的描述列表
     """
     try:
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         descriptions = []
 
         descriptions.extend(
@@ -341,7 +349,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
         logger.info(f"[EmojiAPI] 开始注册表情包，文件名: {filename or '自动生成'}")
 
         # 1. 获取emoji管理器并检查容量
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         count_before = emoji_manager.emoji_num
         max_count = emoji_manager.emoji_num_max
 
@@ -560,7 +568,7 @@ async def delete_emoji(emoji_hash: str) -> Dict[str, Any]:
         logger.info(f"[EmojiAPI] 开始删除表情包，哈希值: {emoji_hash}")
 
         # 1. 获取emoji管理器和删除前的数量
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         count_before = emoji_manager.emoji_num
 
         # 2. 获取被删除表情包的信息（用于返回结果）
@@ -638,7 +646,7 @@ async def delete_emoji_by_description(description: str, exact_match: bool = Fals
     try:
         logger.info(f"[EmojiAPI] 根据描述删除表情包: {description} (精确匹配: {exact_match})")
 
-        emoji_manager = get_emoji_manager()
+        emoji_manager = _get_emoji_manager()
         all_emojis = emoji_manager.emoji_objects
 
         # 筛选匹配的表情包

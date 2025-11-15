@@ -3,7 +3,6 @@ import random
 from typing import List, Optional, Tuple
 from src.chat.utils.chat_message_builder import get_raw_msg_before_timestamp_with_chat, build_readable_messages
 from src.common.database.database_model import MemoryConflict
-from src.config.config import global_config
 
 
 class QuestionMaker:
@@ -26,7 +25,7 @@ class QuestionMaker:
             chat_id=self.chat_id,
             timestamp=timestamp,
             limit=30,
-        )   
+        )
 
         all_dialogue_prompt_str = build_readable_messages(
             latest_30_msgs,
@@ -35,12 +34,11 @@ class QuestionMaker:
         )
         return all_dialogue_prompt_str
 
-
     async def get_all_conflicts(self) -> List[MemoryConflict]:
         """获取当前会话下的所有记忆冲突记录。"""
         conflicts: List[MemoryConflict] = list(MemoryConflict.select().where(MemoryConflict.chat_id == self.chat_id))
         return conflicts
-    
+
     async def get_un_answered_conflict(self) -> List[MemoryConflict]:
         """获取未回答的记忆冲突记录（answer 为空）。"""
         conflicts = await self.get_all_conflicts()

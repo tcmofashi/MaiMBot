@@ -1,0 +1,114 @@
+# MaiBot 多租户集成测试配置文件
+
+[settings]
+concurrent_users = 3
+message_delay_min = 0.5
+message_delay_max = 2.0
+test_duration = 600
+log_level = "INFO"
+
+[llm]
+model_name = "gpt-3.5-turbo"
+api_base = "null"
+api_key = "null"
+temperature = 0.8
+max_tokens = 200
+timeout = 30.0
+
+# 租户配置
+[[tenants]]
+tenant_id = "tenant_a"
+tenant_name = "科技公司A"
+description = "专注于AI技术研发的科技公司"
+
+[tenants.settings]
+industry = "technology"
+size = "medium"
+
+[[tenants]]
+tenant_id = "tenant_b"
+tenant_name = "教育机构B"
+description = "在线教育平台"
+
+[tenants.settings]
+industry = "education"
+size = "large"
+
+[[tenants]]
+tenant_id = "tenant_c"
+tenant_name = "个人用户C"
+description = "个人开发者"
+
+[tenants.settings]
+industry = "individual"
+size = "small"
+
+# 智能体配置
+[[agents]]
+agent_id = "assistant_tech"
+agent_name = "技术助手"
+personality = "专业、严谨、善于技术解答"
+tenant_id = "tenant_a"
+description = "专注于技术问题的AI助手"
+
+[[agents]]
+agent_id = "tutor_edu"
+agent_name = "教育导师"
+personality = "耐心、亲切、善于教学"
+tenant_id = "tenant_b"
+description = "专注于教育辅导的AI助手"
+
+[[agents]]
+agent_id = "companion_general"
+agent_name = "通用伙伴"
+personality = "友善、幽默、健谈"
+tenant_id = "tenant_c"
+description = "日常聊天的AI伙伴"
+
+# 平台配置
+[[platforms]]
+platform = "qq"
+name = "QQ"
+description = "腾讯QQ平台"
+
+[[platforms]]
+platform = "wechat"
+name = "微信"
+description = "微信平台"
+
+[[platforms]]
+platform = "discord"
+name = "Discord"
+description = "Discord平台"
+
+# 测试场景配置
+[[scenarios]]
+name = "技术讨论群"
+description = "公司内部技术讨论群聊"
+tenant_id = "tenant_a"
+agent_id = "assistant_tech"
+platform = "qq"
+user_id = "dev_001"
+group_id = "tech_group_001"
+message_count = 15
+conversation_topics = ["Python编程", "算法优化", "系统架构", "Bug调试"]
+
+[[scenarios]]
+name = "一对一教学"
+description = "学生与教育导师的一对一交流"
+tenant_id = "tenant_b"
+agent_id = "tutor_edu"
+platform = "wechat"
+user_id = "student_001"
+message_count = 20
+conversation_topics = ["数学问题", "学习方法", "作业辅导", "考试准备"]
+
+[[scenarios]]
+name = "日常聊天"
+description = "个人用户的日常闲聊"
+tenant_id = "tenant_c"
+agent_id = "companion_general"
+platform = "discord"
+user_id = "user_001"
+message_count = 12
+conversation_topics = ["电影推荐", "兴趣爱好", "日常生活", "游戏讨论"]

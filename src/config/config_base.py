@@ -89,7 +89,9 @@ class ConfigBase:
         field_type_args = get_args(field_type)
 
         if field_origin_type in {list, set, tuple}:
-            expected_type_name = getattr(field_type, "__name__", getattr(field_origin_type, "__name__", str(field_type)))
+            expected_type_name = getattr(
+                field_type, "__name__", getattr(field_origin_type, "__name__", str(field_type))
+            )
 
             if field_origin_type is list:
                 if not isinstance(value, list):

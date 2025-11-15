@@ -29,10 +29,10 @@ def is_english_letter(char: str) -> bool:
 
 def parse_platform_accounts(platforms: list[str]) -> dict[str, str]:
     """解析 platforms 列表，返回平台到账号的映射
-    
+
     Args:
         platforms: 格式为 ["platform:account"] 的列表，如 ["tg:123456789", "wx:wxid123"]
-    
+
     Returns:
         字典，键为平台名，值为账号
     """
@@ -46,12 +46,12 @@ def parse_platform_accounts(platforms: list[str]) -> dict[str, str]:
 
 def get_current_platform_account(platform: str, platform_accounts: dict[str, str], qq_account: str) -> str:
     """根据当前平台获取对应的账号
-    
+
     Args:
         platform: 当前消息的平台
         platform_accounts: 从 platforms 列表解析的平台账号映射
         qq_account: QQ 账号（兼容旧配置）
-    
+
     Returns:
         当前平台对应的账号
     """
@@ -69,12 +69,12 @@ def is_mentioned_bot_in_message(message: MessageRecv) -> tuple[bool, bool, float
     """检查消息是否提到了机器人（统一多平台实现）"""
     text = message.processed_plain_text or ""
     platform = getattr(message.message_info, "platform", "") or ""
-    
+
     # 获取各平台账号
     platforms_list = getattr(global_config.bot, "platforms", []) or []
     platform_accounts = parse_platform_accounts(platforms_list)
     qq_account = str(getattr(global_config.bot, "qq_account", "") or "")
-    
+
     # 获取当前平台对应的账号
     current_account = get_current_platform_account(platform, platform_accounts, qq_account)
 
@@ -143,7 +143,9 @@ def is_mentioned_bot_in_message(message: MessageRecv) -> tuple[bool, bool, float
         elif current_account:
             if re.search(rf"\[回复 (.+?)\({re.escape(current_account)}\)：(.+?)\]，说：", text):
                 is_mentioned = True
-            elif re.search(rf"\[回复<(.+?)(?=:{re.escape(current_account)}>)\:{re.escape(current_account)}>：(.+?)\]，说：", text):
+            elif re.search(
+                rf"\[回复<(.+?)(?=:{re.escape(current_account)}>)\:{re.escape(current_account)}>：(.+?)\]，说：", text
+            ):
                 is_mentioned = True
 
     # 6) 名称/别名 提及（去除 @/回复标记后再匹配）
@@ -180,7 +182,6 @@ async def get_embedding(text, request_type="embedding") -> Optional[List[float]]
         logger.error(f"获取embedding失败: {str(e)}")
         embedding = None
     return embedding
-
 
 
 def split_into_sentences_w_remove_punctuation(text: str) -> list[str]:
@@ -443,7 +444,6 @@ def calculate_typing_time(
     return total_time  # 加上回车时间
 
 
-
 def truncate_message(message: str, max_length=20) -> str:
     """截断消息，使其不超过指定长度"""
     return f"{message[:max_length]}..." if len(message) > max_length else message
@@ -518,7 +518,6 @@ def get_western_ratio(paragraph):
 
     western_count = sum(bool(is_english_letter(char)) for char in alnum_chars)
     return western_count / len(alnum_chars)
-
 
 
 def translate_timestamp_to_human_readable(timestamp: float, mode: str = "normal") -> str:

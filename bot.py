@@ -6,9 +6,14 @@ import time
 import platform
 import traceback
 import shutil
+import warnings
 from dotenv import load_dotenv
 from pathlib import Path
 from rich.traceback import install
+
+# 抑制第三方库的警告
+warnings.filterwarnings("ignore", message=".*pkg_resources is deprecated.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="jieba")
 
 env_path = Path(__file__).parent / ".env"
 template_env_path = Path(__file__).parent / "template" / "template.env"
@@ -81,6 +86,18 @@ async def graceful_shutdown():  # sourcery skip: use-named-expression
 
         # 触发 ON_STOP 事件
         await events_manager.handle_mai_events(event_type=EventType.ON_STOP)
+
+        # 清理多租户实例
+        from src.core.instance_manager_api import get_instance_manager_api
+
+        instance_manager = get_instance_manager_api()
+
+        # 清理默认租户的所有实例
+        result = await instance_manager.clear_tenant_instances("default")
+        if result.success:
+            logger.info("多租户实例清理完成")
+        else:
+            logger.warning(f"多租户实例清理部分失败: {result.message}")
 
         # 停止所有异步任务
         await async_task_manager.stop_and_wait_all_tasks()
@@ -201,6 +218,16 @@ def raw_main():
     logger.info("检查EULA和隐私条款完成")
 
     easter_egg()
+
+    # 初始化多租户隔离架构
+    from src.core.instance_manager_api import get_instance_manager_api
+    from src.core.instance_factory_registry import auto_register_factories
+
+    # 注册实例工厂函数
+    auto_register_factories()
+
+    get_instance_manager_api()
+    logger.info("多租户隔离架构模块加载成功")
 
     # 返回MainSystem实例
     return MainSystem()

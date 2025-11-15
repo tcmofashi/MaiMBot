@@ -3,17 +3,14 @@ from typing import List, Tuple, Type, Any
 # 导入新插件系统
 from src.plugin_system import BasePlugin, register_plugin, ComponentInfo
 from src.plugin_system.base.config_types import ConfigField
-from src.person_info.person_info import Person
 from src.plugin_system.base.base_tool import BaseTool, ToolParamType
 
 # 导入依赖的系统组件
 from src.common.logger import get_logger
 
-from src.plugins.built_in.relation.relation import BuildRelationAction
 from src.plugin_system.apis import llm_api
 
 logger = get_logger("relation_actions")
-
 
 
 class DeepThinkTool(BaseTool):
@@ -24,7 +21,7 @@ class DeepThinkTool(BaseTool):
     parameters = [
         ("question", ToolParamType.STRING, "需要思考的问题，越具体越好（从上下文中总结）", True, None),
     ]
-    
+
     available_for_llm = True
 
     async def execute(self, function_args: dict[str, Any]) -> dict[str, Any]:
@@ -37,14 +34,14 @@ class DeepThinkTool(BaseTool):
             dict: 工具执行结果
         """
         question: str = function_args.get("question")  # type: ignore
-        
+
         print(f"question: {question}")
-        
+
         prompt = f"""
 请你思考以下问题，以简洁的一段话回答：
 {question}
         """
-        
+
         models = llm_api.get_available_models()
         chat_model_config = models.get("replyer")  # 使用字典访问方式
 
@@ -53,9 +50,9 @@ class DeepThinkTool(BaseTool):
         )
 
         logger.info(f"{question}: {thinking_result}")
-        
-        thinking_result =f"思考结果：{thinking_result}\n**注意** 因为你进行了深度思考，最后的回复内容可以回复的长一些，更加详细一些，不用太简洁。\n"
-        
+
+        thinking_result = f"思考结果：{thinking_result}\n**注意** 因为你进行了深度思考，最后的回复内容可以回复的长一些，更加详细一些，不用太简洁。\n"
+
         return {"content": thinking_result}
 
 

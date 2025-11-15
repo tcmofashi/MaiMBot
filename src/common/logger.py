@@ -215,10 +215,22 @@ def load_log_config():  # sourcery skip: use-contextlib-suppress
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
                 config = tomlkit.load(f)
-                return config.get("log", default_config)
+                log_config = config.get("log", default_config)
+        else:
+            log_config = default_config
     except Exception as e:
         print(f"[日志系统] 加载日志配置失败: {e}")
-    return default_config
+        log_config = default_config
+
+    # 允许环境变量覆盖日志级别
+    import os
+    env_log_level = os.getenv("LOG_LEVEL")
+    if env_log_level:
+        log_config["log_level"] = env_log_level
+        log_config["console_log_level"] = env_log_level
+        log_config["file_log_level"] = env_log_level
+
+    return log_config
 
 
 LOG_CONFIG = load_log_config()

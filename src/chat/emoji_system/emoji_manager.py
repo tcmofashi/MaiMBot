@@ -19,6 +19,7 @@ from src.common.logger import get_logger
 from src.config.config import global_config, model_config
 from src.chat.utils.utils_image import image_path_to_base64, get_image_manager
 from src.llm_models.utils_model import LLMRequest
+from src.isolation.isolation_context import IsolationContext
 
 install(extra_lines=3)
 
@@ -388,6 +389,9 @@ class EmojiManager:
         self.emoji_num_max = global_config.emoji.max_reg_num
         self.emoji_num_max_reach_deletion = global_config.emoji.do_replace
         self.emoji_objects: list[MaiEmoji] = []  # 存储MaiEmoji对象的列表，使用类型注解明确列表元素类型
+
+        # 隔离化支持
+        self._isolation_context: Optional[IsolationContext] = None
 
         logger.info("启动表情包管理器")
 
@@ -945,9 +949,7 @@ class EmojiManager:
                         prompt, image_base64, "jpg", temperature=0.5
                     )
                 else:
-                    prompt = (
-                        "这是一个表情包，请详细描述一下表情包所表达的情感和内容，简短描述细节，从互联网梗,meme的角度去分析，精简回答"
-                    )
+                    prompt = "这是一个表情包，请详细描述一下表情包所表达的情感和内容，简短描述细节，从互联网梗,meme的角度去分析，精简回答"
                     description, _ = await self.vlm.generate_response_for_image(
                         prompt, image_base64, image_format, temperature=0.5
                     )
@@ -1106,6 +1108,124 @@ class EmojiManager:
                 except Exception as remove_error:
                     logger.error(f"[错误] 删除异常处理文件时出错: {remove_error}")
             return False
+
+    # ==================== 隔离化支持方法 ====================
+
+    def set_isolation_context(self, isolation_context: IsolationContext) -> None:
+        """设置隔离上下文"""
+        self._isolation_context = isolation_context
+        logger.debug(
+            f"设置表情管理器隔离上下文: tenant={isolation_context.tenant_id}, agent={isolation_context.agent_id}"
+        )
+
+    def get_isolation_context(self) -> Optional[IsolationContext]:
+        """获取隔离上下文"""
+        return self._isolation_context
+
+    async def get_emoji_for_text_isolated(
+        self, text_emotion: str, tenant_id: str = None, agent_id: str = None
+    ) -> Optional[Tuple[str, str, str]]:
+        """隔离化版本的获取表情包方法
+
+        如果有隔离上下文，优先使用隔离化管理器；否则使用原有逻辑
+
+        Args:
+            text_emotion: 输入的情感描述文本
+            tenant_id: 租户ID（可选）
+            agent_id: 智能体ID（可选）
+
+        Returns:
+            Optional[Tuple[str, str, str]]: (表情包完整文件路径, 表情包描述, 匹配的情感)
+        """
+        try:
+            # 如果提供了租户和智能体ID，使用隔离化管理器
+            if tenant_id and agent_id:
+                from src.chat.emoji_system.isolated_emoji_manager import get_isolated_emoji_manager
+
+                isolated_manager = get_isolated_emoji_manager(tenant_id, agent_id)
+                return await isolated_manager.get_emoji_for_text(text_emotion)
+
+            # 如果有隔离上下文，使用隔离化管理器
+            if self._isolation_context:
+                from src.chat.emoji_system.isolated_emoji_manager import get_isolated_emoji_manager
+
+                isolated_manager = get_isolated_emoji_manager(
+                    self._isolation_context.tenant_id, self._isolation_context.agent_id
+                )
+                return await isolated_manager.get_emoji_for_text(text_emotion)
+
+            # 回退到原有逻辑
+            return await self.get_emoji_for_text(text_emotion)
+
+        except Exception as e:
+            logger.error(f"隔离化获取表情包失败: {e}")
+            # 回退到原有逻辑
+            return await self.get_emoji_for_text(text_emotion)
+
+    def record_usage_isolated(self, emoji_hash: str, tenant_id: str = None, agent_id: str = None) -> None:
+        """隔离化版本的使用记录方法"""
+        try:
+            # 如果有隔离上下文，记录隔离信息
+            if self._isolation_context or (tenant_id and agent_id):
+                tenant = tenant_id or (self._isolation_context.tenant_id if self._isolation_context else None)
+                agent = agent_id or (self._isolation_context.agent_id if self._isolation_context else None)
+
+                if tenant and agent:
+                    logger.debug(f"记录隔离化表情使用: tenant={tenant}, agent={agent}, hash={emoji_hash}")
+
+            # 调用原有方法
+            self.record_usage(emoji_hash)
+
+        except Exception as e:
+            logger.error(f"隔离化记录表情使用失败: {e}")
+            # 回退到原有逻辑
+            self.record_usage(emoji_hash)
+
+
+# ==================== 向后兼容的便捷函数 ====================
+
+
+async def get_isolated_emoji(
+    text_emotion: str, tenant_id: str = None, agent_id: str = None, isolation_context: IsolationContext = None
+) -> Optional[Tuple[str, str, str]]:
+    """便捷的隔离化表情获取函数
+
+    Args:
+        text_emotion: 情感文本
+        tenant_id: 租户ID
+        agent_id: 智能体ID
+        isolation_context: 隔离上下文
+
+    Returns:
+        表情包信息元组或None
+    """
+    manager = get_emoji_manager()
+
+    # 设置隔离上下文
+    if isolation_context:
+        manager.set_isolation_context(isolation_context)
+
+    return await manager.get_emoji_for_text_isolated(text_emotion, tenant_id, agent_id)
+
+
+def record_emoji_usage_isolated(
+    emoji_hash: str, tenant_id: str = None, agent_id: str = None, isolation_context: IsolationContext = None
+) -> None:
+    """便捷的隔离化使用记录函数
+
+    Args:
+        emoji_hash: 表情包哈希值
+        tenant_id: 租户ID
+        agent_id: 智能体ID
+        isolation_context: 隔离上下文
+    """
+    manager = get_emoji_manager()
+
+    # 设置隔离上下文
+    if isolation_context:
+        manager.set_isolation_context(isolation_context)
+
+    manager.record_usage_isolated(emoji_hash, tenant_id, agent_id)
 
 
 emoji_manager = None
