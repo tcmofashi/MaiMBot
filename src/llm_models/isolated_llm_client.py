@@ -457,6 +457,9 @@ class IsolatedLLMClient:
                 user_id=f"{tenant_id}:{agent_id}",  # 使用隔离标识
                 request_type=f"isolated_{self.isolation_context.platform or 'default'}",
                 endpoint="/chat/completions",
+                tenant_id=tenant_id,
+                agent_id=agent_id,
+                platform=self.isolation_context.platform or "unknown",
                 time_cost=time_cost,
             )
 

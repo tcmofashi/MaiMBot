@@ -420,7 +420,8 @@ async def batch_process_isolated_messages(
 def validate_isolated_message(message: Union[MessageRecv, IsolatedMessageRecv]) -> ValidationResult:
     """验证隔离化消息（便捷函数）"""
     if isinstance(message, IsolatedMessageRecv):
-        return validate_isolated_message(message)
+        # 调用消息对象的验证方法，而不是递归调用自己
+        return message.validate()
     else:
         return validate_message(message)
 

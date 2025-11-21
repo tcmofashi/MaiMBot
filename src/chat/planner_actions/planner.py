@@ -124,9 +124,16 @@ no_reply_until_call
 
 
 class ActionPlanner:
-    def __init__(self, chat_id: str, action_manager: ActionManager):
+    def __init__(self, chat_id: str, action_manager: ActionManager, isolation_context=None):
         self.chat_id = chat_id
-        self.log_prefix = f"[{get_chat_manager().get_stream_name(chat_id) or chat_id}]"
+        self.isolation_context = isolation_context
+
+        # 设置日志前缀，包含隔离信息
+        if isolation_context:
+            self.log_prefix = f"[隔离-{isolation_context.tenant_id}-{isolation_context.agent_id}][{get_chat_manager().get_stream_name(chat_id) or chat_id}]"
+        else:
+            self.log_prefix = f"[{get_chat_manager().get_stream_name(chat_id) or chat_id}]"
+
         self.action_manager = action_manager
         # LLM规划器配置
         self.planner_llm = LLMRequest(
@@ -384,7 +391,11 @@ class ActionPlanner:
                 plan_style=config.personality.plan_style,
             )
 
+            # no_reply功能已重新启用，AI可以根据情况选择是否回复
+            logger.info(f"{self.log_prefix}no_reply功能已启用，AI可以自由选择回复或沉默")
+
             return prompt, message_id_list
+
         except Exception as e:
             logger.error(f"构建 Planner 提示词时出错: {e}")
             logger.error(traceback.format_exc())
@@ -610,6 +621,50 @@ class ActionPlanner:
                 continue
 
         return json_objects, reasoning_content
+
+    def _disable_no_reply_options(self, prompt: str) -> str:
+        """禁用no_reply和no_reply_until_call选项，确保AI每次都回复"""
+        # 移除no_reply选项 - 使用更灵活的正则表达式
+        prompt = re.sub(
+            r"no_reply\n动作描述：\n保持沉默，不回复直到有新消息\n控制聊天频率，不要太过频繁的发言\n\{[^\}]*\}",
+            "",
+            prompt,
+            flags=re.DOTALL,
+        )
+
+        # 移除no_reply_until_call选项 - 使用更灵活的正则表达式
+        prompt = re.sub(
+            r"no_reply_until_call\n动作描述：\n保持沉默，直到有人直接叫你的名字\n当前话题不感兴趣时使用，或有人不喜欢你的发言时使用\n当你频繁选择no_reply时使用，表示话题暂时与你无关\n\{[^\}]*\}",
+            "",
+            prompt,
+            flags=re.DOTALL,
+        )
+
+        # 备用方案：如果上面的正则没有匹配到，使用更简单的移除方式
+        # 移除整个no_reply块
+        prompt = re.sub(
+            r"no_reply\n动作描述：[^{]*\{[^}]*\}",
+            "",
+            prompt,
+            flags=re.DOTALL,
+        )
+
+        # 移除整个no_reply_until_call块
+        prompt = re.sub(
+            r"no_reply_until_call\n动作描述：[^{]*\{[^}]*\}",
+            "",
+            prompt,
+            flags=re.DOTALL,
+        )
+
+        # 在动作选择要求中添加强制回复的说明
+        prompt = prompt.replace(
+            "请你根据聊天内容,用户的最新消息和以下标准选择合适的动作:",
+            "请你根据聊天内容,用户的最新消息和以下标准选择合适的动作:\n**重要：必须选择reply动作进行回复，不要选择no_reply或no_reply_until_call**",
+        )
+
+        logger.info(f"{self.log_prefix}已禁用no_reply选项，AI将强制回复")
+        return prompt
 
 
 init_prompt()

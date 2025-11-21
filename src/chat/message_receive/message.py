@@ -9,10 +9,10 @@ from maim_message import (
     UserInfo,
     GroupInfo,
     BaseMessageInfo,
-    MessageBase,
     SenderInfo,
     ReceiverInfo,
 )
+from maim_message.message import APIMessageBase, MessageDim
 
 # 导入隔离上下文
 try:
@@ -43,7 +43,7 @@ logger = get_logger("chat_message")
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class MaiMessageBase(MessageBase):
+class MaiMessageBase(APIMessageBase):
     """统一的消息基类，负责消息段解析与通用结构。"""
 
     def __init__(
@@ -52,24 +52,62 @@ class MaiMessageBase(MessageBase):
         message_info: BaseMessageInfo,
         message_segment: Seg,
         chat_stream: ChatStream,
+        message_dim: Optional[MessageDim] = None,
         raw_message: Optional[str] = None,
         reply: Optional["MaiMessageBase"] = None,
         processed_plain_text: str = "",
     ):
+        # APIMessageBase需要message_info, message_segment, message_dim三个参数
         super().__init__(
             message_info=message_info,
             message_segment=message_segment,
-            raw_message=raw_message,
+            message_dim=message_dim or MessageDim(api_key="default", platform="default"),
         )
         self.chat_stream = chat_stream
         self.reply = reply
         self.processed_plain_text = processed_plain_text
+        self.raw_message = raw_message
 
     def update_chat_stream(self, chat_stream: ChatStream) -> None:
         self.chat_stream = chat_stream
 
     async def process(self) -> None:
-        self.processed_plain_text = await self._process_message_segments(self.message_segment)
+        import time
+
+        start_time = time.time()
+
+        logger.info(f"[基础消息处理] 开始处理基础消息 - 隔离信息: 租户={self.tenant_id}, 智能体={self.agent_id}")
+        logger.debug(
+            f"[基础消息处理] 消息段类型: {self.message_segment.type}, 平台: {getattr(self.chat_stream, 'platform', None) if self.chat_stream else None}"
+        )
+
+        try:
+            self.processed_plain_text = await self._process_message_segments(self.message_segment)
+            processing_time = time.time() - start_time
+
+            logger.info(
+                f"[基础消息处理] 消息处理完成 - 处理时间: {processing_time:.3f}s, 处理后文本长度: {len(self.processed_plain_text)}"
+            )
+            logger.debug(
+                f"[基础消息处理] 处理后文本预览: {self.processed_plain_text[:100]}{'...' if len(self.processed_plain_text) > 100 else ''}"
+            )
+
+            # 记录消息特征
+            message_features = {
+                "has_emoji": self.has_emoji,
+                "has_picid": self.has_picid,
+                "is_voice": self.is_voice,
+                "is_mentioned": self.is_mentioned,
+                "is_at": self.is_at,
+                "is_command": self.is_command,
+                "priority_mode": self.priority_mode,
+            }
+            logger.debug(f"[基础消息处理] 消息特征: {message_features}")
+
+        except Exception as e:
+            processing_time = time.time() - start_time
+            logger.error(f"[基础消息处理] 消息处理失败 - 处理时间: {processing_time:.3f}s, 错误: {e}", exc_info=True)
+            raise
 
     async def _process_message_segments(self, segment: Seg) -> str:
         if segment.type == "seglist":
@@ -84,7 +122,7 @@ class MaiMessageBase(MessageBase):
             cfg = self.chat_stream.get_effective_config()
             nickname = getattr(cfg.bot, "nickname", "Mai")
             for node_dict in segment.data:
-                node_message = MessageBase.from_dict(node_dict)  # type: ignore[arg-type]
+                node_message = APIMessageBase.from_dict(node_dict)  # type: ignore[arg-type]
                 processed_text = await self._process_message_segments(node_message.message_segment)
                 if processed_text:
                     segments_text.append(f"{nickname}: {processed_text}")
@@ -123,6 +161,7 @@ class MessageRecv(MaiMessageBase):
         message_info: BaseMessageInfo,
         message_segment: Seg,
         chat_stream: ChatStream,
+        message_dim: Optional[MessageDim] = None,
         raw_message: Optional[str] = None,
         processed_plain_text: str = "",
         # 新增隔离字段
@@ -130,10 +169,17 @@ class MessageRecv(MaiMessageBase):
         agent_id: Optional[str] = None,
         isolation_context: Optional[IsolationContext] = None,
     ):
+        # 构建MessageDim，如果未提供则根据租户和智能体信息创建
+        if message_dim is None:
+            api_key = f"{tenant_id or 'default'}:{agent_id or 'default'}"
+            platform = message_info.platform or "default"
+            message_dim = MessageDim(api_key=api_key, platform=platform)
+
         super().__init__(
             message_info=message_info,
             message_segment=message_segment,
             chat_stream=chat_stream,
+            message_dim=message_dim,
             raw_message=raw_message,
             processed_plain_text=processed_plain_text,
         )
@@ -159,10 +205,18 @@ class MessageRecv(MaiMessageBase):
         if not self.tenant_id:
             self.tenant_id = "default"
 
+        # 确保chat_stream_id属性存在
+        if not hasattr(self, "chat_stream_id"):
+            self.chat_stream_id = getattr(chat_stream, "stream_id", None) if chat_stream else None
+
         # 创建隔离上下文（如果还没有）
         if not self.isolation_context and self.tenant_id and self.agent_id:
             platform = getattr(chat_stream, "platform", None) if chat_stream else None
-            chat_stream_id = getattr(chat_stream, "stream_id", None) if chat_stream else None
+            chat_stream_id = (
+                getattr(self, "chat_stream_id", None) or getattr(chat_stream, "stream_id", None)
+                if chat_stream
+                else None
+            )
             self.isolation_context = create_isolation_context(
                 tenant_id=self.tenant_id, agent_id=self.agent_id, platform=platform, chat_stream_id=chat_stream_id
             )
@@ -182,8 +236,6 @@ class MessageRecv(MaiMessageBase):
         self.interest_value: Optional[float] = None
         self.key_words: List[str] = []
         self.key_words_lite: List[str] = []
-
-        self._ensure_legacy_fields()
 
     # 隔离相关方法
     def get_isolation_level(self) -> str:
@@ -267,29 +319,20 @@ class MessageRecv(MaiMessageBase):
 
         return cloned
 
-    def _ensure_legacy_fields(self) -> None:
-        """为仍依赖旧字段的模块补齐 user_info/group_info。"""
+    # 新架构中，user_info和group_info已被sender_info和receiver_info替代
+    # 为了向后兼容，提供便利方法获取用户和群组信息
 
-        sender = self.message_info.sender_info
-        if sender and sender.user_info and not self.message_info.user_info:
-            self.message_info.user_info = UserInfo.from_dict(sender.user_info.to_dict())
-        if sender and sender.group_info and not self.message_info.group_info:
-            self.message_info.group_info = GroupInfo.from_dict(sender.group_info.to_dict())
+    def get_user_info(self) -> Optional[UserInfo]:
+        """获取发送者用户信息"""
+        if self.message_info.sender_info and self.message_info.sender_info.user_info:
+            return self.message_info.sender_info.user_info
+        return None
 
-        if not self.message_info.group_info:
-            chat_group = getattr(self.chat_stream, "group_info", None)
-            if chat_group:
-                self.message_info.group_info = GroupInfo.from_dict(chat_group.to_dict())
-
-        if not self.message_info.user_info:
-            chat_user = getattr(self.chat_stream, "user_info", None)
-            if chat_user:
-                self.message_info.user_info = UserInfo.from_dict(chat_user.to_dict())
-
-        if self.message_info.user_info and self.message_info.user_info.user_id is not None:
-            self.message_info.user_info.user_id = str(self.message_info.user_info.user_id)
-        if self.message_info.group_info and self.message_info.group_info.group_id is not None:
-            self.message_info.group_info.group_id = str(self.message_info.group_info.group_id)
+    def get_group_info(self) -> Optional[GroupInfo]:
+        """获取发送者群组信息"""
+        if self.message_info.sender_info and self.message_info.sender_info.group_info:
+            return self.message_info.sender_info.group_info
+        return None
 
     @staticmethod
     def _extract_agent_id(message_info: BaseMessageInfo, message_dict: dict[str, Any]) -> str:
@@ -346,6 +389,7 @@ class MessageRecv(MaiMessageBase):
             user_info=sender_user,
             group_info=sender_group,
             agent_id=agent_id,
+            tenant_id=tenant_id,  # 传递租户ID
         )
 
         # 确保 ChatStream 关联的 Agent 已注册
@@ -570,6 +614,9 @@ class MessageSending(MaiMessageBase):
         reply_to: Optional[str] = None,
         selected_expressions: Optional[List[int]] = None,
         timestamp: Optional[float] = None,
+        # 新增隔离字段
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
     ):
         message_info = BaseMessageInfo(
             platform=chat_stream.platform,
@@ -581,10 +628,15 @@ class MessageSending(MaiMessageBase):
             format_info=None,
         )
 
+        # 构建MessageDim用于APIMessageBase
+        api_key = f"{tenant_id or 'default'}:{agent_id or 'default'}"
+        message_dim = MessageDim(api_key=api_key, platform=chat_stream.platform)
+
         super().__init__(
             message_info=message_info,
             message_segment=message_segment,
             chat_stream=chat_stream,
+            message_dim=message_dim,
             reply=reply,
         )
 
@@ -599,6 +651,37 @@ class MessageSending(MaiMessageBase):
         self.selected_expressions = selected_expressions
         self.thinking_start_time = thinking_start_time
         self.thinking_time = 0.0
+
+        # 隔离字段
+        self.tenant_id = tenant_id
+        self.agent_id = agent_id
+
+        # 优先从chat_stream获取租户信息（这里应该总是有值）
+        if chat_stream:
+            if not self.tenant_id and hasattr(chat_stream, "tenant_id"):
+                self.tenant_id = chat_stream.tenant_id
+            if not self.agent_id and hasattr(chat_stream, "agent_id"):
+                self.agent_id = chat_stream.agent_id
+
+        # 如果仍然没有，尝试从reply消息获取
+        if reply:
+            if not self.tenant_id and hasattr(reply, "tenant_id"):
+                self.tenant_id = reply.tenant_id
+            if not self.agent_id and hasattr(reply, "agent_id"):
+                self.agent_id = reply.agent_id
+
+        # 最后的默认值（应该是最后的选择）
+        if not self.tenant_id:
+            logger.warning("MessageSending: 无法获取租户ID，使用默认值 'default'")
+            self.tenant_id = "default"
+        if not self.agent_id:
+            logger.warning("MessageSending: 无法获取智能体ID，使用默认值 'default'")
+            self.agent_id = "default"
+
+        # 调试日志
+        logger.debug(
+            f"MessageSending初始化: tenant_id={self.tenant_id}, agent_id={self.agent_id}, platform={chat_stream.platform if chat_stream else 'unknown'}"
+        )
 
     def build_reply(self) -> None:
         if self.reply:

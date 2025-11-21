@@ -1,4 +1,4 @@
-from peewee import Model, DoubleField, IntegerField, BooleanField, TextField, FloatField, DateTimeField
+from peewee import Model, DoubleField, IntegerField, BooleanField, TextField, FloatField, DateTimeField, AutoField
 from .database import db
 import datetime
 import json
@@ -60,7 +60,7 @@ class ChatStreams(BaseModel):
     tenant_id = TextField(index=True)  # T: 租户隔离
     agent_id = TextField(index=True)  # A: 智能体隔离
     platform = TextField(index=True)  # P: 平台隔离
-    chat_stream_id = TextField(unique=True, index=True)  # C: 聊天流隔离
+    chat_stream_id = TextField(unique=True, index=True, null=True)  # C: 聊天流隔离
 
     # create_time: 1746096761.4490178 (时间戳，精确到小数点后7位)
     # DoubleField 用于存储浮点数，适合此类时间戳。
@@ -1110,6 +1110,134 @@ def create_user_session(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+
+class AgentApiKeys(BaseModel):
+    """Agent API密钥管理表"""
+    id = AutoField()  # 主键
+    tenant_id = TextField(index=True)  # 租户ID
+    agent_id = TextField(index=True)  # 智能体ID
+    user_identifier = TextField(index=True)  # 用户标识符（前半段，如"abcd"）
+    auth_token = TextField(unique=True, index=True)  # 认证token（后半段，如"1234"）
+    api_key = TextField(unique=True, index=True)  # 完整API密钥（如"abcd.1234"）
+    name = TextField(null=True)  # API密钥名称（便于管理）
+    description = TextField(null=True)  # 描述
+    permissions = TextField(default="[]")  # 权限列表（JSON数组）
+    status = TextField(default="active")  # 状态: active, disabled
+    expires_at = DateTimeField(null=True)  # 过期时间
+    last_used_at = DateTimeField(null=True)  # 最后使用时间
+    usage_count = IntegerField(default=0)  # 使用次数
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    created_by = TextField()  # 创建者用户ID
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "agent_api_keys"
+        indexes = (
+            # 创建复合索引用于快速查找
+            (('tenant_id', 'agent_id'), False),
+            (('user_identifier', 'status'), False),
+        )
+
+
+def generate_agent_api_key(user_identifier: str) -> str:
+    """生成Agent API密钥
+
+    Args:
+        user_identifier: 用户标识符（前半段）
+
+    Returns:
+        完整的API密钥，格式为 {user_identifier}.{auth_token}
+    """
+    auth_token = secrets.token_urlsafe(16)  # 生成认证token
+    return f"{user_identifier}.{auth_token}"
+
+
+def create_agent_api_key(
+    tenant_id: str,
+    agent_id: str,
+    user_identifier: str,
+    name: str = None,
+    description: str = None,
+    permissions: list = None,
+    created_by: str = None,
+    expires_at: datetime.datetime = None,
+) -> AgentApiKeys:
+    """创建Agent API密钥
+
+    Args:
+        tenant_id: 租户ID
+        agent_id: 智能体ID
+        user_identifier: 用户标识符
+        name: API密钥名称
+        description: 描述
+        permissions: 权限列表
+        created_by: 创建者用户ID
+        expires_at: 过期时间
+
+    Returns:
+        AgentApiKeys对象
+    """
+    api_key = generate_agent_api_key(user_identifier)
+    user_identifier, auth_token = api_key.split(".", 1)
+
+    return AgentApiKeys.create(
+        tenant_id=tenant_id,
+        agent_id=agent_id,
+        user_identifier=user_identifier,
+        auth_token=auth_token,
+        api_key=api_key,
+        name=name,
+        description=description,
+        permissions=json.dumps(permissions or []),
+        created_by=created_by or "system",
+        expires_at=expires_at,
+    )
+
+
+def validate_agent_api_key(api_key: str) -> dict:
+    """验证Agent API密钥
+
+    Args:
+        api_key: API密钥
+
+    Returns:
+        验证结果字典，包含tenant_id和agent_id等信息
+    """
+    try:
+        if "." not in api_key:
+            return {"valid": False, "error": "Invalid API key format"}
+
+        user_identifier, auth_token = api_key.split(".", 1)
+
+        key_record = AgentApiKeys.get_or_none(
+            (AgentApiKeys.user_identifier == user_identifier) &
+            (AgentApiKeys.auth_token == auth_token) &
+            (AgentApiKeys.status == "active")
+        )
+
+        if not key_record:
+            return {"valid": False, "error": "API key not found or inactive"}
+
+        # 检查是否过期
+        if key_record.expires_at and key_record.expires_at < datetime.datetime.utcnow():
+            return {"valid": False, "error": "API key expired"}
+
+        # 更新使用统计
+        key_record.last_used_at = datetime.datetime.utcnow()
+        key_record.usage_count += 1
+        key_record.save()
+
+        return {
+            "valid": True,
+            "tenant_id": key_record.tenant_id,
+            "agent_id": key_record.agent_id,
+            "user_identifier": key_record.user_identifier,
+            "api_key_id": key_record.id,
+        }
+
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
 
 
 # 模块加载时调用初始化函数

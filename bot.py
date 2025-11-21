@@ -246,10 +246,19 @@ if __name__ == "__main__":
         try:
             # 执行初始化和任务调度
             loop.run_until_complete(main_system.initialize())
-            # Schedule tasks returns a future that runs forever.
-            # We can run console_input_loop concurrently.
-            main_tasks = loop.create_task(main_system.schedule_tasks())
-            loop.run_until_complete(main_tasks)
+            # Schedule tasks now starts WebSocket server in background thread
+            # We need to keep the main loop running to maintain the process
+            loop.run_until_complete(main_system.schedule_tasks())
+
+            # Keep the main event loop running to maintain the process
+            # This prevents the program from exiting after starting WebSocket server
+            try:
+                loop.run_forever()
+            except KeyboardInterrupt:
+                logger.info("收到中断信号，正在关闭事件循环...")
+            finally:
+                if loop.is_running():
+                    loop.stop()
 
         except KeyboardInterrupt:
             # loop.run_until_complete(get_global_api().stop())

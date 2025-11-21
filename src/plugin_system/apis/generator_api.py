@@ -123,10 +123,17 @@ async def generate_reply(
             logger.error("[GeneratorAPI] 无法获取回复器")
             return False, None
 
-        cfg = getattr(replyer, "config", global_config)
+        # 确保使用正确的配置，优先使用隔离化配置
         try:
-            cfg = replyer.config  # type: ignore[assignment]
-        except Exception:
+            # 通过chat_stream获取配置，而不是直接访问replyer.config
+            if hasattr(replyer, "chat_stream") and replyer.chat_stream:
+                cfg = replyer.chat_stream.get_effective_config()
+                logger.debug(f"[GeneratorAPI] 使用聊天流配置: {type(cfg)}")
+            else:
+                cfg = global_config
+                logger.debug(f"[GeneratorAPI] 使用全局配置: {type(cfg)}")
+        except Exception as e:
+            logger.warning(f"[GeneratorAPI] 获取配置失败，使用全局配置: {e}")
             cfg = global_config
 
         tool_enabled = cfg.tool.enable_tool if enable_tool is None else enable_tool

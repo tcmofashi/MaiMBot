@@ -444,6 +444,7 @@ class Person:
                 )
                 if self.memory_points
                 else json.dumps([], ensure_ascii=False),
+                "tenant_id": "default",  # 添加默认租户ID
             }
 
             # 检查记录是否存在

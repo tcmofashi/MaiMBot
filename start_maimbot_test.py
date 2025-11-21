@@ -66,46 +66,50 @@ class MaiBotTestRunner:
         self.running = False
 
     async def monitor_process_output(self, process: subprocess.Popen, name: str):
-        """监控进程输出"""
+        """监控进程输出 - 使用异步读取避免阻塞"""
         if not process:
             return
 
         log_key = "config" if "配置器" in name else "reply"
 
+        # 使用异步读取，避免阻塞
+        loop = asyncio.get_event_loop()
+
         while process.poll() is None:
             try:
-                if process.stdout:
-                    line = process.stdout.readline()
-                    if line:
-                        log_line = line.strip()
-                        self.log_outputs[log_key].append(log_line)
+                # 使用 run_in_executor 避免阻塞
+                line = await loop.run_in_executor(None, process.stdout.readline)
+                if line:
+                    log_line = line.strip()
+                    self.log_outputs[log_key].append(log_line)
 
-                        # 对于回复后端，显示所有日志（包括debug级别）
-                        if "回复后端" in name:
-                            print(f"[回复后端] {log_line}")
-                        else:
-                            # 对于配置器后端，只显示重要的日志
-                            if any(
-                                keyword in log_line.lower()
-                                for keyword in [
-                                    "error",
-                                    "exception",
-                                    "failed",
-                                    "timeout",
-                                    "websocket",
-                                    "connection",
-                                    "message",
-                                    "received",
-                                    "sent",
-                                    "warning",
-                                ]
-                            ):
-                                logger.info(f"[{name}] {log_line}")
+                    # 对于回复后端，显示所有日志（包括debug级别）
+                    if "回复后端" in name:
+                        print(f"[回复后端] {log_line}")
+                    else:
+                        # 对于配置器后端，只显示重要的日志
+                        if any(
+                            keyword in log_line.lower()
+                            for keyword in [
+                                "error",
+                                "exception",
+                                "failed",
+                                "timeout",
+                                "websocket",
+                                "connection",
+                                "message",
+                                "received",
+                                "sent",
+                                "warning",
+                            ]
+                        ):
+                            logger.info(f"[{name}] {log_line}")
+                else:
+                    # 如果没有输出，短暂等待
+                    await asyncio.sleep(0.1)
             except Exception as e:
                 logger.error(f"❌ 读取{name}输出失败: {e}")
                 break
-
-            await asyncio.sleep(0.1)
 
     def show_backend_logs(self, backend_type: str = "both", lines: int = 20):
         """显示后端日志用于调试"""
@@ -191,8 +195,10 @@ class MaiBotTestRunner:
             env["PYTHONPATH"] = str(self.project_root)
             # 设置环境变量覆盖端口（统一使用8095）
             env["PORT"] = "8095"
-            # 设置日志级别为DEBUG以查看所有日志
+            # 设置日志级别为DEBUG以查看所有日志（确保覆盖配置文件设置）
             env["LOG_LEVEL"] = "DEBUG"
+            env["CONSOLE_LOG_LEVEL"] = "DEBUG"
+            env["FILE_LOG_LEVEL"] = "DEBUG"
 
             self.reply_process = subprocess.Popen(
                 [sys.executable, "bot.py"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
@@ -200,7 +206,7 @@ class MaiBotTestRunner:
 
             # 等待服务启动
             logger.info("⏳ 等待回复后端启动...")
-            await asyncio.sleep(60)  # 给足够时间启动（1分钟）
+            await asyncio.sleep(30)  # 给足够时间启动（30秒）
 
             # 检查进程状态
             if self.reply_process.poll() is None:

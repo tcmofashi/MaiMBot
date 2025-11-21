@@ -823,7 +823,7 @@ class DefaultReplyer:
         dialogue_prompt = self.build_chat_history_prompts(message_list_before_now_long, user_id, sender)
 
         # 获取匹配的额外prompt
-        chat_prompt_content = self.get_chat_prompt_for_chat(chat_id)
+        chat_prompt_content = await self.get_chat_prompt_for_chat(chat_id)
         chat_prompt_block = f"{chat_prompt_content}\n" if chat_prompt_content else ""
 
         # 固定使用群聊回复模板
@@ -1004,6 +1004,9 @@ class DefaultReplyer:
             is_emoji=is_emoji,
             thinking_start_time=thinking_start_time,  # 传递原始思考开始时间
             display_message=display_message,
+            # 传递租户信息
+            tenant_id=getattr(self.chat_stream, "tenant_id", None),
+            agent_id=getattr(self.chat_stream, "agent_id", None),
         )
 
     async def llm_generate_content(self, prompt: str):
@@ -1025,6 +1028,22 @@ class DefaultReplyer:
 
             logger.info(f"使用 {model_name} 生成回复内容: {content}")
         return content, reasoning_content, model_name, tool_calls
+
+    async def get_chat_prompt_for_chat(self, chat_id: str) -> str:
+        """获取聊天流的自定义prompt内容"""
+        try:
+            # 从聊天流获取自定义prompt
+            chat_stream = self.chat_stream
+            if hasattr(chat_stream, "context") and chat_stream.context:
+                # 如果有自定义context，返回格式化的内容
+                if hasattr(chat_stream.context, "custom_prompt") and chat_stream.context.custom_prompt:
+                    return str(chat_stream.context.custom_prompt)
+
+            # 如果没有自定义prompt，返回空字符串
+            return ""
+        except Exception as e:
+            logger.debug(f"获取聊天prompt失败: {e}")
+            return ""
 
     async def get_prompt_info(self, message: str, sender: str, target: str):
         related_info = ""

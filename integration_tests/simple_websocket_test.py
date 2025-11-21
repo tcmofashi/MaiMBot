@@ -7,39 +7,38 @@ import asyncio
 import logging
 import random
 import time
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 from .api_client import TestUser
-from src.isolation.websocket_connection_pool import get_connection_pool
+from maim_message.client import WebSocketClient, create_client_config
+from maim_message.message import APIMessageBase, BaseMessageInfo, Seg, MessageDim, SenderInfo, UserInfo, GroupInfo
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class TenantWebSocketConfig:
-    """租户WebSocket配置"""
+class WebSocketTestConfig:
+    """WebSocket测试配置"""
 
-    server_url: str = "ws://localhost:8095"
+    server_url: str = "ws://localhost:8095/ws"
     api_key: Optional[str] = None
     max_retries: int = 3
     heartbeat_interval: int = 30
-    message_timeout: float = 30.0
+    message_timeout: float = 100.0
 
 
 class SimpleWebSocketClient:
-    """简化的WebSocket客户端 - 使用maim_message租户模式"""
+    """简化的WebSocket客户端 - 使用最新maim_message API"""
 
     def __init__(self):
         self.user = None
         self.agent = None
         self.chat_stream_id = None
-        self.tenant_client = None
-        self.config = TenantWebSocketConfig()
+        self.ws_client = None
+        self.config = WebSocketTestConfig()
         self.last_response = None
         self.message_received_event = asyncio.Event()
-        self.connection_pool = get_connection_pool()
-        self.connection_key = None  # 用于标识连接
 
     async def connect(self, user: TestUser, agent, platform: str = "test") -> bool:
         """连接到WebSocket"""
@@ -57,50 +56,74 @@ class SimpleWebSocketClient:
             self.chat_stream_id = f"test_chat_{uuid.uuid4().hex[:8]}"
 
             # 为每个agent生成独立的api-key
-            # 使用用户api-key + agent_id作为复合标识符
-            agent_api_key = f"{user.api_key}:{agent_id}" if user.api_key else f"agent_key_{agent_id}"
+            # 使用 tenant_id + agent_id 作为复合标识符，确保服务器能正确解析
+            agent_api_key = f"{user.tenant_id}:{agent_id}" if user.tenant_id else f"default:{agent_id}"
+            logger.info(f"🔑 构造API Key: {agent_api_key} (tenant_id={user.tenant_id}, agent_id={agent_id})")
 
-            # 保存连接键，用于后续释放
-            self.connection_key = {
-                "tenant_id": user.tenant_id,
-                "agent_id": agent_id,
-                "platform": platform,
-                "server_url": self.config.server_url
-            }
+            # 定义异步回调函数
+            async def on_connect_callback(conn_uuid, config):
+                logger.info(f"WebSocket连接已建立: {conn_uuid}")
 
-            # 使用连接池获取客户端（每个客户端都是独立连接）
-            self.tenant_client = await self.connection_pool.get_client(
-                tenant_id=user.tenant_id,
-                agent_id=agent_id,
-                platform=platform,
-                server_url=self.config.server_url,
+            async def on_disconnect_callback(conn_uuid, error):
+                logger.info(f"WebSocket连接已断开: {conn_uuid}")
+
+            # 创建最新的WebSocket客户端配置
+            client_config = create_client_config(
+                url=self.config.server_url,
                 api_key=agent_api_key,
-                max_retries=self.config.max_retries,
-                heartbeat_interval=self.config.heartbeat_interval,
-                message_timeout=self.config.message_timeout
+                platform=platform,
+                auto_reconnect=True,
+                max_reconnect_attempts=self.config.max_retries,
+                ping_interval=self.config.heartbeat_interval,
+                close_timeout=int(self.config.message_timeout),
+                on_connect=on_connect_callback,
+                on_disconnect=on_disconnect_callback,
+                on_message=self._handle_message,
             )
 
-            # 设置消息回调
-            self.tenant_client.register_callback(
-                callback=self._handle_message,
-                message_types=["chat_response", "message", "response"],
-                tenant_filter=user.tenant_id,
-                platform_filter=platform,
-            )
+            # 创建最新的WebSocket客户端
+            self.ws_client = WebSocketClient(client_config)
 
-            logger.info(f"租户模式WebSocket连接成功: {user.username} -> {agent_name}")
-            return True
+            # 启动客户端
+            await self.ws_client.start()
+
+            # 连接到服务器
+            connected = await self.ws_client.connect()
+            if connected:
+                logger.info(f"WebSocket连接成功: {user.username} -> {agent_name}")
+                return True
+            else:
+                logger.error(f"WebSocket连接失败: {user.username} -> {agent_name}")
+                return False
 
         except Exception as e:
             logger.error(f"WebSocket连接失败: {e}")
             return False
 
-    
-    def _handle_message(self, message: Dict[str, Any]) -> None:
+    async def _handle_message(self, server_message, metadata) -> None:
         """处理接收到的消息"""
-        self.last_response = message
+        # 处理最新的APIMessageBase格式
+        if hasattr(server_message, "message_segment") and hasattr(server_message, "message_info"):
+            # 如果是APIMessageBase对象，转换为字典
+            message_dict = {
+                "message_info": {
+                    "platform": server_message.message_info.platform if server_message.message_info else "unknown",
+                    "message_id": server_message.message_info.message_id if server_message.message_info else "unknown",
+                    "time": server_message.message_info.time if server_message.message_info else 0,
+                },
+                "message_segment": {
+                    "type": server_message.message_segment.type if server_message.message_segment else "unknown",
+                    "data": server_message.message_segment.data if server_message.message_segment else "",
+                },
+                "raw_message": server_message.message_segment.data if server_message.message_segment else "",
+            }
+            self.last_response = message_dict
+        else:
+            # 如果已经是字典格式，直接使用
+            self.last_response = server_message
+
         self.message_received_event.set()
-        logger.info(f"收到消息: {str(message)[:100]}...")
+        logger.info(f"收到消息: {str(self.last_response)[:100]}...")
 
     async def send_message(self, content: str) -> bool:
         """发送消息"""
@@ -108,56 +131,54 @@ class SimpleWebSocketClient:
             # 获取agent_id，处理字典和对象两种情况
             agent_id = self.agent.agent_id if hasattr(self.agent, "agent_id") else self.agent.get("agent_id")
 
-            # 创建符合MaiMBot期望格式的消息
-            message = {
-                "type": "chat",
-                "message_info": {
-                    "message_id": f"msg_{int(time.time() * 1000)}_{random.randint(1000, 9999)}",
-                    "time": time.time(),
-                    "platform": "test",
-                    "sender_info": {
-                        "user_info": {
-                            "platform": "test",
-                            "user_id": self.user.user_id,
-                            "user_nickname": self.user.username,
-                        },
-                        "group_info": {
-                            "platform": "test",
-                            "group_id": f"test_group_{self.user.tenant_id}",
-                            "group_name": f"{self.user.username}的测试群",
-                        },
-                    },
-                },
-                "message_segment": {
-                    "type": "text",
-                    "data": content,
-                },
-                "raw_message": content,
-                "processed_plain_text": content,
-                "display_message": content,
-                "chat_stream_id": self.chat_stream_id,
-                "tenant_id": self.user.tenant_id,
-                "agent_id": agent_id,
-                "platform": "test",
-            }
+            # 首先构建API key和message_dim
+            message_api_key = f"{self.user.tenant_id}:{agent_id}" if self.user.tenant_id else f"default:{agent_id}"
+            message_dim = MessageDim(
+                api_key=message_api_key,
+                platform="test",
+            )
 
-            # 使用租户客户端发送消息
-            if self.tenant_client:
-                success = await self.tenant_client.send_message(message)
+            # 创建最新的APIMessageBase格式消息
+            message = APIMessageBase(
+                message_info=BaseMessageInfo(
+                    platform="test",
+                    message_id=f"msg_{int(time.time() * 1000)}_{random.randint(1000, 9999)}",
+                    time=time.time(),
+                    sender_info=SenderInfo(
+                        user_info=UserInfo(
+                            platform="test",
+                            user_id=self.user.user_id,
+                            user_nickname=self.user.username,
+                        ),
+                        group_info=GroupInfo(
+                            platform="test",
+                            group_id=f"test_group_{self.user.tenant_id}",
+                            group_name=f"{self.user.username}的测试群",
+                        ),
+                    ),
+                ),
+                message_segment=Seg(type="text", data=content),
+                message_dim=message_dim,
+            )
+            logger.info(f"📤 准备发送消息，API Key: {message_api_key}, 内容: {content[:30]}...")
+
+            # 使用最新的WebSocket客户端发送消息
+            if self.ws_client:
+                success = await self.ws_client.send_message(message)
                 if success:
                     logger.info(f"消息已发送: {content[:50]}...")
                 else:
                     logger.error("发送消息失败")
                 return success
             else:
-                logger.error("租户客户端未初始化")
+                logger.error("WebSocket客户端未初始化")
                 return False
 
         except Exception as e:
             logger.error(f"发送消息失败: {e}")
             return False
 
-    async def receive_response(self, timeout: int = 30) -> Optional[Dict]:
+    async def receive_response(self, timeout: int = 100) -> Optional[Dict]:
         """接收响应"""
         try:
             # 租户模式通过回调处理消息，等待响应
@@ -180,16 +201,17 @@ class SimpleWebSocketClient:
 
     async def close(self):
         """关闭连接"""
-        if self.tenant_client:
+        if self.ws_client:
             try:
-                # 通过连接池释放连接
-                await self.connection_pool.release_client(self.tenant_client)
-                logger.info("租户模式WebSocket连接已释放回连接池")
+                # 断开连接
+                await self.ws_client.disconnect()
+                # 停止客户端
+                await self.ws_client.stop()
+                logger.info("WebSocket连接已关闭")
             except Exception as e:
-                logger.error(f"释放连接失败: {e}")
+                logger.error(f"关闭连接失败: {e}")
             finally:
-                self.tenant_client = None
-                self.connection_key = None
+                self.ws_client = None
 
     async def chat(self, message: str) -> Optional[Dict]:
         """进行一次对话"""
@@ -210,10 +232,6 @@ async def run_simple_websocket_tests(users: List[TestUser], agents: List) -> Dic
         "errors": [],
         "test_details": [],
     }
-
-    # 启动连接池
-    connection_pool = get_connection_pool()
-    await connection_pool.start()
 
     try:
         # 为每个用户和Agent创建连接
@@ -289,10 +307,6 @@ async def run_simple_websocket_tests(users: List[TestUser], agents: List) -> Dic
         error_msg = f"测试过程中发生错误: {e}"
         results["errors"].append(error_msg)
         logger.error(f"WebSocket测试失败: {e}")
-
-    finally:
-        # 停止连接池
-        await connection_pool.stop()
 
     return results
 

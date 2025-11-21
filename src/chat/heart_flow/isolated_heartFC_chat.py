@@ -140,16 +140,40 @@ class IsolatedHeartFChatting:
             # 优先使用隔离化配置
             if hasattr(self.isolation_context, "get_config_manager"):
                 config_manager = self.isolation_context.get_config_manager()
-                return config_manager.get_isolated_config(platform=self.platform)
+                raw_config = config_manager.get_isolated_config(platform=self.platform)
+                logger.debug(f"{self.log_prefix} 获取隔离配置成功: {type(raw_config)}")
             else:
                 # 回退到聊天流配置
-                return self.chat_stream.get_effective_config()
+                raw_config = self.chat_stream.get_effective_config()
+                logger.debug(f"{self.log_prefix} 获取聊天流配置成功: {type(raw_config)}")
+
+            # 使用统一配置包装器确保接口一致性
+            from src.config.config_wrapper import UnifiedConfigWrapper
+
+            wrapper = UnifiedConfigWrapper(raw_config)
+            logger.debug(f"{self.log_prefix} 配置包装器创建成功: {type(wrapper)}")
+
+            # 测试配置是否正常工作
+            try:
+                chat_config = wrapper.chat
+                logger.debug(f"{self.log_prefix} Chat配置获取成功: {type(chat_config)}")
+                talk_value = chat_config.get_talk_value(self.stream_id)
+                logger.debug(f"{self.log_prefix} Talk value获取成功: {talk_value}")
+            except Exception as test_exc:
+                logger.error(f"{self.log_prefix} 配置测试失败: {test_exc}")
+                logger.error(f"{self.log_prefix} Raw config: {raw_config}")
+                raise
+
+            return wrapper
         except Exception as exc:
             logger.warning(f"{self.log_prefix} 获取隔离配置失败，使用回退配置: {exc}")
             # 最后的回退：使用全局配置
             from src.config.config import global_config as default_config
+            from src.config.config_wrapper import UnifiedConfigWrapper
 
-            return default_config
+            wrapper = UnifiedConfigWrapper(default_config)
+            logger.debug(f"{self.log_prefix} 使用全局配置包装器: {type(wrapper)}")
+            return wrapper
 
     async def start(self):
         """启动隔离化的主循环"""
@@ -230,9 +254,9 @@ class IsolatedHeartFChatting:
         question_probability = self._calculate_question_probability()
 
         cfg = self.config
-        question_probability = (
-            question_probability * cfg.chat.get_auto_chat_value(self.stream_id) * self.question_probability_multiplier
-        )
+        # 使用统一配置包装器，无需类型检查
+        auto_chat_value = cfg.chat.get_auto_chat_value(self.stream_id)
+        question_probability = question_probability * auto_chat_value * self.question_probability_multiplier
 
         # 主动发言逻辑
         if (
@@ -324,8 +348,20 @@ class IsolatedHeartFChatting:
             recent_messages_list = []
         start_time = time.time()
 
-        # 使用隔离化的提示模板
-        async with global_prompt_manager.async_message_scope(self.chat_stream.context.get_template_name()):
+        # 检查聊天流上下文是否存在
+        if self.chat_stream.context is None:
+            logger.warning(f"{self.log_prefix} 聊天流上下文为空，使用默认模板")
+            template_name = "default"
+        else:
+            # 使用隔离化的提示模板
+            template_name = self.chat_stream.context.get_template_name()
+            if template_name is None:
+                logger.warning(f"{self.log_prefix} 无法获取模板名称，使用默认模板")
+                template_name = "default"
+
+        logger.debug(f"{self.log_prefix} 使用模板: {template_name}")
+
+        async with global_prompt_manager.async_message_scope(template_name):
             # 启动异步任务（这些组件最终需要隔离化）
             asyncio.create_task(self.expression_learner.trigger_learning_for_chat())
 
@@ -367,7 +403,6 @@ class IsolatedHeartFChatting:
                 current_available_actions=available_actions,
                 chat_content_block=chat_content_block,
                 message_id_list=message_id_list,
-                interest=cfg.personality.interest,
             )
 
             # 事件处理（使用隔离上下文）

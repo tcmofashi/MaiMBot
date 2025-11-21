@@ -2,16 +2,17 @@ import random
 import asyncio
 import hashlib
 import time
-from typing import List, Dict, TYPE_CHECKING, Tuple
+from typing import List, Dict, TYPE_CHECKING, Tuple, Optional
 
 from src.common.logger import get_logger
 from src.config.config import global_config, model_config
 from src.llm_models.utils_model import LLMRequest
-from src.chat.message_receive.chat_stream import get_chat_manager, ChatMessageContext
+from src.chat.message_receive.chat_stream import get_chat_manager, ChatMessageContext, get_isolated_chat_manager
 from src.chat.planner_actions.action_manager import ActionManager
 from src.chat.utils.chat_message_builder import get_raw_msg_before_timestamp_with_chat, build_readable_messages
 from src.plugin_system.base.component_types import ActionInfo, ActionActivationType
 from src.plugin_system.core.global_announcement_manager import global_announcement_manager
+from src.isolation.isolation_context import IsolationContext
 
 if TYPE_CHECKING:
     from src.chat.message_receive.chat_stream import ChatStream
@@ -25,13 +26,30 @@ class ActionModifier:
     用于处理Observation对象和根据激活类型处理actions。
     集成了原有的modify_actions功能和新的激活类型处理功能。
     支持并行判定和智能缓存优化。
+    支持隔离化上下文，实现T+A+C+P四维完全隔离。
     """
 
-    def __init__(self, action_manager: ActionManager, chat_id: str):
-        """初始化动作处理器"""
+    def __init__(
+        self, action_manager: ActionManager, chat_id: str, isolation_context: Optional[IsolationContext] = None
+    ):
+        """初始化动作处理器
+
+        Args:
+            action_manager: 动作管理器
+            chat_id: 聊天ID
+            isolation_context: 隔离上下文，支持T+A+C+P四维隔离
+        """
         self.chat_id = chat_id
-        self.chat_stream: ChatStream = get_chat_manager().get_stream(self.chat_id)  # type: ignore
-        self.log_prefix = f"[{get_chat_manager().get_stream_name(self.chat_id) or self.chat_id}]"
+        self.isolation_context = isolation_context
+
+        # 根据是否有隔离上下文选择聊天管理器
+        if isolation_context:
+            chat_manager = get_isolated_chat_manager(isolation_context.tenant_id, isolation_context.agent_id)
+            self.chat_stream: ChatStream = chat_manager.get_stream(self.chat_id)  # type: ignore
+            self.log_prefix = f"[隔离-{isolation_context.tenant_id}-{isolation_context.agent_id}][{chat_manager.get_stream_name(self.chat_id) or self.chat_id}]"
+        else:
+            self.chat_stream: ChatStream = get_chat_manager().get_stream(self.chat_id)  # type: ignore
+            self.log_prefix = f"[{get_chat_manager().get_stream_name(self.chat_id) or self.chat_id}]"
 
         self.action_manager = action_manager
 

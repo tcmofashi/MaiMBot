@@ -13,7 +13,9 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import uuid
 
-from maim_message import MessageServer, MessageBase, BaseMessageInfo, UserInfo, GroupInfo, SenderInfo, ReceiverInfo, Seg
+from maim_message import BaseMessageInfo, UserInfo, GroupInfo, SenderInfo, ReceiverInfo, Seg
+from maim_message.message import APIMessageBase, MessageDim
+from maim_message.client import WebSocketClient, create_client_config
 
 from .config import TestConfig, TestScenario
 from .message_generator import LLMMessageGenerator, GeneratedMessage
@@ -61,19 +63,24 @@ class MultiTenantTestClient:
                 f"MultiTenantTestClient接收到非字符串URL {server_url} (类型: {type(server_url)})，已转换为: {self.server_url}"
             )
 
-        # 从server_url解析host和port
+        # 创建WebSocket客户端配置
         if "localhost" in self.server_url:
             try:
+                # 将http://localhost:port转换为ws://localhost:port/ws
                 port = int(self.server_url.split(":")[-1])
-                self.message_server = MessageServer(host="localhost", port=port)
+                ws_url = f"ws://localhost:{port}/ws"
             except (ValueError, IndexError) as e:
                 logger.error(f"无法从URL {self.server_url} 解析端口号: {e}")
                 # 默认配置
-                self.message_server = MessageServer(host="localhost", port=8000)
+                ws_url = "ws://localhost:8000/ws"
         else:
             # 默认配置
-            self.message_server = MessageServer(host="localhost", port=8000)
-        self.message_generator = LLMMessageGenerator(config.llm)
+            ws_url = "ws://localhost:8000/ws"
+
+        # 创建客户端配置，使用默认API密钥
+        client_config = create_client_config(url=ws_url, api_key="test_client_key")
+        self.message_server = WebSocketClient(client_config)
+        self.message_generator = LLMMessageGenerator(self.config.llm)
         self.results: List[TestResult] = []
 
     async def run_all_scenarios(self) -> List[TestResult]:
@@ -164,6 +171,12 @@ class MultiTenantTestClient:
         """发送单条消息"""
 
         try:
+            # 确保客户端已连接
+            if not self.message_server.is_connected():
+                logger.info("建立WebSocket连接...")
+                await self.message_server.start()
+                await asyncio.sleep(1)  # 等待连接建立
+
             # 构建用户信息
             user_info = UserInfo(
                 user_id=message.user_id, user_nickname=f"测试用户_{message.user_id}", platform=message.platform
@@ -178,18 +191,18 @@ class MultiTenantTestClient:
                 group_info = GroupInfo(
                     group_id=message.group_id, group_name=f"测试群组_{message.group_id}", platform=message.platform
                 )
+                # 在发送者信息中包含群组信息
+                sender_info = SenderInfo(user_info=user_info, group_info=group_info)
 
             # 构建接收者信息
             bot_user_info = UserInfo(user_id="bot", user_nickname="MaiBot", platform=message.platform)
             receiver_info = ReceiverInfo(user_info=bot_user_info)
 
-            # 构建消息基础信息
+            # 构建消息基础信息 - 使用新的sender_info/receiver_info结构
             message_info = BaseMessageInfo(
                 platform=message.platform,
                 message_id=str(uuid.uuid4()),
                 time=message.timestamp,
-                user_info=user_info,
-                group_info=group_info,
                 sender_info=sender_info,
                 receiver_info=receiver_info,
                 additional_config={
@@ -208,11 +221,15 @@ class MultiTenantTestClient:
             # 构建消息对象（这里简化处理，使用文本内容）
             message_segment = Seg(type="text", data=message.content)
 
-            message_obj = MessageBase(
-                message_info=message_info, message_segment=message_segment, raw_message=message.content
+            # 构建MessageDim用于APIMessageBase
+            message_dim = MessageDim(api_key=f"{message.tenant_id}:{message.agent_id}", platform=message.platform)
+
+            # 创建APIMessageBase对象
+            message_obj = APIMessageBase(
+                message_info=message_info, message_segment=message_segment, message_dim=message_dim
             )
 
-            # 发送消息
+            # 直接发送消息
             response = await self.message_server.send_message(message_obj)
             logger.debug(f"消息发送成功: {message.content[:50]}...")
             return response
@@ -359,8 +376,10 @@ class MultiTenantTestClient:
     async def cleanup(self):
         """清理资源"""
         try:
-            # 清理连接等资源
-            if hasattr(self.message_server, "close"):
+            # 清理WebSocket连接
+            if hasattr(self.message_server, "stop"):
+                await self.message_server.stop()
+            elif hasattr(self.message_server, "close"):
                 await self.message_server.close()
         except Exception as e:
             logger.error(f"清理资源失败: {e}")

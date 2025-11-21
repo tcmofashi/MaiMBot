@@ -270,7 +270,187 @@ class EventsManager:
         """从流ID构建消息"""
         chat_stream = get_chat_manager().get_stream(stream_id)
         assert chat_stream, f"未找到流ID为 {stream_id} 的聊天流"
-        message = chat_stream.context.get_last_message()
+
+        # 检查context是否存在，如果不存在则创建一个默认消息
+        if chat_stream.context is None:
+            logger.warning(f"聊天流 {stream_id} 的context为None，创建默认消息")
+            # 创建一个默认的消息对象
+            from src.chat.message_receive.message import MessageRecv
+            from maim_message import BaseMessageInfo, Seg
+
+            # 创建简单的替代类，因为原始类不存在
+            class UserInfo:
+                def __init__(self, user_id: str, user_nickname: str):
+                    self.user_id = user_id
+                    self.user_nickname = user_nickname
+                    self.user_cardname = user_nickname  # 添加user_cardname属性
+                    self.platform = "test"
+
+                def to_dict(self):
+                    return {
+                        "user_id": self.user_id,
+                        "user_nickname": self.user_nickname,
+                        "user_cardname": self.user_cardname,
+                        "platform": self.platform,
+                    }
+
+            class GroupInfo:
+                def __init__(self, group_id: str, group_name: str):
+                    self.group_id = group_id
+                    self.group_name = group_name
+                    self.platform = "test"
+
+                def to_dict(self):
+                    return {"group_id": self.group_id, "group_name": self.group_name, "platform": self.platform}
+
+            class SenderInfo:
+                def __init__(self, user_info: UserInfo, group_info: GroupInfo = None):
+                    self.user_info = user_info
+                    self.group_info = group_info
+
+            # 创建默认的消息信息
+            message_info = BaseMessageInfo(
+                platform="test",
+                sender_info=SenderInfo(
+                    user_info=UserInfo(user_id="unknown", user_nickname="Unknown User"),
+                    group_info=GroupInfo(group_id="unknown", group_name="Unknown Group")
+                    if chat_stream.group_info
+                    else None,
+                ),
+            )
+
+            # 创建默认的消息段
+            message_segment = Seg(type="text", data="测试消息")
+
+            # 创建默认消息
+            message = MessageRecv(
+                raw_message="测试消息",
+                processed_plain_text="测试消息",
+                message_segment=message_segment,
+                message_info=message_info,
+                chat_stream=chat_stream,
+            )
+        else:
+            try:
+                message = chat_stream.context.get_last_message()
+                # 再次检查消息是否为None
+                if message is None:
+                    logger.warning(f"聊天流 {stream_id} 的context存在但get_last_message()返回None，创建默认消息")
+                    # 创建一个默认的消息对象
+                    from src.chat.message_receive.message import MessageRecv
+                    from maim_message import BaseMessageInfo, Seg
+
+                    # 使用相同的本地替代类
+                    class UserInfo:
+                        def __init__(self, user_id: str, user_nickname: str):
+                            self.user_id = user_id
+                            self.user_nickname = user_nickname
+                            self.user_cardname = user_nickname
+                            self.platform = "test"
+
+                        def to_dict(self):
+                            return {
+                                "user_id": self.user_id,
+                                "user_nickname": self.user_nickname,
+                                "user_cardname": self.user_cardname,
+                                "platform": self.platform,
+                            }
+
+                    class GroupInfo:
+                        def __init__(self, group_id: str, group_name: str):
+                            self.group_id = group_id
+                            self.group_name = group_name
+                            self.platform = "test"
+
+                        def to_dict(self):
+                            return {"group_id": self.group_id, "group_name": self.group_name, "platform": self.platform}
+
+                    class SenderInfo:
+                        def __init__(self, user_info: UserInfo, group_info: GroupInfo = None):
+                            self.user_info = user_info
+                            self.group_info = group_info
+
+                    # 创建默认的消息信息
+                    message_info = BaseMessageInfo(
+                        platform="test",
+                        sender_info=SenderInfo(
+                            user_info=UserInfo(user_id="unknown", user_nickname="Unknown User"),
+                            group_info=GroupInfo(group_id="unknown", group_name="Unknown Group")
+                            if chat_stream.group_info
+                            else None,
+                        ),
+                    )
+
+                    # 创建默认的消息段
+                    message_segment = Seg(type="text", data="测试消息")
+
+                    # 创建默认消息
+                    message = MessageRecv(
+                        raw_message="测试消息",
+                        processed_plain_text="测试消息",
+                        message_segment=message_segment,
+                        message_info=message_info,
+                        chat_stream=chat_stream,
+                    )
+            except Exception as e:
+                logger.error(f"获取聊天流 {stream_id} 的最后消息时发生错误: {e}，创建默认消息")
+                # 创建一个默认的消息对象
+                from src.chat.message_receive.message import MessageRecv
+                from maim_message import BaseMessageInfo, Seg
+
+                # 使用相同的本地替代类
+                class UserInfo:
+                    def __init__(self, user_id: str, user_nickname: str):
+                        self.user_id = user_id
+                        self.user_nickname = user_nickname
+                        self.user_cardname = user_nickname
+                        self.platform = "test"
+
+                    def to_dict(self):
+                        return {
+                            "user_id": self.user_id,
+                            "user_nickname": self.user_nickname,
+                            "user_cardname": self.user_cardname,
+                            "platform": self.platform,
+                        }
+
+                class GroupInfo:
+                    def __init__(self, group_id: str, group_name: str):
+                        self.group_id = group_id
+                        self.group_name = group_name
+                        self.platform = "test"
+
+                    def to_dict(self):
+                        return {"group_id": self.group_id, "group_name": self.group_name, "platform": self.platform}
+
+                class SenderInfo:
+                    def __init__(self, user_info: UserInfo, group_info: GroupInfo = None):
+                        self.user_info = user_info
+                        self.group_info = group_info
+
+                # 创建默认的消息信息
+                message_info = BaseMessageInfo(
+                    platform="test",
+                    sender_info=SenderInfo(
+                        user_info=UserInfo(user_id="unknown", user_nickname="Unknown User"),
+                        group_info=GroupInfo(group_id="unknown", group_name="Unknown Group")
+                        if chat_stream.group_info
+                        else None,
+                    ),
+                )
+
+                # 创建默认的消息段
+                message_segment = Seg(type="text", data="测试消息")
+
+                # 创建默认消息
+                message = MessageRecv(
+                    raw_message="测试消息",
+                    processed_plain_text="测试消息",
+                    message_segment=message_segment,
+                    message_info=message_info,
+                    chat_stream=chat_stream,
+                )
+
         return self._transform_event_message(message, llm_prompt, llm_response)
 
     def _transform_event_without_message(

@@ -4,7 +4,6 @@ import shutil
 import sys
 
 from datetime import datetime
-from tomlkit import TOMLDocument
 from tomlkit.items import Table, KeyType
 from dataclasses import field, dataclass
 from rich.traceback import install
@@ -33,6 +32,7 @@ from src.config.official_configs import (
     MoodConfig,
     MemoryConfig,
     DebugConfig,
+    PluginConfig,
 )
 
 from .api_ada_configs import (
@@ -193,7 +193,7 @@ def _version_tuple(v):
     return tuple(int(x) if x.isdigit() else 0 for x in str(v).replace("v", "").split("-")[0].split("."))
 
 
-def _update_dict(target: TOMLDocument | dict | Table, source: TOMLDocument | dict):
+def _update_dict(target, source):
     """
     将source字典的值更新到target字典中（如果target中存在相同的键）
     """
@@ -387,6 +387,7 @@ class Config(ConfigBase):
     debug: DebugConfig
     mood: MoodConfig
     voice: VoiceConfig
+    plugin: PluginConfig
 
 
 @dataclass

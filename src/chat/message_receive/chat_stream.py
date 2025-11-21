@@ -69,17 +69,25 @@ class ChatStream:
         user_info: UserInfo,
         group_info: Optional[GroupInfo] = None,
         agent_id: str = "default",
+        tenant_id: str = "default",
         data: Optional[dict] = None,
     ):
         self.stream_id = stream_id
         self.platform = platform
         self.user_info = user_info
         self.group_info = group_info
-        self._agent_id = "default"
         self._config_cache: Optional["Config"] = None
         self._config_cache_base_id: Optional[int] = None
         self._agent_cache: Optional["Agent"] = None
-        self.agent_id = data.get("agent_id", agent_id) if data else agent_id
+
+        # 正确设置租户和智能体ID
+        if data:
+            self._agent_id = data.get("agent_id", agent_id)
+            self._tenant_id = data.get("tenant_id", tenant_id)
+        else:
+            self._agent_id = agent_id
+            self._tenant_id = tenant_id
+
         self.create_time = data.get("create_time", time.time()) if data else time.time()
         self.last_active_time = data.get("last_active_time", self.create_time) if data else self.create_time
         self.saved = False
@@ -99,14 +107,33 @@ class ChatStream:
         self._config_cache_base_id = None
         self._agent_cache = None
 
+    @property
+    def tenant_id(self) -> str:
+        return self._tenant_id
+
+    @tenant_id.setter
+    def tenant_id(self, value: str) -> None:
+        normalized = str(value) if value else "default"
+        if getattr(self, "_tenant_id", None) == normalized:
+            return
+        self._tenant_id = normalized
+        self._config_cache = None
+        self._config_cache_base_id = None
+        self._agent_cache = None
+
     def to_dict(self) -> dict:
         """转换为字典格式"""
+        # 确保tenant_id和agent_id不为None
+        tenant_id = self.tenant_id if self.tenant_id is not None else "default"
+        agent_id = self.agent_id if self.agent_id is not None else "default"
+
         return {
             "stream_id": self.stream_id,
             "platform": self.platform,
             "user_info": self.user_info.to_dict() if self.user_info else None,
             "group_info": self.group_info.to_dict() if self.group_info else None,
-            "agent_id": self.agent_id,
+            "agent_id": agent_id,
+            "tenant_id": tenant_id,
             "create_time": self.create_time,
             "last_active_time": self.last_active_time,
         }
@@ -117,6 +144,7 @@ class ChatStream:
         user_info = UserInfo.from_dict(data.get("user_info", {})) if data.get("user_info") else None
         group_info = GroupInfo.from_dict(data.get("group_info", {})) if data.get("group_info") else None
         agent_id = data.get("agent_id", "default")
+        tenant_id = data.get("tenant_id", "default")
 
         return cls(
             stream_id=data["stream_id"],
@@ -124,6 +152,7 @@ class ChatStream:
             user_info=user_info,  # type: ignore
             group_info=group_info,
             agent_id=agent_id,
+            tenant_id=tenant_id,
             data=data,
         )
 
@@ -181,20 +210,43 @@ class ChatStream:
         """返回当前聊天流对应的配置（包含 Agent 覆盖）。"""
 
         from src.config.config import global_config
-        from src.agent.registry import resolve_agent_config
+        from src.agent.registry import resolve_agent_config, resolve_isolated_agent_config
 
         base_config = global_config
         base_id = id(base_config)
 
         if not refresh and self._config_cache is not None and self._config_cache_base_id == base_id:
-            logger.info("ChatStream[%s] 使用缓存配置 agent_id=%s", self.stream_id, self.agent_id)
+            logger.info(
+                "ChatStream[%s] 使用缓存配置 agent_id=%s tenant_id=%s", self.stream_id, self.agent_id, self.tenant_id
+            )
             return self._config_cache
 
-        merged_config = resolve_agent_config(self.agent_id, base_config)
+        # 优先使用隔离化配置解析
+        try:
+            if self.tenant_id and self.tenant_id != "default":
+                merged_config = resolve_isolated_agent_config(self.agent_id, self.tenant_id, base_config)
+                logger.info(
+                    "ChatStream[%s] 使用隔离化配置 agent_id=%s tenant_id=%s",
+                    self.stream_id,
+                    self.agent_id,
+                    self.tenant_id,
+                )
+            else:
+                merged_config = resolve_agent_config(self.agent_id, base_config)
+                logger.info("ChatStream[%s] 使用全局配置 agent_id=%s", self.stream_id, self.agent_id)
+        except Exception as e:
+            logger.warning(f"ChatStream[{self.stream_id}] 配置解析失败，回退到全局配置: {e}")
+            merged_config = resolve_agent_config(self.agent_id, base_config)
 
         self._config_cache = merged_config
         self._config_cache_base_id = base_id
-        logger.info("ChatStream[%s] 重新构建配置 agent_id=%s base_id=%s", self.stream_id, self.agent_id, base_id)
+        logger.info(
+            "ChatStream[%s] 重新构建配置 agent_id=%s tenant_id=%s base_id=%s",
+            self.stream_id,
+            self.agent_id,
+            self.tenant_id,
+            base_id,
+        )
         return merged_config
 
     def get_agent(self, *, refresh: bool = False) -> Optional["Agent"]:
@@ -383,6 +435,7 @@ class ChatManager:
         user_info: UserInfo,
         group_info: Optional[GroupInfo] = None,
         agent_id: str = "default",
+        tenant_id: str = "default",
     ) -> ChatStream:
         """获取或创建聊天流
 
@@ -440,6 +493,7 @@ class ChatManager:
                         user_info=user_info,
                         group_info=group_info,
                         agent_id=agent_id,
+                        tenant_id=tenant_id,
                     )
 
             # 用最新信息更新缓存中的stream
@@ -448,6 +502,13 @@ class ChatManager:
             if group_info:
                 stream.group_info = group_info
             stream.agent_id = agent_id or stream.agent_id
+            # 确保租户ID也被正确设置（从传入的参数或现有值）
+            if hasattr(stream, "tenant_id"):
+                # 如果stream已经有tenant_id，保持不变
+                pass
+            else:
+                # 否则设置为默认值
+                stream.tenant_id = "default"
             stream.update_active_time()
 
             from .message import MessageRecv  # 延迟导入，避免循环引用
@@ -550,7 +611,8 @@ class ChatManager:
                 "platform": s_data_dict["platform"],
                 "create_time": s_data_dict["create_time"],
                 "last_active_time": s_data_dict["last_active_time"],
-                "agent_id": s_data_dict.get("agent_id"),
+                "agent_id": s_data_dict.get("agent_id", "default"),  # 添加默认值
+                "tenant_id": s_data_dict.get("tenant_id", "default"),  # 使用租户ID，支持多租户隔离
                 "user_platform": user_info_d["platform"] if user_info_d else "",
                 "user_id": user_info_d["user_id"] if user_info_d else "",
                 "user_nickname": user_info_d["user_nickname"] if user_info_d else "",
@@ -647,3 +709,73 @@ def resolve_config_for_stream(stream_id: Optional[str] = None):
     from src.config.config import global_config  # 延迟导入以避免循环引用
 
     return global_config
+
+
+# 隔离化聊天管理器缓存
+_isolated_chat_managers: Dict[str, ChatManager] = {}
+
+
+def get_isolated_chat_manager(tenant_id: str, agent_id: str) -> ChatManager:
+    """
+    获取隔离化的聊天管理器
+
+    Args:
+        tenant_id: 租户ID
+        agent_id: 智能体ID
+
+    Returns:
+        ChatManager: 隔离化的聊天管理器实例
+    """
+    # 生成隔离化键
+    isolation_key = f"{tenant_id}:{agent_id}"
+
+    # 检查缓存
+    if isolation_key in _isolated_chat_managers:
+        logger.debug(f"使用缓存的隔离化聊天管理器: {isolation_key}")
+        return _isolated_chat_managers[isolation_key]
+
+    # 创建新的隔离化聊天管理器
+    logger.info(f"创建新的隔离化聊天管理器: {isolation_key}")
+
+    # 创建隔离化聊天管理器实例
+    # 注意：这里我们复用ChatManager类，但通过隔离上下文来实现隔离
+    isolated_manager = ChatManager()
+
+    # 缓存实例
+    _isolated_chat_managers[isolation_key] = isolated_manager
+
+    return isolated_manager
+
+
+def clear_isolated_chat_manager_cache(tenant_id: Optional[str] = None, agent_id: Optional[str] = None):
+    """
+    清理隔离化聊天管理器缓存
+
+    Args:
+        tenant_id: 租户ID，如果为None则清理所有租户
+        agent_id: 智能体ID，如果为None则清理所有智能体
+    """
+    global _isolated_chat_managers
+
+    if tenant_id is None and agent_id is None:
+        # 清理所有缓存
+        _isolated_chat_managers.clear()
+        logger.info("已清理所有隔离化聊天管理器缓存")
+    else:
+        # 清理特定租户或智能体的缓存
+        keys_to_remove = []
+        for key in _isolated_chat_managers.keys():
+            key_tenant, key_agent = key.split(":", 1)
+
+            # 检查是否匹配
+            if tenant_id is not None and key_tenant != tenant_id:
+                continue
+            if agent_id is not None and key_agent != agent_id:
+                continue
+
+            keys_to_remove.append(key)
+
+        # 移除匹配的键
+        for key in keys_to_remove:
+            del _isolated_chat_managers[key]
+            logger.info(f"已清理隔离化聊天管理器缓存: {key}")

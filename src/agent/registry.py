@@ -223,9 +223,13 @@ class IsolatedAgentRegistry:
     def _validate_agent_access(self, agent: Agent) -> bool:
         """验证智能体访问权限"""
 
-        # 这里可以扩展更复杂的权限验证逻辑
-        # 目前简单验证智能体ID格式
-        return f"{self.tenant_id}:" in agent.agent_id or agent.agent_id == "default"
+        # 检查智能体的租户ID是否与当前租户匹配
+        # 对于 'default' 租户，允许所有智能体
+        if self.tenant_id == "default":
+            return True
+
+        # 对于其他租户，检查智能体的租户ID
+        return getattr(agent, "tenant_id", None) == self.tenant_id
 
     def get_tenant_info(self) -> Dict[str, any]:
         """获取租户信息"""

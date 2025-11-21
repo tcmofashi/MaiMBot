@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
-from maim_message.tenant_client import TenantMessageClient, ClientConfig
 
 from .api_client import TestUser, TestAgent
 

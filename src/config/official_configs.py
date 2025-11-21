@@ -747,3 +747,20 @@ class LPMMKnowledgeConfig(ConfigBase):
 
     embedding_dimension: int = 1024
     """嵌入向量维度，应该与模型的输出维度一致"""
+
+
+@dataclass
+class PluginConfig(ConfigBase):
+    """插件系统配置"""
+
+    enable_plugins: bool = True
+    """是否启用插件系统"""
+
+    tenant_mode_disable_plugins: bool = True
+    """在租户模式下是否禁用所有插件"""
+
+    allowed_plugins: list[str] = field(default_factory=lambda: [])
+    """允许加载的插件列表，为空则允许所有插件"""
+
+    blocked_plugins: list[str] = field(default_factory=lambda: [])
+    """禁止加载的插件列表"""

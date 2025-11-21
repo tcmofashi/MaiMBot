@@ -8,7 +8,7 @@ import hashlib
 import time
 from typing import Dict, Optional, TYPE_CHECKING
 from rich.traceback import install
-from maim_message import GroupInfo, UserInfo, SenderInfo, ReceiverInfo
+from maim_message import GroupInfo, UserInfo, SenderInfo
 
 from .isolation_context import IsolationContext, generate_isolated_id
 
@@ -209,7 +209,7 @@ class IsolatedChatStream:
         else:
             self.context = IsolatedChatMessageContext(message, None)
 
-    def build_bot_info(self, info_cls: type[SenderInfo] | type[ReceiverInfo] = SenderInfo):
+    def build_bot_info(self, info_cls=SenderInfo):
         """构造当前聊天流中机器人侧的 Info 对象。"""
 
         cfg = self.get_effective_config()

@@ -12,6 +12,7 @@ from src.api.routes.tenant_api import router as tenant_router
 from src.api.routes.agent_api import router as agent_router
 from src.api.routes.chat_api import router as chat_router
 from src.api.routes.chat_api_v2 import router as chat_v2_router
+from src.api.routes.api_key_api import router as api_key_router
 from src.api.init_agent_templates import init_template_data
 from src.common.logger import get_logger
 
@@ -26,6 +27,8 @@ api_router.include_router(auth_router, tags=["认证"])
 api_router.include_router(tenant_router, tags=["租户管理"])
 
 api_router.include_router(agent_router, tags=["Agent管理"])
+
+api_router.include_router(api_key_router, tags=["API密钥管理"])
 
 api_router.include_router(chat_router, tags=["聊天v1"])
 
@@ -45,6 +48,7 @@ async def api_root():
             "auth": "/api/v1/auth",
             "tenant": "/api/v1/tenant",
             "agents": "/api/v1/agents",
+            "api_keys": "/api/v1/api-keys",
             "chat_v1": "/api/v1/chat",
             "chat_v2": "/api/v2/chat",
             "docs": "/docs",

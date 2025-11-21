@@ -15,6 +15,19 @@ from .message import MessageRecv
 from .isolated_message import IsolatedMessageRecv, IsolationMetadata
 from .message_validator import validate_message, ValidationResult
 
+# 导入maim_message的基础类
+try:
+    from maim_message.message import APIMessageBase, BaseMessageInfo, Seg
+    from maim_message import BaseMessageInfo as LegacyBaseMessageInfo, Seg as LegacySeg
+except ImportError:
+    # 兼容性处理
+    class BaseMessageInfo:
+        pass
+
+    class Seg:
+        pass
+
+
 # 导入隔离上下文
 try:
     from ..isolation import IsolationContext, IsolationLevel, create_isolation_context, generate_isolated_id
@@ -26,6 +39,13 @@ except ImportError:
             self.agent_id = kwargs.get("agent_id")
             self.platform = kwargs.get("platform")
             self.chat_stream_id = kwargs.get("chat_stream_id")
+
+    # 添加缺失的 IsolationLevel 枚举
+    class IsolationLevel:
+        TENANT = "tenant"
+        AGENT = "agent"
+        PLATFORM = "platform"
+        CHAT = "chat"
 
     def create_isolation_context(*args, **kwargs):
         return IsolationContext(*args, **kwargs)
@@ -184,7 +204,7 @@ class MessageConverter:
 
             # 执行转换
             if isinstance(message, dict):
-                converted = self._convert_dict_to_isolated(message, tenant_id, agent_id, platform, **kwargs)
+                converted = await self._convert_dict_to_isolated(message, tenant_id, agent_id, platform, **kwargs)
             elif isinstance(message, MessageRecv):
                 converted = self._convert_message_to_isolated(message, tenant_id, agent_id, platform, **kwargs)
             else:
@@ -432,7 +452,7 @@ class MessageConverter:
 
         return final_tenant, final_agent, final_platform
 
-    def _convert_dict_to_isolated(
+    async def _convert_dict_to_isolated(
         self, message_dict: Dict[str, Any], tenant_id: str, agent_id: str, platform: Optional[str], **kwargs
     ) -> Optional[IsolatedMessageRecv]:
         """将字典转换为隔离化消息"""
@@ -445,8 +465,8 @@ class MessageConverter:
                 isolation_level=kwargs.get("isolation_level", IsolationLevel.AGENT),
             )
 
-            # 从字典创建隔离化消息
-            isolated_message = IsolatedMessageRecv.from_isolated_dict(message_dict)
+            # 从字典创建隔离化消息 - 修复：添加await关键字
+            isolated_message = await IsolatedMessageRecv.from_isolated_dict(message_dict)
 
             # 更新隔离信息
             isolated_message.tenant_id = tenant_id
@@ -471,17 +491,62 @@ class MessageConverter:
     ) -> Optional[IsolatedMessageRecv]:
         """将MessageRecv转换为隔离化消息"""
         try:
+            # 确保字段类型正确
+            if not isinstance(message.message_info, BaseMessageInfo):
+                logger.error(f"message_info字段类型错误，期望BaseMessageInfo，实际{type(message.message_info)}")
+                # 尝试转换类型
+                try:
+                    if hasattr(message.message_info, "to_dict"):
+                        message.message_info = BaseMessageInfo.from_dict(message.message_info.to_dict())
+                    else:
+                        logger.error("无法转换message_info为BaseMessageInfo类型")
+                        return None
+                except Exception as e:
+                    logger.error(f"转换message_info失败: {e}")
+                    return None
+
+            if not isinstance(message.message_segment, Seg):
+                logger.error(f"message_segment字段类型错误，期望Seg，实际{type(message.message_segment)}")
+                # 尝试转换类型
+                try:
+                    if hasattr(message.message_segment, "to_dict"):
+                        message.message_segment = Seg.from_dict(message.message_segment.to_dict())
+                    else:
+                        # 如果是字典，直接创建Seg对象
+                        if isinstance(message.message_segment, dict):
+                            message.message_segment = Seg.from_dict(message.message_segment)
+                        else:
+                            logger.error("无法转换message_segment为Seg类型")
+                            return None
+                except Exception as e:
+                    logger.error(f"转换message_segment失败: {e}")
+                    return None
+
+            # 确保chat_stream_id属性存在
+            if not hasattr(message, "chat_stream_id"):
+                if message.chat_stream:
+                    message.chat_stream_id = getattr(message.chat_stream, "stream_id", None)
+                else:
+                    message.chat_stream_id = None
+
             # 创建隔离元数据
             isolation_metadata = IsolationMetadata(
                 tenant_id=tenant_id,
                 agent_id=agent_id,
                 platform=platform or getattr(message.chat_stream, "platform", None) if message.chat_stream else None,
-                chat_stream_id=getattr(message.chat_stream, "stream_id", None) if message.chat_stream else None,
+                chat_stream_id=getattr(message, "chat_stream_id", None)
+                or getattr(message.chat_stream, "stream_id", None)
+                if message.chat_stream
+                else None,
                 isolation_level=kwargs.get("isolation_level", IsolationLevel.AGENT),
             )
 
             # 创建隔离上下文
-            chat_stream_id = getattr(message.chat_stream, "stream_id", None) if message.chat_stream else None
+            chat_stream_id = (
+                getattr(message, "chat_stream_id", None) or getattr(message.chat_stream, "stream_id", None)
+                if message.chat_stream
+                else None
+            )
             isolation_context = create_isolation_context(
                 tenant_id=tenant_id, agent_id=agent_id, platform=platform, chat_stream_id=chat_stream_id
             )
@@ -501,7 +566,7 @@ class MessageConverter:
                 validate_isolation=False,
             )
 
-            # 复制其他属性
+            # 复制其他属性，包括chat_stream_id
             for attr_name in dir(message):
                 if not attr_name.startswith("_") and attr_name not in [
                     "message_info",
@@ -517,6 +582,10 @@ class MessageConverter:
                         setattr(isolated_message, attr_name, getattr(message, attr_name))
                     except Exception:
                         pass  # 忽略无法复制的属性
+
+            # 确保chat_stream_id属性存在
+            if hasattr(message, "chat_stream_id"):
+                isolated_message.chat_stream_id = message.chat_stream_id
 
             return isolated_message
 

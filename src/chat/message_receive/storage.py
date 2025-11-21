@@ -110,7 +110,26 @@ class MessageStorage:
             # 安全地获取 user_info, 如果为 None 则视为空字典 (以防万一)
             user_info_from_chat = chat_info_dict.get("user_info") or {}
 
+            # 获取隔离信息 - 从chat_stream中获取租户和智能体信息
+            tenant_id = getattr(chat_stream, "tenant_id", None) or "default"
+            agent_id = getattr(chat_stream, "agent_id", None) or "default"
+            platform = getattr(chat_stream, "platform", "unknown")
+            chat_stream_id = getattr(chat_stream, "stream_id", "unknown")
+
+            # 额外防御：确保这些值不为None或空
+            if not tenant_id or not isinstance(tenant_id, str):
+                logger.warning(f"ChatStream缺少有效的tenant_id，使用默认值: {tenant_id}")
+                tenant_id = "default"
+            if not agent_id or not isinstance(agent_id, str):
+                logger.warning(f"ChatStream缺少有效的agent_id，使用默认值: {agent_id}")
+                agent_id = "default"
+
             Messages.create(
+                # T+A+C+P 四维隔离字段
+                tenant_id=tenant_id,
+                agent_id=agent_id,
+                platform=platform,
+                chat_stream_id=chat_stream_id,
                 message_id=msg_id,
                 time=float(message.message_info.time),  # type: ignore
                 chat_id=chat_stream.stream_id,

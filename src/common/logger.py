@@ -224,11 +224,21 @@ def load_log_config():  # sourcery skip: use-contextlib-suppress
 
     # 允许环境变量覆盖日志级别
     import os
+
     env_log_level = os.getenv("LOG_LEVEL")
     if env_log_level:
         log_config["log_level"] = env_log_level
         log_config["console_log_level"] = env_log_level
         log_config["file_log_level"] = env_log_level
+
+    # 允许单独设置控制台和文件日志级别
+    env_console_level = os.getenv("CONSOLE_LOG_LEVEL")
+    if env_console_level:
+        log_config["console_log_level"] = env_console_level
+
+    env_file_level = os.getenv("FILE_LOG_LEVEL")
+    if env_file_level:
+        log_config["file_log_level"] = env_file_level
 
     return log_config
 

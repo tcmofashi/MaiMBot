@@ -28,7 +28,8 @@ from src.common.data_models.message_data_model import ReplyContentType
 from src.chat.message_receive.chat_stream import get_chat_manager
 from src.chat.message_receive.uni_message_sender import UniversalMessageSender
 from src.chat.message_receive.message import MessageSending, MessageRecv
-from maim_message import Seg, UserInfo, MessageBase, BaseMessageInfo
+from maim_message import Seg, UserInfo, BaseMessageInfo, SenderInfo
+from maim_message.message import APIMessageBase, MessageDim
 
 if TYPE_CHECKING:
     from src.common.data_models.database_data_model import DatabaseMessages
@@ -120,6 +121,9 @@ async def _send_to_target(
             thinking_start_time=current_time,
             reply_to=reply_to_platform_id,
             selected_expressions=selected_expressions,
+            # 传递租户信息
+            tenant_id=getattr(target_stream, "tenant_id", None),
+            agent_id=getattr(target_stream, "agent_id", None),
         )
 
         # 发送消息
@@ -477,11 +481,23 @@ def _parse_content_to_seg(reply_content: "ReplyContent") -> Tuple[Seg, bool]:
                         sub_seg, _ = _parse_content_to_seg(sub_content)
                         single_node_content.append(sub_seg)
                 message_segment = Seg(type="seglist", data=single_node_content)
-            forward_message_list.append(
-                MessageBase(
-                    message_segment=message_segment, message_info=BaseMessageInfo(user_info=user_info)
-                ).to_dict()
+            # 创建符合APIMessageBase格式的消息
+            message_dim = MessageDim(api_key="forward:default", platform="forward")
+            sender_info = None
+            if user_info:
+                sender_info = SenderInfo(user_info=user_info)
+
+            api_message = APIMessageBase(
+                message_info=BaseMessageInfo(
+                    platform="forward",
+                    message_id=f"forward_{len(forward_message_list)}",
+                    time=0,
+                    sender_info=sender_info,
+                ),
+                message_segment=message_segment,
+                message_dim=message_dim,
             )
+            forward_message_list.append(api_message.to_dict())
         return Seg(type="forward", data=forward_message_list), False  # type: ignore
     else:
         message_type_in_str = content_type.value if isinstance(content_type, ReplyContentType) else str(content_type)

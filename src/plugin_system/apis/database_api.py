@@ -358,18 +358,24 @@ async def store_action_info(
         if chat_stream:
             record_data.update(
                 {
-                    "chat_id": getattr(chat_stream, "stream_id", ""),
+                    "chat_stream_id": getattr(chat_stream, "stream_id", ""),
+                    "chat_id": getattr(chat_stream, "stream_id", ""),  # 兼容性字段
                     "chat_info_stream_id": getattr(chat_stream, "stream_id", ""),
                     "chat_info_platform": getattr(chat_stream, "platform", ""),
+                    "tenant_id": getattr(chat_stream, "tenant_id", "default"),
+                    "agent_id": getattr(chat_stream, "agent_id", "default"),
                 }
             )
         else:
             # 如果没有chat_stream，设置默认值
             record_data.update(
                 {
-                    "chat_id": "",
+                    "chat_stream_id": "",
+                    "chat_id": "",  # 兼容性字段
                     "chat_info_stream_id": "",
                     "chat_info_platform": "",
+                    "tenant_id": "default",
+                    "agent_id": "default",
                 }
             )
 

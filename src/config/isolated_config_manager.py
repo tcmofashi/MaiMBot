@@ -423,6 +423,17 @@ class IsolatedConfigManager:
                 if hasattr(category_obj, key):
                     return getattr(category_obj, key)
 
+            # 如果全局配置对象中没有，尝试从配置文件直接读取
+            import tomlkit
+
+            config_file = Path("config/bot_config.toml")
+            if config_file.exists():
+                with open(config_file, "r", encoding="utf-8") as f:
+                    config_data = tomlkit.load(f)
+
+                if category in config_data and key in config_data[category]:
+                    return config_data[category][key]
+
             return default
 
         except Exception as e:
@@ -591,6 +602,10 @@ class IsolatedConfigManager:
         except Exception as e:
             logger.error(f"Failed to get config history: {e}")
             return []
+
+    def get_isolated_config(self, platform: str = None) -> Any:
+        """获取隔离化配置（兼容方法）"""
+        return self.get_effective_config(platform)
 
 
 # 全局配置管理器缓存

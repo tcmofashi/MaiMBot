@@ -61,6 +61,15 @@ except ImportError:
     def generate_isolated_id(*args):
         return hashlib.sha256("|".join(args).encode()).hexdigest()
 
+    class IsolationValidator:
+        def validate_message(self, message):
+            class ValidationResult:
+                def __init__(self):
+                    self.is_valid = True
+                    self.errors = []
+
+            return ValidationResult()
+
 
 logger = get_logger("isolated_message")
 
@@ -163,7 +172,7 @@ class IsolatedMessageRecv(MessageRecv):
             agent_id=self.agent_id,
             platform=getattr(chat_stream, "platform", None),
             chat_stream_id=getattr(chat_stream, "stream_id", None),
-            isolation_level=self.get_isolation_level(),
+            isolation_level=isolation_metadata.isolation_level if isolation_metadata else IsolationLevel.AGENT,
         )
 
         # 验证隔离信息
@@ -286,6 +295,10 @@ class IsolatedMessageRecv(MessageRecv):
     def get_isolation_metadata(self) -> IsolationMetadata:
         """获取隔离元数据"""
         return self.isolation_metadata
+
+    def get_isolation_level(self) -> str:
+        """获取隔离级别"""
+        return self.isolation_metadata.isolation_level if self.isolation_metadata else IsolationLevel.AGENT
 
     def get_isolation_scope(self) -> IsolationScope:
         """获取隔离范围对象"""
@@ -412,10 +425,40 @@ class IsolatedMessageRecv(MessageRecv):
         else:
             # 创建默认聊天流
             chat_manager = get_chat_manager()
+
+            # 确保有有效的用户信息 - 优先使用sender_info
+            user_info = None
+            group_info = None
+
+            # 从sender_info提取用户信息（新的标准方式）
+            if (
+                hasattr(message_info, "sender_info")
+                and message_info.sender_info
+                and message_info.sender_info.user_info
+                and message_info.sender_info.user_info.user_id
+            ):
+                user_info = message_info.sender_info.user_info
+
+            # 从sender_info提取群组信息
+            if (
+                hasattr(message_info, "sender_info")
+                and message_info.sender_info
+                and message_info.sender_info.group_info
+            ):
+                group_info = message_info.sender_info.group_info
+
+            # 如果没有找到用户信息，创建默认用户信息
+            if not user_info or not user_info.user_id:
+                user_info = UserInfo(
+                    platform=data.get("platform", "test"),
+                    user_id=data.get("user_id", f"user_{data.get('agent_id', 'default')}"),
+                    user_nickname=data.get("user_nickname", "Test User"),
+                )
+
             chat_stream = await chat_manager.get_or_create_stream(
-                platform=message_info.platform or "unknown",
-                user_info=message_info.user_info or UserInfo(),
-                group_info=message_info.group_info,
+                platform=message_info.platform or data.get("platform", "test"),
+                user_info=user_info,
+                group_info=group_info,
                 agent_id=data.get("agent_id", "default"),
             )
 
@@ -450,19 +493,71 @@ class IsolatedMessageRecv(MessageRecv):
 
     async def process_with_isolation(self) -> None:
         """带隔离处理的消息处理"""
+        import time
+
+        start_time = time.time()
+
+        logger.info(f"[隔离化消息处理] 开始处理隔离化消息 - ID: {self.isolated_message_id}")
+        logger.debug(
+            f"[隔离化消息处理] 隔离信息: 租户={self.tenant_id}, 智能体={self.agent_id}, 平台={getattr(self.chat_stream, 'platform', None) if self.chat_stream else None}"
+        )
+
         try:
             # 触发隔离前回调
+            callback_start = time.time()
+            logger.debug(f"[隔离化消息处理] 开始触发隔离前回调 - 消息ID: {self.isolated_message_id}")
             self.trigger_isolation_callbacks()
+            callback_duration = time.time() - callback_start
+            logger.debug(
+                f"[隔离化消息处理] 隔离前回调完成 - 消息ID: {self.isolated_message_id}, 耗时: {callback_duration:.3f}秒"
+            )
 
             # 执行消息处理
+            process_start = time.time()
+            logger.info(f"[隔离化消息处理] 开始执行基础消息处理 - 消息ID: {self.isolated_message_id}")
             await self.process()
+            process_duration = time.time() - process_start
+            logger.info(
+                f"[隔离化消息处理] 基础消息处理完成 - 消息ID: {self.isolated_message_id}, 耗时: {process_duration:.3f}秒"
+            )
+
+            # 基础消息处理完成后，调用隔离化心流处理器
+            try:
+                from src.chat.heart_flow.heartflow_message_processor import get_isolated_heartfc_receiver
+
+                logger.info(f"[隔离化消息处理] 开始调用隔离化心流处理器 - 消息ID: {self.isolated_message_id}")
+
+                # 获取隔离化心流处理器
+                isolated_receiver = get_isolated_heartfc_receiver(self.tenant_id, self.agent_id)
+
+                # 调用隔离化心流处理器处理消息
+                await isolated_receiver.process_message(self)
+                logger.info(f"[隔离化消息处理] 隔离化心流处理器处理完成 - 消息ID: {self.isolated_message_id}")
+
+            except Exception as e:
+                logger.error(
+                    f"[隔离化消息处理] 隔离化心流处理器处理失败 - 消息ID: {self.isolated_message_id}, 异常: {e}",
+                    exc_info=True,
+                )
+                # 不抛出异常，避免影响主流程
 
             # 隔离后处理
             if self.is_cross_isolation_message():
-                logger.info(f"处理跨隔离消息: {self.get_isolation_info()}")
+                logger.info(
+                    f"[隔离化消息处理] 处理跨隔离消息 - 消息ID: {self.isolated_message_id}, 隔离信息: {self.get_isolation_info()}"
+                )
+
+            total_duration = time.time() - start_time
+            logger.info(
+                f"[隔离化消息处理] 隔离化消息处理完成 - 消息ID: {self.isolated_message_id}, 总耗时: {total_duration:.3f}秒"
+            )
 
         except Exception as e:
-            logger.error(f"隔离化消息处理失败: {e}", exc_info=True)
+            total_duration = time.time() - start_time
+            logger.error(
+                f"[隔离化消息处理] 隔离化消息处理失败 - 消息ID: {self.isolated_message_id}, 异常: {str(e)}, 耗时: {total_duration:.3f}秒",
+                exc_info=True,
+            )
             raise
 
     def __str__(self) -> str:

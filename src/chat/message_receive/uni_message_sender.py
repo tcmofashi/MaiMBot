@@ -5,7 +5,6 @@ from typing import Optional
 from rich.traceback import install
 from maim_message import Seg
 
-from src.common.message.api import get_global_api
 from src.common.logger import get_logger
 from src.chat.message_receive.message import MessageSending
 from src.chat.message_receive.storage import MessageStorage
@@ -38,15 +37,73 @@ logger = get_logger("sender")
 
 
 async def _send_message(message: MessageSending, show_log=True) -> bool:
-    """合并后的消息发送函数，包含WS发送和日志记录"""
+    """合并后的消息发送函数，使用WebSocketServer通过WebSocket发送消息"""
     message_preview = truncate_message(message.processed_plain_text, max_length=200)
 
     try:
-        # 直接调用API发送消息
-        await get_global_api().send_message(message)
-        if show_log:
-            logger.info(f"已将消息  '{message_preview}'  发往平台'{message.message_info.platform}'")
-        return True
+        # 获取全局WebSocket服务器实例
+        from src.common.message.api import get_global_api
+
+        # 获取WebSocket服务器实例
+        websocket_server = get_global_api()
+
+        # 从消息中获取租户信息
+        tenant_id = getattr(message, "tenant_id", None)
+        agent_id = getattr(message, "agent_id", None)
+        platform = message.message_info.platform
+
+        # 如果没有租户信息，尝试从聊天流获取
+        if not tenant_id and hasattr(message, "chat_stream") and message.chat_stream:
+            tenant_id = getattr(message.chat_stream, "tenant_id", None)
+            if not agent_id:
+                agent_id = getattr(message.chat_stream, "agent_id", None)
+
+        # 如果仍然没有租户信息，尝试从回复消息获取
+        if (not tenant_id or not agent_id) and hasattr(message, "reply") and message.reply:
+            if not tenant_id:
+                tenant_id = getattr(message.reply, "tenant_id", None)
+            if not agent_id:
+                agent_id = getattr(message.reply, "agent_id", None)
+
+        # 调试日志
+        logger.debug(f"消息发送租户信息解析: tenant_id={tenant_id}, agent_id={agent_id}, platform={platform}")
+        logger.debug(
+            f"消息对象租户字段: tenant_id={getattr(message, 'tenant_id', None)}, agent_id={getattr(message, 'agent_id', None)}"
+        )
+        if hasattr(message, "chat_stream") and message.chat_stream:
+            logger.debug(
+                f"聊天流租户字段: tenant_id={getattr(message.chat_stream, 'tenant_id', None)}, agent_id={getattr(message.chat_stream, 'agent_id', None)}"
+            )
+
+        # 使用默认值（应该是最后的选择）
+        if not tenant_id:
+            logger.warning("无法获取租户ID，使用默认值 'default'")
+            tenant_id = "default"
+        if not agent_id:
+            logger.warning("无法获取智能体ID，使用默认值 'default'")
+            agent_id = "default"
+
+        # 构建API密钥（格式：tenant_id:agent_id）
+        api_key = f"{tenant_id}:{agent_id}"
+
+        # 构建目标选择参数
+        target = {"by_api_key": api_key}
+
+        # 发送文本消息
+        success = await websocket_server.send_message(
+            message=message,
+        )
+
+        # send_message是同步方法，直接检查返回值
+        if success:
+            if show_log:
+                logger.info(
+                    f"已将消息  '{message_preview}'  发往平台'{platform}' (租户: {tenant_id}, 智能体: {agent_id})"
+                )
+            return True
+        else:
+            logger.error("发送消息失败: 无活跃连接或发送失败")
+            return False
 
     except Exception as e:
         logger.error(f"发送消息   '{message_preview}'   发往平台'{message.message_info.platform}' 失败: {str(e)}")

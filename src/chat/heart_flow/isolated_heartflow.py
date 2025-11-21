@@ -64,7 +64,7 @@ class IsolatedHeartflow:
 
                 # 获取隔离化的聊天管理器
                 chat_manager = get_isolated_chat_manager(self.tenant_id, self.agent_id)
-                chat_stream = await chat_manager.get_or_create_stream_by_id(chat_id)
+                chat_stream = chat_manager.get_stream(chat_id)
 
                 if not chat_stream:
                     raise ValueError(f"未找到 chat_id={chat_id} 的聊天流")
@@ -301,3 +301,21 @@ async def isolated_heartflow_health_check() -> Dict[str, Any]:
 def get_isolated_heartflow_stats() -> Dict[str, Any]:
     """获取隔离化心流统计信息"""
     return _isolated_heartflow_manager.get_manager_stats()
+
+
+async def get_or_create_heartflow_chat(
+    tenant_id: str, agent_id: str, chat_id: str
+) -> Optional[HeartFChatting | BrainChatting | IsolatedHeartFChatting]:
+    """
+    获取或创建隔离化心流聊天的便捷函数
+
+    Args:
+        tenant_id: 租户标识
+        agent_id: 智能体标识
+        chat_id: 聊天流唯一标识符
+
+    Returns:
+        心流聊天实例或None
+    """
+    heartflow = get_isolated_heartflow(tenant_id, agent_id)
+    return await heartflow.get_or_create_heartflow_chat(chat_id)

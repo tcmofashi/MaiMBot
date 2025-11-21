@@ -2,9 +2,10 @@
 
 __version__ = "0.1.0"
 
-from .api import get_global_api
+from .api import get_global_api, set_global_message_handler
 
 
 __all__ = [
     "get_global_api",
+    "set_global_message_handler",
 ]

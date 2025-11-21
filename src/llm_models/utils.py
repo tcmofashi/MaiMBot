@@ -173,6 +173,9 @@ class LLMUsageRecorder:
         request_type: str,
         endpoint: str,
         time_cost: float = 0.0,
+        tenant_id: str = "default",
+        agent_id: str = "default",
+        platform: str = "unknown",
     ):
         input_cost = (model_usage.prompt_tokens / 1000000) * model_info.price_in
         output_cost = (model_usage.completion_tokens / 1000000) * model_info.price_out
@@ -180,6 +183,9 @@ class LLMUsageRecorder:
         try:
             # 使用 Peewee 模型创建记录
             LLMUsage.create(
+                tenant_id=tenant_id,
+                agent_id=agent_id,
+                platform=platform,
                 model_name=model_info.model_identifier,
                 model_assign_name=model_info.name,
                 model_api_provider=model_info.api_provider,

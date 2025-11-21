@@ -38,15 +38,15 @@ class TelemetryHeartBeatTask(AsyncTask):
             "mmc_version": global_config.MMC_VERSION,
         }
 
-        match platform.system():
-            case "Windows":
-                info_dict["os_type"] = "Windows"
-            case "Linux":
-                info_dict["os_type"] = "Linux"
-            case "Darwin":
-                info_dict["os_type"] = "macOS"
-            case _:
-                info_dict["os_type"] = "Unknown"
+        system = platform.system()
+        if system == "Windows":
+            info_dict["os_type"] = "Windows"
+        elif system == "Linux":
+            info_dict["os_type"] = "Linux"
+        elif system == "Darwin":
+            info_dict["os_type"] = "macOS"
+        else:
+            info_dict["os_type"] = "Unknown"
 
         return info_dict
 
