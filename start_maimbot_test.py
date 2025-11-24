@@ -10,6 +10,7 @@ import os
 import subprocess
 import signal
 import logging
+import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -134,9 +135,12 @@ class MaiBotTestRunner:
             env["PYTHONPATH"] = str(self.project_root)
             # 设置环境变量覆盖端口
             env["PORT"] = "18000"
+            # 明确设置 HOST，确保监听在 0.0.0.0
+            env["HOST"] = "0.0.0.0"
 
             os.chdir(self.project_root)
 
+            # 直接以脚本方式启动，使用 src/api/main.py 内的 uvicorn.run，避免 -m uvicorn 立即退出问题
             self.config_process = subprocess.Popen(
                 [sys.executable, "src/api/main.py"],
                 stdout=subprocess.PIPE,
@@ -195,10 +199,23 @@ class MaiBotTestRunner:
             env["PYTHONPATH"] = str(self.project_root)
             # 设置环境变量覆盖端口（统一使用8095）
             env["PORT"] = "8095"
+            # 明确设置 HOST，确保监听在 0.0.0.0
+            env["HOST"] = "0.0.0.0"
             # 设置日志级别为DEBUG以查看所有日志（确保覆盖配置文件设置）
             env["LOG_LEVEL"] = "DEBUG"
             env["CONSOLE_LOG_LEVEL"] = "DEBUG"
             env["FILE_LOG_LEVEL"] = "DEBUG"
+            # 计算并注入 EULA/PRIVACY 确认哈希，避免 bot.py 阻塞交互
+            try:
+                eula_path = self.project_root / "EULA.md"
+                privacy_path = self.project_root / "PRIVACY.md"
+                eula_hash = hashlib.md5(eula_path.read_bytes()).hexdigest()
+                privacy_hash = hashlib.md5(privacy_path.read_bytes()).hexdigest()
+                env["EULA_AGREE"] = eula_hash
+                env["PRIVACY_AGREE"] = privacy_hash
+                logger.info("已注入 EULA_AGREE/PRIVACY_AGREE 环境变量，跳过协议交互确认")
+            except Exception as e:
+                logger.warning(f"无法计算 EULA/PRIVACY 哈希，可能导致启动阻塞: {e}")
 
             self.reply_process = subprocess.Popen(
                 [sys.executable, "bot.py"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env

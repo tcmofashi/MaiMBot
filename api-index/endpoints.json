@@ -1,0 +1,173 @@
+{
+  "generated_at": "2025-11-25T02:12:00+08:00",
+  "notes": "本文件整合 Markdown 文档与源码路由，包含主应用(API)与独立记忆系统服务的端点。主应用在 src/api/main.py 通过 app.include_router(api_router, prefix=\"/api\") 统一加上 /api 前缀；子路由使用 APIRouter(prefix=...) 追加版本或模块前缀。记忆系统是独立服务，不受主应用 /api 前缀影响。",
+  "docs_endpoints": [
+    { "method": "POST", "path": "/api/v1/auth/login", "module": "auth", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/auth/refresh", "module": "auth", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/health", "module": "system", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/system/info", "module": "system", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/ready", "module": "system", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "GET", "path": "/api/v1/tenants", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/tenants", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/tenants/{tenant_id}", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/tenants/{tenant_id}", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+    { "method": "DELETE", "path": "/api/v1/tenants/{tenant_id}", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/tenants/{tenant_id}/statistics", "module": "tenants", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "GET", "path": "/api/v1/agents", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/agents", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/agents/{agent_id}", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/agents/{agent_id}", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "DELETE", "path": "/api/v1/agents/{agent_id}", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/agents/{agent_id}/config", "module": "agents", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/agents/{agent_id}/config", "module": "agents", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "POST", "path": "/api/v1/chat/send", "module": "chat", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/chat/{chat_stream_id}/messages", "module": "chat", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/chat/streams", "module": "chat", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/chat/streams", "module": "chat", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/chat/messages/{message_id}/status", "module": "chat", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "POST", "path": "/api/v1/memory/store", "module": "memory", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/memory/search", "module": "memory", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/memory/agent/{agent_id}", "module": "memory", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/memory/{memory_id}", "module": "memory", "source": "docs/API_REFERENCE.md" },
+    { "method": "DELETE", "path": "/api/v1/memory/{memory_id}", "module": "memory", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/memory/statistics", "module": "memory", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "POST", "path": "/api/v1/heartflow/process", "module": "heartflow", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/heartflow/status/{chat_stream_id}", "module": "heartflow", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/heartflow/config/{chat_stream_id}", "module": "heartflow", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/heartflow/analysis/{chat_stream_id}", "module": "heartflow", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "POST", "path": "/api/v1/emoji/send", "module": "emoji", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/emoji/packs", "module": "emoji", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/emoji/packs", "module": "emoji", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/emoji/statistics", "module": "emoji", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "GET", "path": "/api/v1/plugins", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/plugins/install", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/plugins/{plugin_id}/enable", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/plugins/{plugin_id}/disable", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/plugins/{plugin_id}/config", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/plugins/{plugin_id}/config", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/plugins/{plugin_id}/execute", "module": "plugins", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "GET", "path": "/api/v1/config", "module": "config", "source": "docs/API_REFERENCE.md" },
+    { "method": "PUT", "path": "/api/v1/config", "module": "config", "source": "docs/API_REFERENCE.md" },
+    { "method": "POST", "path": "/api/v1/config/reset", "module": "config", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/config/history", "module": "config", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "GET", "path": "/api/v1/monitor/status", "module": "monitor", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/stats/usage", "module": "stats", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/stats/tenants", "module": "stats", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/stats/api", "module": "stats", "source": "docs/API_REFERENCE.md" },
+    { "method": "GET", "path": "/api/v1/stats/performance", "module": "stats", "source": "docs/API_REFERENCE.md" },
+
+    { "method": "POST", "path": "/api/v2/chat", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v2/chat/auth", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v2/chat/batch", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "GET", "path": "/api/v2/agents", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+
+    { "method": "POST", "path": "/api/v1/auth/register", "module": "auth", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v1/auth/login", "module": "auth", "source": "docs/API_SERVER.md" },
+    { "method": "GET", "path": "/api/v1/auth/me", "module": "auth", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v1/auth/logout", "module": "auth", "source": "docs/API_SERVER.md" },
+
+    { "method": "GET", "path": "/api/v1/tenant", "module": "tenant", "source": "docs/API_SERVER.md" },
+    { "method": "PUT", "path": "/api/v1/tenant", "module": "tenant", "source": "docs/API_SERVER.md" },
+    { "method": "GET", "path": "/api/v1/tenant/stats", "module": "tenant", "source": "docs/API_SERVER.md" },
+
+    { "method": "GET", "path": "/api/v1/agents/templates", "module": "agents", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v1/agents", "module": "agents", "source": "docs/API_SERVER.md" },
+    { "method": "GET", "path": "/api/v1/agents", "module": "agents", "source": "docs/API_SERVER.md" },
+    { "method": "PUT", "path": "/api/v1/agents/{agent_id}", "module": "agents", "source": "docs/API_SERVER.md" },
+    { "method": "DELETE", "path": "/api/v1/agents/{agent_id}", "module": "agents", "source": "docs/API_SERVER.md" },
+
+    { "method": "POST", "path": "/api/v2/chat", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v2/chat/auth", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "POST", "path": "/api/v2/chat/batch", "module": "chat_v2", "source": "docs/API_SERVER.md" },
+    { "method": "GET", "path": "/api/v2/agents", "module": "chat_v2", "source": "docs/API_SERVER.md" }
+  ],
+  "code_endpoints": [
+    { "method": "GET", "path": "/api/", "module": "root", "file": "src/api/main.py", "router_prefix": "/api" },
+    { "method": "GET", "path": "/api/health", "module": "root", "file": "src/api/main.py", "router_prefix": "/api" },
+    { "method": "GET", "path": "/api/info", "module": "root", "file": "src/api/main.py", "router_prefix": "/api" },
+    { "method": "GET", "path": "/health", "module": "app", "file": "src/api/main.py", "router_prefix": "" },
+
+    { "method": "POST", "path": "/api/v1/auth/register", "module": "auth", "file": "src/api/routes/auth_api.py", "router_prefix": "/v1/auth" },
+    { "method": "POST", "path": "/api/v1/auth/login", "module": "auth", "file": "src/api/routes/auth_api.py", "router_prefix": "/v1/auth" },
+    { "method": "POST", "path": "/api/v1/auth/logout", "module": "auth", "file": "src/api/routes/auth_api.py", "router_prefix": "/v1/auth" },
+    { "method": "GET", "path": "/api/v1/auth/me", "module": "auth", "file": "src/api/routes/auth_api.py", "router_prefix": "/v1/auth" },
+    { "method": "POST", "path": "/api/v1/auth/refresh", "module": "auth", "file": "src/api/routes/auth_api.py", "router_prefix": "/v1/auth" },
+
+    { "method": "GET", "path": "/api/v1/tenant", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+    { "method": "PUT", "path": "/api/v1/tenant", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+    { "method": "GET", "path": "/api/v1/tenant/stats", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+    { "method": "POST", "path": "/api/v1/tenant/upgrade", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+    { "method": "GET", "path": "/api/v1/tenant/api-key", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+    { "method": "POST", "path": "/api/v1/tenant/regenerate-api-key", "module": "tenant", "file": "src/api/routes/tenant_api.py", "router_prefix": "/v1/tenant" },
+
+    { "method": "GET", "path": "/api/v1/agents/templates", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "GET", "path": "/api/v1/agents/templates/{template_id}", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "POST", "path": "/api/v1/agents", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "GET", "path": "/api/v1/agents", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "GET", "path": "/api/v1/agents/{agent_id}", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "PUT", "path": "/api/v1/agents/{agent_id}", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "DELETE", "path": "/api/v1/agents/{agent_id}", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+    { "method": "POST", "path": "/api/v1/agents/templates", "module": "agents", "file": "src/api/routes/agent_api.py", "router_prefix": "/v1/agents" },
+
+    { "method": "POST", "path": "/api/v1/chat", "module": "chat_v1", "file": "src/api/routes/chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/agents", "module": "chat_v1", "file": "src/api/routes/chat_api.py", "router_prefix": "/v1" },
+    { "method": "POST", "path": "/api/v1/chat/batch", "module": "chat_v1", "file": "src/api/routes/chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/status", "module": "chat_v1", "file": "src/api/routes/chat_api.py", "router_prefix": "/v1" },
+
+    { "method": "POST", "path": "/api/v2/chat", "module": "chat_v2", "file": "src/api/routes/chat_api_v2.py", "router_prefix": "/v2" },
+    { "method": "POST", "path": "/api/v2/chat/auth", "module": "chat_v2", "file": "src/api/routes/chat_api_v2.py", "router_prefix": "/v2" },
+    { "method": "GET", "path": "/api/v2/agents", "module": "chat_v2", "file": "src/api/routes/chat_api_v2.py", "router_prefix": "/v2" },
+    { "method": "POST", "path": "/api/v2/chat/batch", "module": "chat_v2", "file": "src/api/routes/chat_api_v2.py", "router_prefix": "/v2" },
+
+    { "method": "POST", "path": "/api/v1/{tenant_id}/chat", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/{tenant_id}/agents", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "POST", "path": "/api/v1/{tenant_id}/agents/{agent_id}/chat", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/{tenant_id}/chat/history", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/{tenant_id}/stats", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "POST", "path": "/api/v1/{tenant_id}/search", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+    { "method": "GET", "path": "/api/v1/{tenant_id}/health", "module": "isolated_chat", "file": "src/api/routes/isolated_chat_api.py", "router_prefix": "/v1" },
+
+    { "method": "POST", "path": "/api/api-keys", "module": "api_keys", "file": "src/api/routes/api_key_api.py", "router_prefix": "" },
+    { "method": "GET", "path": "/api/api-keys", "module": "api_keys", "file": "src/api/routes/api_key_api.py", "router_prefix": "" },
+    { "method": "DELETE", "path": "/api/api-keys/{api_key_id}", "module": "api_keys", "file": "src/api/routes/api_key_api.py", "router_prefix": "" },
+    { "method": "POST", "path": "/api/api-keys/validate", "module": "api_keys", "file": "src/api/routes/api_key_api.py", "router_prefix": "" },
+
+    { "method": "GET", "path": "/users", "module": "example", "file": "src/common/server.py", "router_prefix": "" },
+    { "method": "POST", "path": "/users", "module": "example", "file": "src/common/server.py", "router_prefix": "" }
+  ],
+  "memory_service_endpoints": [
+    { "method": "GET", "path": "/api/v1/health", "module": "memory_service.health", "file": "src/memory_system/service/api/health.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/health/readiness", "module": "memory_service.health", "file": "src/memory_system/service/api/health.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/health/liveness", "module": "memory_service.health", "file": "src/memory_system/service/api/health.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/health/components", "module": "memory_service.health", "file": "src/memory_system/service/api/health.py", "router_prefix": "/api/v1" },
+
+    { "method": "GET", "path": "/api/v1/stats", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/health", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "POST", "path": "/api/v1/maintenance/cleanup", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "POST", "path": "/api/v1/maintenance/backup", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "POST", "path": "/api/v1/maintenance/optimize", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/maintenance/{task_id}", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "GET", "path": "/api/v1/maintenance/tasks", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+    { "method": "DELETE", "path": "/api/v1/maintenance/tasks/{task_id}", "module": "memory_service.admin", "file": "src/memory_system/service/api/admin.py", "router_prefix": "/api/v1" },
+
+    { "method": "POST", "path": "/api/v1/memories/", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "GET", "path": "/api/v1/memories/{memory_id}", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "PUT", "path": "/api/v1/memories/{memory_id}", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "DELETE", "path": "/api/v1/memories/{memory_id}", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "POST", "path": "/api/v1/memories/search", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "POST", "path": "/api/v1/memories/query", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "POST", "path": "/api/v1/memories/aggregate", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "POST", "path": "/api/v1/memories/batch", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "DELETE", "path": "/api/v1/memories/batch", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" },
+    { "method": "GET", "path": "/api/v1/memories/tenant/{tenant_id}/agent/{agent_id}", "module": "memory_service.memories", "file": "src/memory_system/service/api/memories.py", "router_prefix": "/api/v1/memories" }
+  ]
+}
