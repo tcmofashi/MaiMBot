@@ -331,6 +331,3 @@ config.toml
 interested_rates.txt
 MaiBot.code-workspace
 *.lock
-api-index/endpoints.json
-.gitignore
-api-index/api_test_results.json
