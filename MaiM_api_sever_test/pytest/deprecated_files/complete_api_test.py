@@ -331,6 +331,76 @@ def complete_api_test():
     else:
         print("   跳过 - 无有效的 access_token")
     
+    # 步骤 9: 创建 Agent
+    print("\n🆕 步骤 9: 创建 Agent")
+    if tenant_info.get("access_token"):
+        create_agent_headers = {
+            "Authorization": f"Bearer {tenant_info['access_token']}",
+            "Content-Type": "application/json"
+        }
+        create_agent_data = {
+            "name": "我的测试助手",
+            "description": "一个用于测试的友好AI助手",
+            "template_id": "friendly_assistant"
+        }
+        create_agent_result = api_call_with_result(
+            method="POST",
+            path="/api/v1/agents",
+            headers=create_agent_headers,
+            json=create_agent_data
+        )
+        results["test_steps"].append({
+            "step": 9,
+            "description": "创建 Agent",
+            "result": create_agent_result
+        })
+        
+        # 提取创建的 Agent ID
+        agent_id = ""
+        if create_agent_result.get("success") and "body" in create_agent_result:
+            body = create_agent_result["body"]
+            if isinstance(body, dict) and "agent_id" in body:
+                agent_id = body["agent_id"]
+                tenant_info["created_agent_id"] = agent_id
+                print(f"   创建的 Agent ID: {agent_id}")
+    else:
+        print("   跳过 - 无有效的 access_token")
+    
+    # 步骤 10: 调用 Agent 聊天功能
+    print("\n💬 步骤 10: 调用 Agent 聊天功能")
+    if tenant_info.get("access_token") and tenant_info.get("created_agent_id"):
+        chat_headers = {
+            "Authorization": f"Bearer {tenant_info['access_token']}",
+            "Content-Type": "application/json"
+        }
+        chat_data = {
+            "message": "你好，请介绍一下你自己",
+            "agent_id": tenant_info["created_agent_id"],
+            "platform": "web",
+            "user_id": "test_user_001"
+        }
+        chat_result = api_call_with_result(
+            method="POST",
+            path="/api/v2/chat/auth",
+            headers=chat_headers,
+            json=chat_data
+        )
+        results["test_steps"].append({
+            "step": 10,
+            "description": "调用 Agent 聊天功能",
+            "result": chat_result
+        })
+        
+        # 显示聊天响应
+        if chat_result.get("success") and "body" in chat_result:
+            body = chat_result["body"]
+            if isinstance(body, dict) and "data" in body:
+                response_data = body["data"]
+                if "response" in response_data:
+                    print(f"   Agent 回复: {response_data['response']}")
+    else:
+        print("   跳过 - 无有效的 access_token 或 Agent ID")
+    
     # 保存提取的租户信息
     results["extracted_tenant_info"] = tenant_info
     

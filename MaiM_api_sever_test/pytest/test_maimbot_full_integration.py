@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-MaiMBot 一键测试脚本
+MaiMBot 完整集成测试脚本
 启动双后端并运行集成测试的完整解决方案
+
+创建时间: 2025-11-27
+最后修改: 2025-11-27
+AI生成标识: Cline
+测试类型: 集成测试
+文件类型: 集成测试
+测试模块: src/api/main.py, bot.py
+测试功能: 双后端启动和集成测试
+分类标签: [integration_test, backend_test, maimbot]
 """
 
 import asyncio
@@ -409,7 +418,7 @@ async def main():
     """主函数"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="MaiMBot 一键测试脚本")
+    parser = argparse.ArgumentParser(description="MaiMBot 完整集成测试脚本")
     parser.add_argument("--users", type=int, default=2, help="用户数量 (默认: 2)")
     parser.add_argument("--agents", type=int, default=1, help="每个用户的Agent数量 (默认: 1)")
     parser.add_argument("--integration", action="store_true", help="运行完整集成测试")
@@ -453,14 +462,14 @@ async def main():
 
 if __name__ == "__main__":
     # 显示使用说明
-    print("🤖 MaiMBot 一键测试脚本")
+    print("🤖 MaiMBot 完整集成测试脚本")
     print("=" * 50)
     print("使用方法:")
-    print("  python start_maimbot_test.py                    # 基础连接测试")
-    print("  python start_maimbot_test.py --integration     # 完整集成测试")
-    print("  python start_maimbot_test.py --users 3 --agents 2  # 自定义参数测试")
-    print("  python start_maimbot_test.py --start-only       # 只启动服务")
-    print("  python start_maimbot_test.py --no-cleanup      # 测试后不清理")
+    print("  python test_maimbot_full_integration.py                    # 基础连接测试")
+    print("  python test_maimbot_full_integration.py --integration     # 完整集成测试")
+    print("  python test_maimbot_full_integration.py --users 3 --agents 2  # 自定义参数测试")
+    print("  python test_maimbot_full_integration.py --start-only       # 只启动服务")
+    print("  python test_maimbot_full_integration.py --no-cleanup      # 测试后不清理")
     print("=" * 50)
     print()
 

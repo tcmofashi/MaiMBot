@@ -1,6 +1,6 @@
 {
   "test_run": "完整 API 测试流程",
-  "timestamp": "2025-11-26T01:18:36.773272",
+  "timestamp": "2025-11-26T02:21:33.910942",
   "test_steps": [
     {
       "step": 1,
@@ -11,7 +11,7 @@
         "port": 18000,
         "status_code": 404,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:32 GMT",
           "server": "uvicorn",
           "content-length": "22",
           "content-type": "application/json"
@@ -31,7 +31,7 @@
         "port": 18000,
         "status_code": 200,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:32 GMT",
           "server": "uvicorn",
           "content-length": "4592",
           "content-type": "application/json"
@@ -244,7 +244,7 @@
         "port": 18000,
         "status_code": 409,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:32 GMT",
           "server": "uvicorn",
           "content-length": "31",
           "content-type": "application/json"
@@ -264,14 +264,14 @@
         "port": 18000,
         "status_code": 200,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:32 GMT",
           "server": "uvicorn",
           "content-length": "949",
           "content-type": "application/json"
         },
         "body": {
-          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTc3NTE2LCJpYXQiOjE3NjQwOTExMTZ9.1bBz_vYRi5k7aGSffHG-imknRoMofZjffRmBb-spBFY",
-          "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2NjY4MzExNiwiaWF0IjoxNzY0MDkxMTE2fQ.iF-xPvysSYsZRq6sbJ_KfdBRoivpXALYzSff6PhcvZ4",
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTgxMjk0LCJpYXQiOjE3NjQwOTQ4OTR9.gApw7lXOmyYbwvcuc0DG5__rNJTDsjtD6ikuXhhnUyU",
+          "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2NjY4Njg5NCwiaWF0IjoxNzY0MDk0ODk0fQ.hJqLEhNiOqjwgww3PB1dT5ZfvIEDVhkbX8GMhVVebYY",
           "token_type": "bearer",
           "expires_in": 86400,
           "user_info": {
@@ -285,7 +285,7 @@
             "api_key": "mb_n0fsRxJ3P9M4m4ofgDnfJVMDUHHmjnQLoDMmDiSE0Uc",
             "status": "active",
             "created_at": "2025-11-25T16:56:30.712857",
-            "last_login_at": "2025-11-25T17:18:36.880754"
+            "last_login_at": "2025-11-25T18:21:34.021283"
           }
         },
         "success": true
@@ -300,7 +300,7 @@
         "port": 18000,
         "status_code": 200,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:34 GMT",
           "server": "uvicorn",
           "content-length": "365",
           "content-type": "application/json"
@@ -316,7 +316,7 @@
           "api_key": "mb_n0fsRxJ3P9M4m4ofgDnfJVMDUHHmjnQLoDMmDiSE0Uc",
           "status": "active",
           "created_at": "2025-11-25T16:56:30.712857",
-          "last_login_at": "2025-11-25T17:18:36.880754"
+          "last_login_at": "2025-11-25T18:21:34.021283"
         },
         "success": true
       }
@@ -330,9 +330,9 @@
         "port": 18000,
         "status_code": 200,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:34 GMT",
           "server": "uvicorn",
-          "content-length": "461",
+          "content-length": "462",
           "content-type": "application/json"
         },
         "body": {
@@ -349,8 +349,8 @@
           "permissions": [],
           "created_at": "2025-11-25T16:56:30.712857",
           "updated_at": "2025-11-25T16:56:30.712857",
-          "last_login_at": "2025-11-25T17:18:36.880754",
-          "login_count": 6
+          "last_login_at": "2025-11-25T18:21:34.021283",
+          "login_count": 13
         },
         "success": true
       }
@@ -364,7 +364,7 @@
         "port": 18000,
         "status_code": 200,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:34 GMT",
           "server": "uvicorn",
           "content-length": "168",
           "content-type": "application/json"
@@ -390,7 +390,7 @@
         "port": 18000,
         "status_code": 500,
         "headers": {
-          "date": "Tue, 25 Nov 2025 17:18:36 GMT",
+          "date": "Tue, 25 Nov 2025 18:21:34 GMT",
           "server": "uvicorn",
           "content-length": "21",
           "content-type": "text/plain; charset=utf-8"
@@ -398,9 +398,30 @@
         "body": "Internal Server Error",
         "success": false
       }
+    },
+    {
+      "step": 9,
+      "description": "创建 Agent",
+      "result": {
+        "endpoint": "/api/v1/agents",
+        "method": "POST",
+        "port": 18000,
+        "status_code": 405,
+        "headers": {
+          "date": "Tue, 25 Nov 2025 18:21:34 GMT",
+          "server": "uvicorn",
+          "allow": "GET",
+          "content-length": "31",
+          "content-type": "application/json"
+        },
+        "body": {
+          "detail": "Method Not Allowed"
+        },
+        "success": false
+      }
     }
   ],
   "extracted_tenant_info": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTc3NTE2LCJpYXQiOjE3NjQwOTExMTZ9.1bBz_vYRi5k7aGSffHG-imknRoMofZjffRmBb-spBFY"
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcl8xODUwZmQ3YzExMmE5Mjc2IiwidGVuYW50X2lkIjoidGVuYW50XzIwZjdmMmM0NzgyNTUzMWEiLCJ0eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTgxMjk0LCJpYXQiOjE3NjQwOTQ4OTR9.gApw7lXOmyYbwvcuc0DG5__rNJTDsjtD6ikuXhhnUyU"
   }
 }

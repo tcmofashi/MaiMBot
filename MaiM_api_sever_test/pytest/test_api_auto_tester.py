@@ -10,12 +10,21 @@
 - 可选WS测试(需要 websocket-client)
 - 在服务未启动时给出可读性提示，并可选择跳过不可达的基础地址
 
+创建时间: 2025-11-27
+最后修改: 2025-11-27
+AI生成标识: Cline
+测试类型: API自动测试
+文件类型: API测试
+测试模块: src/api/main.py, bot.py
+测试功能: API接口自动测试
+分类标签: [api_test, auto_test, integration_test]
+
 依赖:
 - requests
 - websocket-client (如需WS测试)
 
 使用:
-- python scripts/api_auto_tester.py --config config\\api_tester.json
+- python test_api_auto_tester.py --config config\\api_tester.json
   可选参数:
     --timeout 15         每个请求的超时时间(秒)，默认15
     --fail-fast          首次失败后立即退出(返回非0)
