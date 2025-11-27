@@ -1,0 +1,2372 @@
+[
+  {
+    "method": "?",
+    "path": "/API_REFERENCE.md",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\MULTI_TENANT_MIGRATION_SUMMARY.md",
+        "line": 294,
+        "snippet": "- ✅ `docs/API_REFERENCE.md` - API参考"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/API_REFERENCE.md)",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 906,
+        "snippet": "- [API参考](./API_REFERENCE.md)"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api.deepseek.com/v1",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\model_configuration_guide.md",
+        "line": 31,
+        "snippet": "base_url = \"https://api.deepseek.com/v1\" # API服务的基础URL"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\model_configuration_guide.md",
+        "line": 58,
+        "snippet": "base_url = \"https://api.deepseek.com/v1\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api.example.com/api/v1",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 941,
+        "snippet": "base_url=\"https://api.example.com/api/v1\","
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 971,
+        "snippet": "baseURL: 'https://api.example.com/api/v1',"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api.siliconflow.cn/v1",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\model_configuration_guide.md",
+        "line": 67,
+        "snippet": "base_url = \"https://api.siliconflow.cn/v1\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api.telegram.org/bot<token>/sendMessage",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 704,
+        "snippet": "curl -X POST \"https://api.telegram.org/bot<token>/sendMessage\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api.weather.com/v1/current?q={location}",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\plugins\\tool-components.md",
+        "line": 141,
+        "snippet": "api_url = f\"http://api.weather.com/v1/current?q={location}\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/agents",
+    "category": "api",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 593,
+        "snippet": "self.client.post(\"/api/agents\", json={"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/health",
+    "category": "api",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 455,
+        "snippet": "2. 使用 `/api/health` 接口检查服务状态"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/multi_tenant/isolation_check",
+    "category": "multi_tenant",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 777,
+        "snippet": "curl http://localhost:8080/api/multi_tenant/isolation_check"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/multi_tenant/status",
+    "category": "multi_tenant",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 518,
+        "snippet": "curl http://localhost:8080/api/multi_tenant/status"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 589,
+        "snippet": "self.client.get(\"/api/multi_tenant/status\")"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/routes/isolated_chat_api.py",
+    "category": "api",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\MULTI_TENANT_MIGRATION_SUMMARY.md",
+        "line": 94,
+        "snippet": "- `src/api/routes/isolated_chat_api.py` - 隔离聊天API"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/utils/isolated_api_utils.py",
+    "category": "api",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\MULTI_TENANT_MIGRATION_SUMMARY.md",
+        "line": 95,
+        "snippet": "- `src/api/utils/isolated_api_utils.py` - API工具"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1",
+    "category": "api",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 36,
+        "snippet": "开发环境: http://localhost:8080/api/v1"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 37,
+        "snippet": "生产环境: https://your-domain.com/api/v1"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/",
+    "category": "v1",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 27,
+        "snippet": "- **版本控制**: 支持API版本管理 (`/api/v1/`)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 920,
+        "snippet": "- **API版本**: 使用URL路径版本控制 (`/api/v1/`)"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 325,
+        "snippet": "POST /api/v1/agents"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 49,
+        "snippet": "- Agent创建 (`POST /api/v1/agents`)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 194,
+        "snippet": "- `POST /api/v1/agents` - 创建Agent"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 195,
+        "snippet": "- `GET /api/v1/agents` - 获取Agent列表"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 360,
+        "snippet": "curl -X POST \"http://localhost:8000/api/v1/agents\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 119,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/agents\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 132,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/agents\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 444,
+        "snippet": "A: 创建Agent后会返回agent_id，也可以通过 `/api/v1/agents` 接口查看所有Agent。"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 140,
+        "snippet": "response = client.post(\"/api/v1/agents\", json={"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents/agent_abc123",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 139,
+        "snippet": "curl -X PUT \"http://localhost:8095/api/v1/agents/agent_abc123\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents/templates",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 193,
+        "snippet": "- `GET /api/v1/agents/templates` - 获取模板列表"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents/templates?category=general",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 113,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/agents/templates?category=general\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents/{agent_id}",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 352,
+        "snippet": "GET /api/v1/agents/{agent_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 358,
+        "snippet": "PUT /api/v1/agents/{agent_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 372,
+        "snippet": "DELETE /api/v1/agents/{agent_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 50,
+        "snippet": "- Agent配置更新 (`PUT /api/v1/agents/{agent_id}`)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 196,
+        "snippet": "- `PUT /api/v1/agents/{agent_id}` - 更新Agent"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 197,
+        "snippet": "- `DELETE /api/v1/agents/{agent_id}` - 删除Agent"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents/{agent_id}/config",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 378,
+        "snippet": "GET /api/v1/agents/{agent_id}/config"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 379,
+        "snippet": "PUT /api/v1/agents/{agent_id}/config"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/agents?page=1&limit=20&status=active",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 296,
+        "snippet": "GET /api/v1/agents?page=1&limit=20&status=active"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/auth/login",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 72,
+        "snippet": "POST /api/v1/auth/login"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 42,
+        "snippet": "- 用户登录 (`POST /api/v1/auth/login`)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 183,
+        "snippet": "- `POST /api/v1/auth/login` - 用户登录"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 65,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/auth/login\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/auth/logout",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 185,
+        "snippet": "- `POST /api/v1/auth/logout` - 用户登出"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/auth/me",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 184,
+        "snippet": "- `GET /api/v1/auth/me` - 获取用户信息"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 76,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/auth/me\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 441,
+        "snippet": "A: 用户注册后会自动生成租户ID，也可以通过 `/api/v1/auth/me` 接口获取。"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/auth/refresh",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 111,
+        "snippet": "POST /api/v1/auth/refresh"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/auth/register",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 41,
+        "snippet": "- 用户注册 (`POST /api/v1/auth/register`)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 182,
+        "snippet": "- `POST /api/v1/auth/register` - 用户注册"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 353,
+        "snippet": "curl -X POST \"http://localhost:8000/api/v1/auth/register\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 31,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/auth/register\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/chat/messages/{message_id}/status",
+    "category": "chat",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 463,
+        "snippet": "GET /api/v1/chat/messages/{message_id}/status"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/chat/send",
+    "category": "chat",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 387,
+        "snippet": "POST /api/v1/chat/send"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 147,
+        "snippet": "response = client.post(\"/api/v1/chat/send\", json={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 234,
+        "snippet": "self.client.post(\"/api/v1/chat/send\", json={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 373,
+        "snippet": "response = client.post(\"/api/v1/chat/send\", json={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 443,
+        "snippet": "response = client.post(\"/api/v1/chat/send\", json={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 450,
+        "snippet": "response = client.post(\"/api/v1/chat/send\", json={"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/chat/streams",
+    "category": "chat",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 439,
+        "snippet": "POST /api/v1/chat/streams"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/chat/streams?platform=qq&status=active",
+    "category": "chat",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 457,
+        "snippet": "GET /api/v1/chat/streams?platform=qq&status=active"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/chat/{chat_stream_id}/messages?page=1&limit=50&before=msg_123",
+    "category": "chat",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 433,
+        "snippet": "GET /api/v1/chat/{chat_stream_id}/messages?page=1&limit=50&before=msg_123"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/config",
+    "category": "config",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 765,
+        "snippet": "PUT /api/v1/config"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/config/history?category=llm&limit=10",
+    "category": "config",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 789,
+        "snippet": "GET /api/v1/config/history?category=llm&limit=10"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/config/reset?category=llm",
+    "category": "config",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 783,
+        "snippet": "POST /api/v1/config/reset?category=llm"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/config?category=llm&platform=qq",
+    "category": "config",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 759,
+        "snippet": "GET /api/v1/config?category=llm&platform=qq"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/emoji/packs",
+    "category": "emoji",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 679,
+        "snippet": "POST /api/v1/emoji/packs"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/emoji/packs?platform=qq&category=happy",
+    "category": "emoji",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 673,
+        "snippet": "GET /api/v1/emoji/packs?platform=qq&category=happy"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/emoji/send",
+    "category": "emoji",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 656,
+        "snippet": "POST /api/v1/emoji/send"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/emoji/statistics?period=7d",
+    "category": "emoji",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 699,
+        "snippet": "GET /api/v1/emoji/statistics?period=7d"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/health",
+    "category": "v1",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 124,
+        "snippet": "GET /api/v1/health"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/heartflow/analysis/{chat_stream_id}?period=24h",
+    "category": "heartflow",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 648,
+        "snippet": "GET /api/v1/heartflow/analysis/{chat_stream_id}?period=24h"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/heartflow/config/{chat_stream_id}",
+    "category": "config",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 634,
+        "snippet": "PUT /api/v1/heartflow/config/{chat_stream_id}"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/heartflow/process",
+    "category": "heartflow",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 577,
+        "snippet": "POST /api/v1/heartflow/process"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/heartflow/status/{chat_stream_id}",
+    "category": "heartflow",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 628,
+        "snippet": "GET /api/v1/heartflow/status/{chat_stream_id}"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/agent/{agent_id}?type=long_term&limit=20",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 518,
+        "snippet": "GET /api/v1/memory/agent/{agent_id}?type=long_term&limit=20"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/search?query=Python&limit=10&type=preference",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 489,
+        "snippet": "GET /api/v1/memory/search?query=Python&limit=10&type=preference"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/search?query=test",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 241,
+        "snippet": "self.client.get(\"/api/v1/memory/search?query=test\")"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/statistics",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 543,
+        "snippet": "GET /api/v1/memory/statistics"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/store",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 471,
+        "snippet": "POST /api/v1/memory/store"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/memory/{memory_id}",
+    "category": "memory",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 524,
+        "snippet": "PUT /api/v1/memory/{memory_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 537,
+        "snippet": "DELETE /api/v1/memory/{memory_id}"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/monitor/status",
+    "category": "v1",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 797,
+        "snippet": "GET /api/v1/monitor/status"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins/install",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 713,
+        "snippet": "POST /api/v1/plugins/install"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins/{plugin_id}/config",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 735,
+        "snippet": "GET /api/v1/plugins/{plugin_id}/config"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 736,
+        "snippet": "PUT /api/v1/plugins/{plugin_id}/config"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins/{plugin_id}/disable",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 729,
+        "snippet": "POST /api/v1/plugins/{plugin_id}/disable"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins/{plugin_id}/enable",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 728,
+        "snippet": "POST /api/v1/plugins/{plugin_id}/enable"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins/{plugin_id}/execute",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 742,
+        "snippet": "POST /api/v1/plugins/{plugin_id}/execute"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/plugins?status=enabled&category=message_processing",
+    "category": "plugins",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 707,
+        "snippet": "GET /api/v1/plugins?status=enabled&category=message_processing"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/ready",
+    "category": "v1",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 169,
+        "snippet": "GET /api/v1/ready"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/stats/api?endpoint=chat/send&period=24h",
+    "category": "stats",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 842,
+        "snippet": "GET /api/v1/stats/api?endpoint=chat/send&period=24h"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/stats/performance?period=1h",
+    "category": "stats",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 848,
+        "snippet": "GET /api/v1/stats/performance?period=1h"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/stats/tenants?period=7d",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 836,
+        "snippet": "GET /api/v1/stats/tenants?period=7d"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/stats/usage",
+    "category": "stats",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 245,
+        "snippet": "self.client.get(\"/api/v1/stats/usage\")"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/stats/usage?period=30d&group_by=day",
+    "category": "stats",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 830,
+        "snippet": "GET /api/v1/stats/usage?period=30d&group_by=day"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/system/info",
+    "category": "v1",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 148,
+        "snippet": "GET /api/v1/system/info"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenant",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 188,
+        "snippet": "- `GET /api/v1/tenant` - 获取租户信息"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 189,
+        "snippet": "- `PUT /api/v1/tenant` - 更新租户配置"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 85,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/tenant\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 92,
+        "snippet": "curl -X PUT \"http://localhost:8095/api/v1/tenant\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenant/stats",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 190,
+        "snippet": "- `GET /api/v1/tenant/stats` - 租户统计"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 104,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/tenant/stats\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenants",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 211,
+        "snippet": "POST /api/v1/tenants"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 133,
+        "snippet": "response = client.post(\"/api/v1/tenants\", json={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 421,
+        "snippet": "response = client.get(\"/api/v1/tenants\", headers={"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\TEST_REPORT.md",
+        "line": 428,
+        "snippet": "response = client.get(\"/api/v1/tenants\", headers={"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenants/{tenant_id}",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 233,
+        "snippet": "GET /api/v1/tenants/{tenant_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 239,
+        "snippet": "PUT /api/v1/tenants/{tenant_id}"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 254,
+        "snippet": "DELETE /api/v1/tenants/{tenant_id}"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenants/{tenant_id}/statistics",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 260,
+        "snippet": "GET /api/v1/tenants/{tenant_id}/statistics"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v1/tenants?page=1&limit=20&search=关键词",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 177,
+        "snippet": "GET /api/v1/tenants?page=1&limit=20&search=关键词"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v2/agents",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 205,
+        "snippet": "- `GET /api/v2/agents` - 获取可用Agent"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v2/agents?tenant_id=tenant_def456",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 242,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v2/agents?tenant_id=tenant_def456\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v2/chat",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 202,
+        "snippet": "- `POST /api/v2/chat` - 发送消息(请求体参数)"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 368,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 153,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 206,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v2/chat/auth",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 203,
+        "snippet": "- `POST /api/v2/chat/auth` - 认证用户聊天"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 193,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat/auth\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api/v2/chat/batch",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 204,
+        "snippet": "- `POST /api/v2/chat/batch` - 批量聊天"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 219,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat/batch\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "?",
+    "path": "/api_compatibility_strategy.py",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\migration_guide.md",
+        "line": 463,
+        "snippet": "- `scripts/migration/api_compatibility_strategy.py` - API兼容性工具"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "DELETE",
+    "path": "/api-keys/{api_key_id}",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "src",
+        "file": "src\\api\\routes\\api_key_api.py",
+        "line": 239,
+        "snippet": "@router.delete(\"/api-keys/{api_key_id}\", summary=\"删除API密钥\")"
+      }
+    ],
+    "flags": {
+      "from_docs": false,
+      "from_code": true,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api-key",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "src",
+        "file": "src\\api\\routes\\tenant_api.py",
+        "line": 272,
+        "snippet": "@router.get(\"/api-key\")"
+      }
+    ],
+    "flags": {
+      "from_docs": false,
+      "from_code": true,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api-keys",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "src",
+        "file": "src\\api\\routes\\api_key_api.py",
+        "line": 179,
+        "snippet": "@router.get(\"/api-keys\", response_model=ApiKeyListResponse, summary=\"获取API密钥列表\")"
+      }
+    ],
+    "flags": {
+      "from_docs": false,
+      "from_code": true,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/agents",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 132,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/agents\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/agents/templates?category=general",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 113,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/agents/templates?category=general\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/auth/me",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 76,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/auth/me\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/tenant",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 85,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/tenant\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/tenant/stats",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 104,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v1/tenant/stats\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/agents?tenant_id=tenant_def456",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 242,
+        "snippet": "curl -X GET \"http://localhost:8095/api/v2/agents?tenant_id=tenant_def456\""
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api?endpoint=chat/send&period=24h",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_REFERENCE.md",
+        "line": 842,
+        "snippet": "GET /api/v1/stats/api?endpoint=chat/send&period=24h"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api-keys",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "src",
+        "file": "src\\api\\routes\\api_key_api.py",
+        "line": 97,
+        "snippet": "@router.post(\"/api-keys\", response_model=ApiKeyResponse, summary=\"创建API密钥\")"
+      }
+    ],
+    "flags": {
+      "from_docs": false,
+      "from_code": true,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api-keys/validate",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "src",
+        "file": "src\\api\\routes\\api_key_api.py",
+        "line": 274,
+        "snippet": "@router.post(\"/api-keys/validate\", response_model=ApiKeyValidationResponse, summary=\"验证API密钥\")"
+      }
+    ],
+    "flags": {
+      "from_docs": false,
+      "from_code": true,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api.telegram.org/bot<token>/sendMessage",
+    "category": "unknown",
+    "versions": [
+      "unversioned"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\DEPLOYMENT_GUIDE.md",
+        "line": 704,
+        "snippet": "curl -X POST \"https://api.telegram.org/bot<token>/sendMessage\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/agents",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 360,
+        "snippet": "curl -X POST \"http://localhost:8000/api/v1/agents\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 119,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/agents\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 65,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/auth/login\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/register",
+    "category": "auth",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 353,
+        "snippet": "curl -X POST \"http://localhost:8000/api/v1/auth/register\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 31,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v1/auth/register\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/chat",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_SERVER.md",
+        "line": 368,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 153,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      },
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 206,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/chat/auth",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 193,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat/auth\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/chat/batch",
+    "category": "v2",
+    "versions": [
+      "v2"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 219,
+        "snippet": "curl -X POST \"http://localhost:8095/api/v2/chat/batch\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/agents/agent_abc123",
+    "category": "agents",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 139,
+        "snippet": "curl -X PUT \"http://localhost:8095/api/v1/agents/agent_abc123\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/tenant",
+    "category": "tenant",
+    "versions": [
+      "v1"
+    ],
+    "sources": [
+      {
+        "origin": "docs",
+        "file": "docs\\API_USAGE_EXAMPLES.md",
+        "line": 92,
+        "snippet": "curl -X PUT \"http://localhost:8095/api/v1/tenant\" \\"
+      }
+    ],
+    "flags": {
+      "from_docs": true,
+      "from_code": false,
+      "from_tests": false
+    }
+  }
+]

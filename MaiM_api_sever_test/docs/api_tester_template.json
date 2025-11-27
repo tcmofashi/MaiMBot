@@ -1,0 +1,53 @@
+{
+  "default": {
+    "base_url": "http://localhost:18000",
+    "bot_base_url": "http://localhost:8095",
+    "memory_base_url": "http://localhost:8001",
+    "ws_url": "ws://localhost:8095/ws",
+
+    "headers": {
+      "X-Tenant-ID": "",
+      "X-Agent-ID": "",
+      "Authorization": ""
+    },
+
+    "auth": {
+      "use_base": "base",
+      "login_path": "/api/v1/auth/login",
+      "method": "POST",
+      "request_body": {
+        "username": "",
+        "password": ""
+      },
+      "headers": {},
+      "params": {},
+      "response_token_json_path": "access_token",
+      "token_header": "Authorization",
+      "token_prefix": "Bearer "
+    },
+
+    "auto_tests": [
+      { "method": "GET", "use": "base", "path": "/api/health" },
+      { "method": "GET", "use": "base", "path": "/api/info" },
+
+      { "method": "GET", "use": "base", "path": "/api/v1/auth/me" },
+      { "method": "GET", "use": "base", "path": "/api/v1/tenant" },
+      { "method": "GET", "use": "base", "path": "/api/v1/agents" },
+
+      { "method": "POST", "use": "base", "path": "/api/v1/chat", "body": { "content": "示例内容", "agent_id": "" } },
+      { "method": "POST", "use": "base", "path": "/api/v1/chat/batch", "body": { "items": [{ "content": "示例批量" }] } },
+
+      { "method": "POST", "use": "bot", "path": "/api/v2/chat", "body": { "content": "示例内容 v2", "agent_id": "" } },
+      { "method": "POST", "use": "bot", "path": "/api/v2/chat/batch", "body": { "items": [{ "content": "示例批量 v2" }] } },
+      { "method": "GET", "use": "bot", "path": "/api/v2/agents" },
+
+      { "method": "GET", "use": "base", "path": "/api/api-keys" },
+      { "method": "POST", "use": "base", "path": "/api/api-keys/validate", "body": { "api_key": "" } },
+
+      { "method": "GET", "use": "memory", "path": "/api/v1/health" },
+      { "method": "GET", "use": "memory", "path": "/api/v1/memories/tenant//agent/" },
+
+      { "method": "WS", "use": "bot", "path": "/ws", "message": "{\"type\":\"ping\"}" }
+    ]
+  }
+}

@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-MaiMBot 一键测试脚本
+MaiMBot 完整集成测试脚本
 启动双后端并运行集成测试的完整解决方案
+
+创建时间: 2025-11-27
+最后修改: 2025-11-27
+AI生成标识: Cline
+测试类型: 集成测试
+文件类型: 集成测试
+测试模块: src/api/main.py, bot.py
+测试功能: 双后端启动和集成测试
+分类标签: [integration_test, backend_test, maimbot]
 """
 
 import asyncio
@@ -10,6 +19,7 @@ import os
 import subprocess
 import signal
 import logging
+import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -134,9 +144,12 @@ class MaiBotTestRunner:
             env["PYTHONPATH"] = str(self.project_root)
             # 设置环境变量覆盖端口
             env["PORT"] = "18000"
+            # 明确设置 HOST，确保监听在 0.0.0.0
+            env["HOST"] = "0.0.0.0"
 
             os.chdir(self.project_root)
 
+            # 直接以脚本方式启动，使用 src/api/main.py 内的 uvicorn.run，避免 -m uvicorn 立即退出问题
             self.config_process = subprocess.Popen(
                 [sys.executable, "src/api/main.py"],
                 stdout=subprocess.PIPE,
@@ -195,10 +208,23 @@ class MaiBotTestRunner:
             env["PYTHONPATH"] = str(self.project_root)
             # 设置环境变量覆盖端口（统一使用8095）
             env["PORT"] = "8095"
+            # 明确设置 HOST，确保监听在 0.0.0.0
+            env["HOST"] = "0.0.0.0"
             # 设置日志级别为DEBUG以查看所有日志（确保覆盖配置文件设置）
             env["LOG_LEVEL"] = "DEBUG"
             env["CONSOLE_LOG_LEVEL"] = "DEBUG"
             env["FILE_LOG_LEVEL"] = "DEBUG"
+            # 计算并注入 EULA/PRIVACY 确认哈希，避免 bot.py 阻塞交互
+            try:
+                eula_path = self.project_root / "EULA.md"
+                privacy_path = self.project_root / "PRIVACY.md"
+                eula_hash = hashlib.md5(eula_path.read_bytes()).hexdigest()
+                privacy_hash = hashlib.md5(privacy_path.read_bytes()).hexdigest()
+                env["EULA_AGREE"] = eula_hash
+                env["PRIVACY_AGREE"] = privacy_hash
+                logger.info("已注入 EULA_AGREE/PRIVACY_AGREE 环境变量，跳过协议交互确认")
+            except Exception as e:
+                logger.warning(f"无法计算 EULA/PRIVACY 哈希，可能导致启动阻塞: {e}")
 
             self.reply_process = subprocess.Popen(
                 [sys.executable, "bot.py"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
@@ -392,7 +418,7 @@ async def main():
     """主函数"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="MaiMBot 一键测试脚本")
+    parser = argparse.ArgumentParser(description="MaiMBot 完整集成测试脚本")
     parser.add_argument("--users", type=int, default=2, help="用户数量 (默认: 2)")
     parser.add_argument("--agents", type=int, default=1, help="每个用户的Agent数量 (默认: 1)")
     parser.add_argument("--integration", action="store_true", help="运行完整集成测试")
@@ -436,14 +462,14 @@ async def main():
 
 if __name__ == "__main__":
     # 显示使用说明
-    print("🤖 MaiMBot 一键测试脚本")
+    print("🤖 MaiMBot 完整集成测试脚本")
     print("=" * 50)
     print("使用方法:")
-    print("  python start_maimbot_test.py                    # 基础连接测试")
-    print("  python start_maimbot_test.py --integration     # 完整集成测试")
-    print("  python start_maimbot_test.py --users 3 --agents 2  # 自定义参数测试")
-    print("  python start_maimbot_test.py --start-only       # 只启动服务")
-    print("  python start_maimbot_test.py --no-cleanup      # 测试后不清理")
+    print("  python test_maimbot_full_integration.py                    # 基础连接测试")
+    print("  python test_maimbot_full_integration.py --integration     # 完整集成测试")
+    print("  python test_maimbot_full_integration.py --users 3 --agents 2  # 自定义参数测试")
+    print("  python test_maimbot_full_integration.py --start-only       # 只启动服务")
+    print("  python test_maimbot_full_integration.py --no-cleanup      # 测试后不清理")
     print("=" * 50)
     print()
 
