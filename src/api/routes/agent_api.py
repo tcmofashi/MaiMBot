@@ -460,7 +460,7 @@ async def delete_agent(agent_id: str, current_user=Depends(get_current_user)):
 
 # 管理员接口 - 创建Agent模板
 @router.post("/templates", response_model=AgentTemplateInfo)
-async def create_agent_template(request_data: AgentTemplateCreateRequest, current_user=Depends(get_current_user)):
+async def create_agent_template_api(request_data: AgentTemplateCreateRequest, current_user=Depends(get_current_user)):
     """
     创建Agent模板（管理员功能）
     """

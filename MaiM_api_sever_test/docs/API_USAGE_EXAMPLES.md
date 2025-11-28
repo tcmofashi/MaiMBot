@@ -239,7 +239,7 @@ curl -X POST "http://localhost:8095/api/v2/chat/batch" \
 ### 5.1 通过查询参数获取
 
 ```bash
-curl -X GET "http://localhost:8095/api/v2/agents?tenant_id=tenant_def456"
+curl -X GET "http://localhost:8095/api/v2/chat-agents?tenant_id=tenant_def456"
 ```
 
 ## 6. 错误处理

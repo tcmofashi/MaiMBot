@@ -1,0 +1,4835 @@
+{
+  "database_name": "MaiBot.db",
+  "analysis_time": "2025-11-27T23:26:28.964570",
+  "tables": {
+    "agents": {
+      "schema": "CREATE TABLE \"agents\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"name\" TEXT NOT NULL, \"description\" TEXT, \"tags\" TEXT, \"persona\" TEXT NOT NULL, \"bot_overrides\" TEXT, \"config_overrides\" TEXT, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "tags",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "persona",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "bot_overrides",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "config_overrides",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "agentrecord_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "agentrecord_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "chat_streams": {
+      "schema": "CREATE TABLE \"chat_streams\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT NOT NULL, \"chat_stream_id\" TEXT, \"create_time\" REAL NOT NULL, \"group_platform\" TEXT, \"group_id\" TEXT, \"group_name\" TEXT, \"last_active_time\" REAL NOT NULL, \"user_platform\" TEXT NOT NULL, \"user_id\" TEXT NOT NULL, \"user_nickname\" TEXT NOT NULL, \"user_cardname\" TEXT, \"stream_id\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "create_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "group_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "group_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "last_active_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "user_platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "user_nickname",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "user_cardname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "stream_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "chatstreams_stream_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 14,
+              "name": "stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "chatstreams_chat_stream_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "chatstreams_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "chatstreams_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "chatstreams_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "chatstreams_stream_id",
+          "columns": [
+            "stream_id"
+          ]
+        },
+        {
+          "name": "chatstreams_chat_stream_id",
+          "columns": [
+            "chat_stream_id"
+          ]
+        }
+      ]
+    },
+    "llm_usage": {
+      "schema": "CREATE TABLE \"llm_usage\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT NOT NULL, \"model_name\" TEXT NOT NULL, \"model_assign_name\" TEXT, \"model_api_provider\" TEXT, \"user_id\" TEXT NOT NULL, \"request_type\" TEXT NOT NULL, \"endpoint\" TEXT NOT NULL, \"prompt_tokens\" INTEGER NOT NULL, \"completion_tokens\" INTEGER NOT NULL, \"total_tokens\" INTEGER NOT NULL, \"cost\" REAL NOT NULL, \"time_cost\" REAL, \"status\" TEXT NOT NULL, \"timestamp\" DATETIME NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "model_name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "model_assign_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "model_api_provider",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "request_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "endpoint",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "prompt_tokens",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "completion_tokens",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "total_tokens",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "cost",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "time_cost",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 16,
+          "name": "timestamp",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "llmusage_timestamp",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 16,
+              "name": "timestamp"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "llmusage_request_type",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 8,
+              "name": "request_type"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "llmusage_user_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 7,
+              "name": "user_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "llmusage_model_name",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "model_name"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "llmusage_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "llmusage_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "llmusage_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "emoji": {
+      "schema": "CREATE TABLE \"emoji\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"full_path\" TEXT NOT NULL, \"format\" TEXT NOT NULL, \"emoji_hash\" TEXT NOT NULL, \"description\" TEXT NOT NULL, \"query_count\" INTEGER NOT NULL, \"is_registered\" INTEGER NOT NULL, \"is_banned\" INTEGER NOT NULL, \"emotion\" TEXT, \"record_time\" REAL NOT NULL, \"register_time\" REAL, \"usage_count\" INTEGER NOT NULL, \"last_used_time\" REAL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "full_path",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "format",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "emoji_hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "query_count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "is_registered",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "is_banned",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "emotion",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "record_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "register_time",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "usage_count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "last_used_time",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "emoji_emoji_hash",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "emoji_hash"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "emoji_full_path",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "full_path"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "emoji_full_path",
+          "columns": [
+            "full_path"
+          ]
+        }
+      ]
+    },
+    "messages": {
+      "schema": "CREATE TABLE \"messages\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT NOT NULL, \"chat_stream_id\" TEXT NOT NULL, \"message_id\" TEXT NOT NULL, \"time\" REAL NOT NULL, \"chat_id\" TEXT, \"reply_to\" TEXT, \"interest_value\" REAL, \"key_words\" TEXT, \"key_words_lite\" TEXT, \"is_mentioned\" INTEGER, \"is_at\" INTEGER, \"reply_probability_boost\" REAL, \"chat_info_stream_id\" TEXT NOT NULL, \"chat_info_platform\" TEXT NOT NULL, \"chat_info_user_platform\" TEXT NOT NULL, \"chat_info_user_id\" TEXT NOT NULL, \"chat_info_user_nickname\" TEXT NOT NULL, \"chat_info_user_cardname\" TEXT, \"chat_info_group_platform\" TEXT, \"chat_info_group_id\" TEXT, \"chat_info_group_name\" TEXT, \"chat_info_create_time\" REAL NOT NULL, \"chat_info_last_active_time\" REAL NOT NULL, \"user_platform\" TEXT, \"user_id\" TEXT, \"user_nickname\" TEXT, \"user_cardname\" TEXT, \"sender_user_platform\" TEXT, \"sender_user_id\" TEXT, \"sender_user_nickname\" TEXT, \"sender_user_cardname\" TEXT, \"sender_group_platform\" TEXT, \"sender_group_id\" TEXT, \"sender_group_name\" TEXT, \"receiver_user_platform\" TEXT, \"receiver_user_id\" TEXT, \"receiver_user_nickname\" TEXT, \"receiver_user_cardname\" TEXT, \"receiver_group_platform\" TEXT, \"receiver_group_id\" TEXT, \"receiver_group_name\" TEXT, \"processed_plain_text\" TEXT, \"display_message\" TEXT, \"priority_mode\" TEXT, \"priority_info\" TEXT, \"additional_config\" TEXT, \"is_emoji\" INTEGER NOT NULL, \"is_picid\" INTEGER NOT NULL, \"is_command\" INTEGER NOT NULL, \"is_notify\" INTEGER NOT NULL, \"selected_expressions\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "message_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "reply_to",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "interest_value",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "key_words",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "key_words_lite",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "is_mentioned",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "is_at",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "reply_probability_boost",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "chat_info_stream_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 16,
+          "name": "chat_info_platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 17,
+          "name": "chat_info_user_platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 18,
+          "name": "chat_info_user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 19,
+          "name": "chat_info_user_nickname",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 20,
+          "name": "chat_info_user_cardname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 21,
+          "name": "chat_info_group_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 22,
+          "name": "chat_info_group_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 23,
+          "name": "chat_info_group_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 24,
+          "name": "chat_info_create_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 25,
+          "name": "chat_info_last_active_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 26,
+          "name": "user_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 27,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 28,
+          "name": "user_nickname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 29,
+          "name": "user_cardname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 30,
+          "name": "sender_user_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 31,
+          "name": "sender_user_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 32,
+          "name": "sender_user_nickname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 33,
+          "name": "sender_user_cardname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 34,
+          "name": "sender_group_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 35,
+          "name": "sender_group_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 36,
+          "name": "sender_group_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 37,
+          "name": "receiver_user_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 38,
+          "name": "receiver_user_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 39,
+          "name": "receiver_user_nickname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 40,
+          "name": "receiver_user_cardname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 41,
+          "name": "receiver_group_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 42,
+          "name": "receiver_group_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 43,
+          "name": "receiver_group_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 44,
+          "name": "processed_plain_text",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 45,
+          "name": "display_message",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 46,
+          "name": "priority_mode",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 47,
+          "name": "priority_info",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 48,
+          "name": "additional_config",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 49,
+          "name": "is_emoji",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 50,
+          "name": "is_picid",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 51,
+          "name": "is_command",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 52,
+          "name": "is_notify",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 53,
+          "name": "selected_expressions",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "messages_chat_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 7,
+              "name": "chat_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "messages_message_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "message_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "messages_chat_stream_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "messages_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "messages_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "messages_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "images": {
+      "schema": "CREATE TABLE \"images\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"image_id\" TEXT NOT NULL, \"emoji_hash\" TEXT NOT NULL, \"description\" TEXT, \"path\" TEXT NOT NULL, \"count\" INTEGER NOT NULL, \"timestamp\" REAL NOT NULL, \"type\" TEXT NOT NULL, \"vlm_processed\" INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "image_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "emoji_hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "path",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "timestamp",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "vlm_processed",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "images_path",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "path"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "images_emoji_hash",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "emoji_hash"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "images_path",
+          "columns": [
+            "path"
+          ]
+        }
+      ]
+    },
+    "image_descriptions": {
+      "schema": "CREATE TABLE \"image_descriptions\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"type\" TEXT NOT NULL, \"image_description_hash\" TEXT NOT NULL, \"description\" TEXT NOT NULL, \"timestamp\" REAL NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "image_description_hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "timestamp",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "imagedescriptions_image_description_hash",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "image_description_hash"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "online_time": {
+      "schema": "CREATE TABLE \"online_time\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"timestamp\" TEXT NOT NULL, \"duration\" INTEGER NOT NULL, \"start_timestamp\" DATETIME NOT NULL, \"end_timestamp\" DATETIME NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "timestamp",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "duration",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "start_timestamp",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "end_timestamp",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "onlinetime_end_timestamp",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "end_timestamp"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "person_info": {
+      "schema": "CREATE TABLE \"person_info\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"is_known\" INTEGER NOT NULL, \"person_id\" TEXT NOT NULL, \"person_name\" TEXT, \"name_reason\" TEXT, \"platform\" TEXT NOT NULL, \"user_id\" TEXT NOT NULL, \"nickname\" TEXT, \"memory_points\" TEXT, \"know_times\" REAL, \"know_since\" REAL, \"last_know\" REAL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "is_known",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "person_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "person_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "name_reason",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "nickname",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "memory_points",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "know_times",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "know_since",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "last_know",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "personinfo_user_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 7,
+              "name": "user_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "personinfo_person_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "person_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "personinfo_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "personinfo_person_id",
+          "columns": [
+            "person_id"
+          ]
+        }
+      ]
+    },
+    "group_info": {
+      "schema": "CREATE TABLE \"group_info\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"group_id\" TEXT NOT NULL, \"group_name\" TEXT, \"platform\" TEXT NOT NULL, \"group_impression\" TEXT, \"member_list\" TEXT, \"topic\" TEXT, \"create_time\" REAL, \"last_active\" REAL, \"member_count\" INTEGER)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "group_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "group_impression",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "member_list",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "topic",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "create_time",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "last_active",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "member_count",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "groupinfo_group_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "group_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "groupinfo_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "groupinfo_group_id",
+          "columns": [
+            "group_id"
+          ]
+        }
+      ]
+    },
+    "expression": {
+      "schema": "CREATE TABLE \"expression\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"chat_stream_id\" TEXT NOT NULL, \"situation\" TEXT NOT NULL, \"style\" TEXT NOT NULL, \"context\" TEXT, \"up_content\" TEXT, \"last_active_time\" REAL NOT NULL, \"chat_id\" TEXT, \"create_date\" REAL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "situation",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "style",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "context",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "up_content",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "last_active_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "create_date",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "expression_chat_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 9,
+              "name": "chat_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "expression_chat_stream_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "expression_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "expression_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "graph_nodes": {
+      "schema": "CREATE TABLE \"graph_nodes\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"concept\" TEXT NOT NULL, \"memory_items\" TEXT NOT NULL, \"weight\" REAL NOT NULL, \"hash\" TEXT NOT NULL, \"created_time\" REAL NOT NULL, \"last_modified\" REAL NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "concept",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "memory_items",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "weight",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "created_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "last_modified",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "graphnodes_concept",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "concept"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "graphnodes_concept",
+          "columns": [
+            "concept"
+          ]
+        }
+      ]
+    },
+    "graph_edges": {
+      "schema": "CREATE TABLE \"graph_edges\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"source\" TEXT NOT NULL, \"target\" TEXT NOT NULL, \"strength\" INTEGER NOT NULL, \"hash\" TEXT NOT NULL, \"created_time\" REAL NOT NULL, \"last_modified\" REAL NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "target",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "strength",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "created_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "last_modified",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "graphedges_target",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "target"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "graphedges_source",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "source"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "action_records": {
+      "schema": "CREATE TABLE \"action_records\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"chat_stream_id\" TEXT NOT NULL, \"action_id\" TEXT NOT NULL, \"time\" REAL NOT NULL, \"action_reasoning\" TEXT, \"action_name\" TEXT NOT NULL, \"action_data\" TEXT NOT NULL, \"action_done\" INTEGER NOT NULL, \"action_build_into_prompt\" INTEGER NOT NULL, \"action_prompt_display\" TEXT NOT NULL, \"chat_id\" TEXT, \"chat_info_stream_id\" TEXT, \"chat_info_platform\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "action_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "action_reasoning",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "action_name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "action_data",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "action_done",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "action_build_into_prompt",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "action_prompt_display",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "chat_info_stream_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "chat_info_platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "actionrecords_chat_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 12,
+              "name": "chat_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "actionrecords_action_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "action_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "actionrecords_chat_stream_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "actionrecords_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "actionrecords_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "memory_chest": {
+      "schema": "CREATE TABLE \"memory_chest\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"chat_stream_id\" TEXT, \"memory_level\" TEXT NOT NULL, \"memory_scope\" TEXT NOT NULL, \"title\" TEXT NOT NULL, \"content\" TEXT NOT NULL, \"chat_id\" TEXT, \"locked\" INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "memory_level",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "memory_scope",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "content",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "locked",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "memorychest_memory_scope",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "memory_scope"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "memorychest_memory_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "memory_level"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "memorychest_chat_stream_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "memorychest_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "memorychest_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "memorychest_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "memory_conflicts": {
+      "schema": "CREATE TABLE \"memory_conflicts\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"conflict_content\" TEXT NOT NULL, \"answer\" TEXT, \"create_time\" REAL NOT NULL, \"update_time\" REAL NOT NULL, \"context\" TEXT, \"chat_id\" TEXT, \"raise_time\" REAL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "conflict_content",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "answer",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "create_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "update_time",
+          "type": "REAL",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "context",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "raise_time",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "jargon": {
+      "schema": "CREATE TABLE \"jargon\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"chat_stream_id\" TEXT NOT NULL, \"content\" TEXT NOT NULL, \"raw_content\" TEXT, \"type\" TEXT, \"translation\" TEXT, \"meaning\" TEXT, \"chat_id\" TEXT, \"is_global\" INTEGER NOT NULL, \"count\" INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "chat_stream_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "content",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "raw_content",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "type",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "translation",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "meaning",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "chat_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "is_global",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "jargon_chat_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 9,
+              "name": "chat_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "jargon_chat_stream_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "chat_stream_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "jargon_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "jargon_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "tenant_users": {
+      "schema": "CREATE TABLE \"tenant_users\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"user_id\" TEXT NOT NULL, \"username\" TEXT NOT NULL, \"email\" TEXT, \"phone\" TEXT, \"password_hash\" TEXT NOT NULL, \"salt\" TEXT NOT NULL, \"api_key\" TEXT NOT NULL, \"status\" TEXT NOT NULL, \"tenant_type\" TEXT NOT NULL, \"tenant_name\" TEXT NOT NULL, \"tenant_config\" TEXT, \"permissions\" TEXT NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"last_login_at\" DATETIME, \"login_count\" INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "username",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "email",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "phone",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "password_hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "salt",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "api_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "tenant_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "tenant_name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "tenant_config",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "permissions",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 16,
+          "name": "last_login_at",
+          "type": "DATETIME",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 17,
+          "name": "login_count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "tenantusers_api_key",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 8,
+              "name": "api_key"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "tenantusers_user_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "user_id"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "tenantusers_tenant_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "tenantusers_api_key",
+          "columns": [
+            "api_key"
+          ]
+        },
+        {
+          "name": "tenantusers_user_id",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "tenantusers_tenant_id",
+          "columns": [
+            "tenant_id"
+          ]
+        }
+      ]
+    },
+    "agent_templates": {
+      "schema": "CREATE TABLE \"agent_templates\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"template_id\" TEXT NOT NULL, \"name\" TEXT NOT NULL, \"description\" TEXT, \"category\" TEXT NOT NULL, \"tags\" TEXT, \"is_active\" INTEGER NOT NULL, \"is_system\" INTEGER NOT NULL, \"usage_count\" INTEGER NOT NULL, \"persona\" TEXT NOT NULL, \"personality_traits\" TEXT, \"response_style\" TEXT, \"memory_config\" TEXT, \"plugin_config\" TEXT NOT NULL, \"config_schema\" TEXT, \"default_config\" TEXT, \"created_by\" TEXT, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "template_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "tags",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "is_system",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "usage_count",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "persona",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "personality_traits",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "response_style",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "memory_config",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "plugin_config",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "config_schema",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "default_config",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 16,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 17,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 18,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "agenttemplates_template_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "template_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "agenttemplates_template_id",
+          "columns": [
+            "template_id"
+          ]
+        }
+      ]
+    },
+    "user_sessions": {
+      "schema": "CREATE TABLE \"user_sessions\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"session_id\" TEXT NOT NULL, \"user_id\" TEXT NOT NULL, \"tenant_id\" TEXT NOT NULL, \"jwt_token\" TEXT NOT NULL, \"token_hash\" TEXT NOT NULL, \"refresh_token\" TEXT, \"expires_at\" DATETIME NOT NULL, \"created_at\" DATETIME NOT NULL, \"last_accessed_at\" DATETIME NOT NULL, \"ip_address\" TEXT, \"user_agent\" TEXT, \"is_active\" INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "session_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "jwt_token",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "token_hash",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "refresh_token",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "expires_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "last_accessed_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "ip_address",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "user_agent",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "usersessions_expires_at",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 7,
+              "name": "expires_at"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "usersessions_refresh_token",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "refresh_token"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "usersessions_token_hash",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "token_hash"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "usersessions_jwt_token",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "jwt_token"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "usersessions_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "tenant_id"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "usersessions_user_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "user_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "usersessions_session_id",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "session_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "usersessions_refresh_token",
+          "columns": [
+            "refresh_token"
+          ]
+        },
+        {
+          "name": "usersessions_jwt_token",
+          "columns": [
+            "jwt_token"
+          ]
+        },
+        {
+          "name": "usersessions_session_id",
+          "columns": [
+            "session_id"
+          ]
+        }
+      ]
+    },
+    "isolatedconfigbase": {
+      "schema": "CREATE TABLE \"isolatedconfigbase\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"config_level\" TEXT NOT NULL, \"config_category\" TEXT NOT NULL, \"config_key\" TEXT NOT NULL, \"config_value\" TEXT NOT NULL, \"config_type\" TEXT NOT NULL, \"description\" TEXT, \"is_active\" INTEGER NOT NULL, \"priority\" INTEGER NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"created_by\" TEXT, \"updated_by\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "config_level",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "config_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "config_value",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "config_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "updated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "isolatedconfigbase_tenant_id_agent_id_platform_config_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "agent_id"
+            },
+            {
+              "seqno": 2,
+              "cid": 3,
+              "name": "platform"
+            },
+            {
+              "seqno": 3,
+              "cid": 4,
+              "name": "config_level"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "isolatedconfigbase_config_key",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "isolatedconfigbase_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "isolatedconfigbase_config_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "config_level"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "isolatedconfigbase_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "isolatedconfigbase_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "isolatedconfigbase_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    },
+    "tenant_configs": {
+      "schema": "CREATE TABLE \"tenant_configs\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"config_level\" TEXT NOT NULL, \"config_category\" TEXT NOT NULL, \"config_key\" TEXT NOT NULL, \"config_value\" TEXT NOT NULL, \"config_type\" TEXT NOT NULL, \"description\" TEXT, \"is_active\" INTEGER NOT NULL, \"priority\" INTEGER NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"created_by\" TEXT, \"updated_by\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "config_level",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "config_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "config_value",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "config_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "updated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "tenantconfig_tenant_id_config_category_config_key",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 5,
+              "name": "config_category"
+            },
+            {
+              "seqno": 2,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "tenantconfig_config_key",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "tenantconfig_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "tenantconfig_config_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "config_level"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "tenantconfig_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "tenantconfig_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "tenantconfig_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "tenantconfig_tenant_id_config_category_config_key",
+          "columns": [
+            "tenant_id",
+            "config_category",
+            "config_key"
+          ]
+        }
+      ]
+    },
+    "agent_configs": {
+      "schema": "CREATE TABLE \"agent_configs\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"config_level\" TEXT NOT NULL, \"config_category\" TEXT NOT NULL, \"config_key\" TEXT NOT NULL, \"config_value\" TEXT NOT NULL, \"config_type\" TEXT NOT NULL, \"description\" TEXT, \"is_active\" INTEGER NOT NULL, \"priority\" INTEGER NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"created_by\" TEXT, \"updated_by\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "config_level",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "config_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "config_value",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "config_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "updated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "agentconfig_tenant_id_agent_id_config_category_config_key",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "agent_id"
+            },
+            {
+              "seqno": 2,
+              "cid": 5,
+              "name": "config_category"
+            },
+            {
+              "seqno": 3,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "agentconfig_config_key",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "agentconfig_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "agentconfig_config_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "config_level"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "agentconfig_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "agentconfig_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "agentconfig_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "agentconfig_tenant_id_agent_id_config_category_config_key",
+          "columns": [
+            "tenant_id",
+            "agent_id",
+            "config_category",
+            "config_key"
+          ]
+        }
+      ]
+    },
+    "platform_configs": {
+      "schema": "CREATE TABLE \"platform_configs\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"config_level\" TEXT NOT NULL, \"config_category\" TEXT NOT NULL, \"config_key\" TEXT NOT NULL, \"config_value\" TEXT NOT NULL, \"config_type\" TEXT NOT NULL, \"description\" TEXT, \"is_active\" INTEGER NOT NULL, \"priority\" INTEGER NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"created_by\" TEXT, \"updated_by\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "config_level",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "config_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "config_value",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "config_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 14,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 15,
+          "name": "updated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "platformconfig_tenant_id_agent_id_platform_config_catego_7c77ce8",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "agent_id"
+            },
+            {
+              "seqno": 2,
+              "cid": 3,
+              "name": "platform"
+            },
+            {
+              "seqno": 3,
+              "cid": 5,
+              "name": "config_category"
+            },
+            {
+              "seqno": 4,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "platformconfig_config_key",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "platformconfig_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "platformconfig_config_level",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "config_level"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "platformconfig_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "platformconfig_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "platformconfig_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "platformconfig_tenant_id_agent_id_platform_config_catego_7c77ce8",
+          "columns": [
+            "tenant_id",
+            "agent_id",
+            "platform",
+            "config_category",
+            "config_key"
+          ]
+        }
+      ]
+    },
+    "configtemplate": {
+      "schema": "CREATE TABLE \"configtemplate\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"name\" TEXT NOT NULL, \"description\" TEXT, \"config_category\" TEXT NOT NULL, \"template_content\" TEXT NOT NULL, \"is_system\" INTEGER NOT NULL, \"is_active\" INTEGER NOT NULL, \"created_at\" DATETIME NOT NULL, \"updated_at\" DATETIME NOT NULL, \"created_by\" TEXT, \"updated_by\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "template_content",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "is_system",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "created_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "updated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "configtemplate_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "configtemplate_name",
+          "unique": true,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "name"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "configtemplate_name",
+          "columns": [
+            "name"
+          ]
+        }
+      ]
+    },
+    "confighistory": {
+      "schema": "CREATE TABLE \"confighistory\" (\"id\" INTEGER NOT NULL PRIMARY KEY, \"tenant_id\" TEXT NOT NULL, \"agent_id\" TEXT NOT NULL, \"platform\" TEXT, \"config_category\" TEXT NOT NULL, \"config_key\" TEXT NOT NULL, \"old_value\" TEXT, \"new_value\" TEXT, \"change_type\" TEXT NOT NULL, \"change_reason\" TEXT, \"operated_by\" TEXT, \"operated_at\" DATETIME NOT NULL, \"ip_address\" TEXT, \"user_agent\" TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "agent_id",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "platform",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "config_category",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "config_key",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "old_value",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "new_value",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "change_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "change_reason",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 10,
+          "name": "operated_by",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 11,
+          "name": "operated_at",
+          "type": "DATETIME",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 12,
+          "name": "ip_address",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 13,
+          "name": "user_agent",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "confighistory_tenant_id_agent_id_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "agent_id"
+            },
+            {
+              "seqno": 2,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "confighistory_change_type",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 8,
+              "name": "change_type"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "confighistory_config_key",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "config_key"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "confighistory_config_category",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "config_category"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "confighistory_platform",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "platform"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "confighistory_agent_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "agent_id"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "confighistory_tenant_id",
+          "unique": false,
+          "origin": "c",
+          "partial": false,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "tenant_id"
+            }
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "unique_constraints": []
+    }
+  }
+}

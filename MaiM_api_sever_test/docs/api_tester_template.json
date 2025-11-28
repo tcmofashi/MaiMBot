@@ -39,7 +39,7 @@
 
       { "method": "POST", "use": "bot", "path": "/api/v2/chat", "body": { "content": "示例内容 v2", "agent_id": "" } },
       { "method": "POST", "use": "bot", "path": "/api/v2/chat/batch", "body": { "items": [{ "content": "示例批量 v2" }] } },
-      { "method": "GET", "use": "bot", "path": "/api/v2/agents" },
+      { "method": "GET", "use": "bot", "path": "/api/v2/chat-agents" },
 
       { "method": "GET", "use": "base", "path": "/api/api-keys" },
       { "method": "POST", "use": "base", "path": "/api/api-keys/validate", "body": { "api_key": "" } },

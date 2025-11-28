@@ -1,28 +1,30 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 """
-complete_api_test.py
+MaiMBot 完整 API 集成测试
 
-完整的 API 测试脚本 - 基于 MaiMBot API 使用示例
+创建时间: 2025-11-27 23:39:40
+最后修改: 2025-11-29 01:21:01
+AI生成标识: Cline
+测试类型: 集成测试
 
-功能:
+功能描述:
 - 完整的用户注册、登录、获取信息流程
 - 自动从注册响应中提取 tenant_id 等关键信息
 - 支持后续 API 调用使用提取的信息
 - 所有结果自动保存到 JSON 文件
-
-依赖:
-- urllib3 (已在 requirements.txt 中)
-- 标准库
-
-使用示例:
-python api-index/complete_api_test.py
 """
 
+import os
+import sys
 from typing import Optional, Dict, Any, Tuple
 import json as _json
 import urllib.parse as _urlparse
 import urllib3
 from datetime import datetime
+
+# 添加项目根目录到路径，确保测试文件在任何目录下都可执行
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 
 def call_rest_api(
@@ -405,13 +407,20 @@ def complete_api_test():
     results["extracted_tenant_info"] = tenant_info
     
     # 自动保存到 JSON 文件
-    output_file = "complete_api_test_results.json"
-    with open(output_file, "w", encoding="utf-8") as f:
+    import os
+    results_dir = "MaiM_api_sever_test/test_data/api_tests"
+    os.makedirs(results_dir, exist_ok=True)
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    output_file = f"complete_api_integration_test_results_{timestamp}.json"
+    output_path = os.path.join(results_dir, output_file)
+    
+    with open(output_path, "w", encoding="utf-8") as f:
         _json.dump(results, f, ensure_ascii=False, indent=2)
     
     print("\n" + "=" * 50)
     print(f"✅ 测试完成！")
-    print(f"📁 结果已保存到: {output_file}")
+    print(f"📁 结果已保存到: {output_path}")
     print(f"🔑 提取的租户信息:")
     for key, value in tenant_info.items():
         if value:

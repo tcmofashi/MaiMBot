@@ -141,14 +141,14 @@
 
 ### 聊天（Chat v1）（`src/api/routes/chat_api.py`，前缀 `/v1`）
 - POST /api/v1/chat
-- GET  /api/v1/agents
+- GET  /api/v1/chat-agents
 - POST /api/v1/chat/batch
 - GET  /api/v1/status
 
 ### 聊天（Chat v2）（`src/api/routes/chat_api_v2.py`，前缀 `/v2`）
 - POST /api/v2/chat
 - POST /api/v2/chat/auth
-- GET  /api/v2/agents
+- GET  /api/v2/chat-agents
 - POST /api/v2/chat/batch
 
 ### 隔离式聊天（Isolated Chat v1）（`src/api/routes/isolated_chat_api.py`，前缀 `/v1`）
@@ -218,6 +218,6 @@
 - 文档与源码在部分模块存在路径风格差异：
   - 文档记忆系统以 `/api/v1/memory/*` 描述；源码独立服务采用更 REST 的 `/api/v1/memories/*`、`/api/v1/conflicts/*`。
   - API 密钥管理：文档路径 `/api/v1/api-keys`；源码当前为 `/api/api-keys`（缺少版本前缀）。如需与文档一致，建议在 `src/api/routes/api_key_api.py` 中设置 `router = APIRouter(prefix="/v1")` 并调整装饰器路径为 `"/api-keys"`，或直接 `prefix="/v1/api-keys"`。
-- `src/api/routes/chat_api.py` 的 `GET /api/v1/agents` 与 `src/api/routes/agent_api.py` 的 `GET /api/v1/agents` 命名上可能产生语义重叠（一个用于聊天可用 Agent 列表，一个用于管理侧 Agent 列表）。建议在文档中区分用途或改用更明确的路径（如 `/api/v1/chat/agents`）。
+- `src/api/routes/chat_api.py` 的 `GET /api/v1/chat-agents` 与 `src/api/routes/agent_api.py` 的 `GET /api/v1/agents` 已通过路径区分，避免路由冲突。前者用于聊天相关的Agent列表，后者用于Agent管理功能。
 
 以上为当前项目内可定位的全部 API 接口汇总。

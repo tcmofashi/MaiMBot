@@ -1,0 +1,51 @@
+{
+  "test_run": "完整 API 测试流程",
+  "timestamp": "2025-11-27T23:43:33.372862",
+  "test_steps": [
+    {
+      "step": 1,
+      "description": "健康检查",
+      "result": {
+        "endpoint": "/api/v1/health",
+        "method": "GET",
+        "port": 18000,
+        "error": "HTTPConnectionPool(host='127.0.0.1', port=18000): Max retries exceeded with url: /api/v1/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C66331E110>: Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。'))",
+        "success": false
+      }
+    },
+    {
+      "step": 2,
+      "description": "获取 Agent 模板",
+      "result": {
+        "endpoint": "/api/v1/agents/templates",
+        "method": "GET",
+        "port": 18000,
+        "error": "HTTPConnectionPool(host='127.0.0.1', port=18000): Max retries exceeded with url: /api/v1/agents/templates (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C663338450>: Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。'))",
+        "success": false
+      }
+    },
+    {
+      "step": 3,
+      "description": "用户注册",
+      "result": {
+        "endpoint": "/api/v1/auth/register",
+        "method": "POST",
+        "port": 18000,
+        "error": "HTTPConnectionPool(host='127.0.0.1', port=18000): Max retries exceeded with url: /api/v1/auth/register (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C663338F90>: Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。'))",
+        "success": false
+      }
+    },
+    {
+      "step": 4,
+      "description": "用户登录",
+      "result": {
+        "endpoint": "/api/v1/auth/login",
+        "method": "POST",
+        "port": 18000,
+        "error": "HTTPConnectionPool(host='127.0.0.1', port=18000): Max retries exceeded with url: /api/v1/auth/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C66333B950>: Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。'))",
+        "success": false
+      }
+    }
+  ],
+  "extracted_tenant_info": {}
+}
