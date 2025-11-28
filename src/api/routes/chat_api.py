@@ -278,7 +278,7 @@ async def _process_legacy_chat(chat_request: ChatRequest, request: Request) -> D
         ) from e
 
 
-@router.get("/agents")
+@router.get("/chat-agents")
 @api_endpoint(require_tenant=False)
 async def get_agents(
     request: Request,

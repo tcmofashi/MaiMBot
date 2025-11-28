@@ -9,6 +9,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
+from peewee import DoesNotExist
 
 from ..utils.isolated_api_utils import (
     api_endpoint,
@@ -20,6 +21,9 @@ from ..utils.isolated_api_utils import (
     ResponseMessage,
 )
 from src.api.routes.auth_api import get_current_user
+from src.common.logger import get_logger
+
+logger = get_logger(__name__)
 
 try:
     from src.isolation.isolation_context import create_isolation_context, get_isolation_context
@@ -275,7 +279,7 @@ async def chat_v2_auth(request: Request, chat_request: ChatRequestV2, current_us
         return handle_api_error(e, request_id, current_user.tenant_id)
 
 
-@router.get("/agents")
+@router.get("/chat-agents")
 @api_endpoint(require_tenant=False)
 async def get_agents_v2(request: Request, tenant_id: str, credentials=None):
     """
