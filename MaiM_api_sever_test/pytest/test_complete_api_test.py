@@ -3,7 +3,7 @@
 MaiMBot 完整 API 集成测试
 
 创建时间: 2025-11-27 23:39:40
-最后修改: 2025-11-27 23:39:40
+最后修改: 2025-11-29 01:21:01
 AI生成标识: Cline
 测试类型: 集成测试
 
@@ -14,11 +14,17 @@ AI生成标识: Cline
 - 所有结果自动保存到 JSON 文件
 """
 
+import os
+import sys
 from typing import Optional, Dict, Any, Tuple
 import json as _json
 import urllib.parse as _urlparse
 import urllib3
 from datetime import datetime
+
+# 添加项目根目录到路径，确保测试文件在任何目录下都可执行
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 
 def call_rest_api(

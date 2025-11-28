@@ -3,8 +3,8 @@
 MaiMBot 完整集成测试脚本
 启动双后端并运行集成测试的完整解决方案
 
-创建时间: 2025-11-27
-最后修改: 2025-11-27
+创建时间: 2025-11-29 01:23:08
+最后修改: 2025-11-29 01:23:08
 AI生成标识: Cline
 测试类型: 集成测试
 文件类型: 集成测试
@@ -23,8 +23,8 @@ import hashlib
 from pathlib import Path
 from typing import Optional
 
-# 设置项目根目录
-project_root = Path(__file__).parent
+# 设置项目根目录 - 修正路径计算
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # 配置日志
