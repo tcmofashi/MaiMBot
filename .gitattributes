@@ -1,3 +1,12 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 webui/dist/** binary
+
+# ORM基座替换保护配置
+# 防止合并代码时覆盖SaaS特有的ORM文件
+
+# 保护定义BaseModel的文件不被覆盖
+src/common/database/database_model.py merge=ours
+
+# 保护数据库配置文件
+src/common/database/database.py merge=ours

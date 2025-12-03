@@ -1,36 +1,32 @@
 from peewee import Model, DoubleField, IntegerField, BooleanField, TextField, FloatField, DateTimeField
-from .database import db, SAAS_MODE
+from .database import db
 import datetime
-import os
 from src.common.logger import get_logger
 
 logger = get_logger("database_model")
+# 请在此处定义您的数据库实例。
+# 您需要取消注释并配置适合您的数据库的部分。
+# 例如，对于 SQLite:
+# db = SqliteDatabase('MaiBot.db')
+#
+# 对于 PostgreSQL:
+# db = PostgresqlDatabase('your_db_name', user='your_user', password='your_password',
+#                         host='localhost', port=5432)
+#
+# 对于 MySQL:
+# db = MySQLDatabase('your_db_name', user='your_user', password='your_password',
+#                    host='localhost', port=3306)
 
-# ORM基座替换：尝试导入SaaS版本的BusinessBaseModel
-try:
-    if SAAS_MODE:
-        # 导入统一数据库核心库的BusinessBaseModel
-        import sys
-        sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "maim_db", "src"))
-        from src.core.models import BusinessBaseModel
 
-        # 使用SaaS版本的BaseModel（支持多租户）
-        BaseModel = BusinessBaseModel
-        logger.info("使用SaaS版本的BusinessBaseModel，支持多租户数据隔离")
+# 定义一个基础模型是一个好习惯，所有其他模型都应继承自它。
+# 这允许您在一个地方为所有模型指定数据库。
 
-    else:
-        # 回退到原有的简单BaseModel（单用户模式）
-        class BaseModel(Model):
-            class Meta:
-                database = db
-        logger.info("使用单用户版本的BaseModel")
 
-except ImportError:
-    # 最终回退选项
-    class BaseModel(Model):
-        class Meta:
-            database = db
-    logger.warning("回退到基础BaseModel，多租户功能不可用")
+class BaseModel(Model):
+    class Meta:
+        # 将下面的 'db' 替换为您实际的数据库实例变量名。
+        database = db  # 例如: database = my_actual_db_instance
+        pass  # 在用户定义数据库实例之前，此处为占位符
 
 
 class ChatStreams(BaseModel):
