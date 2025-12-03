@@ -1,18 +1,18 @@
 """
 MaiMBot API主路由文件
-整合所有的API接口，包括认证、租户管理、Agent管理和聊天功能
+整合API接口，包括租户管理、Agent管理、API密钥管理和聊天功能
+用户认证由专门的服务提供，本服务专注于配置管理
 """
 
 import time
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes.auth_api import router as auth_router
-from src.api.routes.tenant_api import router as tenant_router
-from src.api.routes.agent_api import router as agent_router
-from src.api.routes.chat_api import router as chat_router
-from src.api.routes.chat_api_v2 import router as chat_v2_router
-from src.api.routes.api_key_api import router as api_key_router
+from src.api.routes.auth_api_v2 import router as api_key_auth_router
+from src.api.routes.tenant_api_v2 import router as tenant_router
+from src.api.routes.agent_api_v2 import router as agent_router
+from src.api.routes.api_key_api_v2 import router as api_key_router
+from src.api.routes.chat_api_v2 import router as chat_router
 from src.api.init_agent_templates import init_template_data
 from src.common.logger import get_logger
 
@@ -21,18 +21,12 @@ logger = get_logger(__name__)
 # 创建主路由器
 api_router = APIRouter()
 
-# 注册所有子路由
-api_router.include_router(auth_router, tags=["认证"])
-
-api_router.include_router(tenant_router, tags=["租户管理"])
-
-api_router.include_router(agent_router, tags=["Agent管理"])
-
-api_router.include_router(api_key_router, tags=["API密钥管理"])
-
-api_router.include_router(chat_router, tags=["聊天v1"])
-
-api_router.include_router(chat_v2_router, tags=["聊天v2"])
+# 注册所有子路由 (统一使用v2版本)
+api_router.include_router(api_key_auth_router, prefix="/v2", tags=["API密钥认证"])
+api_router.include_router(tenant_router, prefix="/v2", tags=["租户管理"])
+api_router.include_router(agent_router, prefix="/v2", tags=["Agent管理"])
+api_router.include_router(api_key_router, prefix="/v2", tags=["API密钥管理"])
+api_router.include_router(chat_router, prefix="/v2", tags=["聊天"])
 
 
 @api_router.get("/")
@@ -45,16 +39,15 @@ async def api_root():
         "version": "2.0.0",
         "description": "多租户AI聊天机器人API服务",
         "endpoints": {
-            "auth": "/api/v1/auth",
-            "tenant": "/api/v1/tenant",
-            "agents": "/api/v1/agents",
-            "api_keys": "/api/v1/api-keys",
-            "chat_v1": "/api/v1/chat",
-            "chat_v2": "/api/v2/chat",
+            "api_key_auth": "/api/v2/auth",
+            "tenant": "/api/v2/tenants",
+            "agents": "/api/v2/agents",
+            "api_keys": "/api/v2/api-keys",
+            "chat": "/api/v2/chat",
             "docs": "/docs",
             "redoc": "/redoc",
         },
-        "features": ["多租户隔离", "Agent模板管理", "用户认证授权", "请求体参数认证", "批量消息处理", "向后兼容"],
+        "features": ["多租户隔离", "Agent模板管理", "API密钥认证", "请求体参数认证", "批量消息处理", "无验证租户创建"],
     }
 
 
@@ -89,21 +82,22 @@ async def api_info():
         "version": "2.0.0",
         "architecture": {
             "isolation_levels": ["tenant", "agent", "chat", "platform"],
-            "auth_methods": ["jwt_token", "api_key", "request_body"],
+            "auth_methods": ["api_key", "request_body"],
             "data_flow": "request_body_parameters",
+            "user_auth": "external_service",
         },
         "api_versions": {
             "v1": {"description": "传统API，支持URL参数", "base_path": "/api/v1", "auth": "可选"},
             "v2": {"description": "新版API，支持请求体参数", "base_path": "/api/v2", "auth": "推荐"},
         },
         "supported_features": [
-            "用户注册登录",
             "租户管理",
             "Agent模板配置",
             "多租户隔离聊天",
             "批量消息处理",
-            "API认证授权",
-            "会话管理",
+            "API密钥认证",
+            "无验证租户创建",
+            "权限管理",
         ],
     }
 

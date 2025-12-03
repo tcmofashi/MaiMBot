@@ -11,7 +11,7 @@ from datetime import datetime
 from functools import wraps
 import uuid
 
-from maim_message import (
+from maim_message.message import (
     Seg,
     BaseMessageInfo,
 )

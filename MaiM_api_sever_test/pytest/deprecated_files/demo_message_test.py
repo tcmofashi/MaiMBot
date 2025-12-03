@@ -62,6 +62,7 @@ async def demo_message_test():
     try:
         # 启动连接池
         from integration_tests.simple_websocket_test import get_connection_pool
+
         connection_pool = get_connection_pool()
         await connection_pool.start()
 

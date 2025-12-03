@@ -28,7 +28,7 @@ from src.common.data_models.message_data_model import ReplyContentType
 from src.chat.message_receive.chat_stream import get_chat_manager
 from src.chat.message_receive.uni_message_sender import UniversalMessageSender
 from src.chat.message_receive.message import MessageSending, MessageRecv
-from maim_message import Seg, UserInfo, BaseMessageInfo, SenderInfo
+from maim_message.message import Seg, UserInfo, BaseMessageInfo, SenderInfo
 from maim_message.message import APIMessageBase, MessageDim
 
 if TYPE_CHECKING:

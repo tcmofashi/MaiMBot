@@ -3,7 +3,7 @@ import os
 import re
 
 from typing import Dict, Any, Optional
-from maim_message import UserInfo, Seg, GroupInfo
+from maim_message.message import UserInfo, Seg, GroupInfo
 
 from src.common.logger import get_logger
 from src.mood.mood_manager import mood_manager  # 导入情绪管理器

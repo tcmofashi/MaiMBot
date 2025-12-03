@@ -18,7 +18,7 @@ async def test_isolated_message_processing():
 
         # 导入必要的模块
         from src.chat.message_receive.isolated_message import IsolatedMessageRecv
-        from maim_message import BaseMessageInfo, Seg, UserInfo, GroupInfo
+        from maim_message.message import BaseMessageInfo, Seg, UserInfo, GroupInfo
         from src.chat.message_receive.chat_stream import ChatStream
 
         print("✅ 模块导入成功")

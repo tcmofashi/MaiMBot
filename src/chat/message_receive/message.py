@@ -4,7 +4,7 @@ import urllib3
 from rich.traceback import install
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass
-from maim_message import (
+from maim_message.message import (
     Seg,
     UserInfo,
     GroupInfo,

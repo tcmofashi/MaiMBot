@@ -29,10 +29,11 @@
 用法:
 - python scripts/extract_api_endpoints.py
 """
+
 import os
 import re
 import json
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 REPO_ROOT = os.path.dirname(os.path.dirname(__file__))
 OUTPUT_DIR = os.path.join(REPO_ROOT, "api-index")
@@ -49,19 +50,27 @@ SCAN_DIRS = [
 
 # 正则模式
 # Markdown 中带方法的声明
-MD_METHOD_PATH_RE = re.compile(r'\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b[^\n]*\b(/api[^\s\)\]\}"]+)', re.IGNORECASE)
+MD_METHOD_PATH_RE = re.compile(
+    r'\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b[^\n]*\b(/api[^\s\)\]\}"]+)', re.IGNORECASE
+)
 # Markdown 中任何 /api 路径
 MD_PATH_ONLY_RE = re.compile(r'["\'`]?(/api[^\s"\'`]+)', re.IGNORECASE)
 # curl 形式
 MD_CURL_RE = re.compile(r'curl\s+-X\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+"[^"]*(/api[^"]+)"', re.IGNORECASE)
 
 # Python 源码装饰器
-PY_ROUTE_RE = re.compile(r'@\s*(?:app|router)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*["\'](/api[^"\']+)["\']', re.IGNORECASE)
+PY_ROUTE_RE = re.compile(
+    r'@\s*(?:app|router)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*["\'](/api[^"\']+)["\']', re.IGNORECASE
+)
 # WebSocket 装饰器
 PY_WS_RE = re.compile(r'@\s*(?:app|router)\s*\.websocket\s*\(\s*["\'](/ws[^"\']*)["\']', re.IGNORECASE)
 
 # 测试代码 / 客户端调用
-PY_CLIENT_CALL_RE = re.compile(r'\b(?:client|self\.client|requests)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*["\'](?:[^"\']*?)(/api[^"\']]+)["\']', re.IGNORECASE)
+PY_CLIENT_CALL_RE = re.compile(
+    r'\b(?:client|self\.client|requests)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*["\'](?:[^"\']*?)(/api[^"\']]+)["\']',
+    re.IGNORECASE,
+)
+
 
 def read_file_lines(path: str) -> List[str]:
     try:
@@ -69,6 +78,7 @@ def read_file_lines(path: str) -> List[str]:
             return f.readlines()
     except Exception:
         return []
+
 
 def category_for_path(path: str) -> str:
     # 简单分类策略
@@ -107,6 +117,7 @@ def category_for_path(path: str) -> str:
         return "ws"
     return "unknown"
 
+
 def versions_for_path(path: str) -> List[str]:
     vs: List[str] = []
     if "/api/v1/" in path:
@@ -115,13 +126,17 @@ def versions_for_path(path: str) -> List[str]:
         vs.append("v2")
     return vs or ["unversioned"]
 
+
 def normalize_method(m: str) -> str:
     m = (m or "").upper()
-    if m in {"GET","POST","PUT","DELETE","PATCH","HEAD","OPTIONS"}:
+    if m in {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}:
         return m
     return "?"
 
-def add_endpoint(store: Dict[str, Any], method: str, path: str, origin: str, file_path: str, line_no: int, snippet: str) -> None:
+
+def add_endpoint(
+    store: Dict[str, Any], method: str, path: str, origin: str, file_path: str, line_no: int, snippet: str
+) -> None:
     key = f"{normalize_method(method)} {path}"
     entry = store.get(key)
     flags = {
@@ -129,7 +144,12 @@ def add_endpoint(store: Dict[str, Any], method: str, path: str, origin: str, fil
         "from_code": origin == "src",
         "from_tests": origin in {"tests", "integration_tests"},
     }
-    src_obj = {"origin": origin, "file": os.path.relpath(file_path, REPO_ROOT), "line": line_no, "snippet": snippet.strip()}
+    src_obj = {
+        "origin": origin,
+        "file": os.path.relpath(file_path, REPO_ROOT),
+        "line": line_no,
+        "snippet": snippet.strip(),
+    }
     if entry is None:
         store[key] = {
             "method": normalize_method(method),
@@ -150,6 +170,7 @@ def add_endpoint(store: Dict[str, Any], method: str, path: str, origin: str, fil
         if sig not in existing:
             entry["sources"].append(src_obj)
 
+
 def scan_markdown(file_path: str, store: Dict[str, Any]) -> None:
     lines = read_file_lines(file_path)
     for idx, line in enumerate(lines, start=1):
@@ -169,6 +190,7 @@ def scan_markdown(file_path: str, store: Dict[str, Any]) -> None:
             # 未指定方法时使用 "?"
             add_endpoint(store, "?", path, "docs", file_path, idx, line)
 
+
 def scan_python(file_path: str, store: Dict[str, Any], origin: str) -> None:
     lines = read_file_lines(file_path)
     for idx, line in enumerate(lines, start=1):
@@ -183,6 +205,7 @@ def scan_python(file_path: str, store: Dict[str, Any], origin: str) -> None:
             method = m.group(1)
             path = m.group(2)
             add_endpoint(store, method, path, origin, file_path, idx, line)
+
 
 def scan_all() -> Dict[str, Any]:
     endpoints: Dict[str, Any] = {}
@@ -203,6 +226,7 @@ def scan_all() -> Dict[str, Any]:
                         print(f"[WARN] 扫描失败: {path} -> {e}")
                         continue
     return endpoints
+
 
 def write_outputs(endpoints: Dict[str, Any]) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -226,21 +250,27 @@ def write_outputs(endpoints: Dict[str, Any]) -> None:
     with open(ENDPOINTS_MD, "w", encoding="utf-8") as f:
         f.write("# API 接口索引\n\n")
         f.write(f"- 总计端点: {len(sorted_items)}\n")
-        f.write(f"- 来源目录: {', '.join([d for d,_,_ in SCAN_DIRS])}\n\n")
+        f.write(f"- 来源目录: {', '.join([d for d, _, _ in SCAN_DIRS])}\n\n")
         for cat in sorted(groups.keys()):
             items = groups[cat]
             f.write(f"## {cat} ({len(items)})\n\n")
             f.write("| 方法 | 路径 | 版本 | 来源(示例) |\n")
             f.write("|------|------|------|------------|\n")
             for it in items:
-                f.write(f"| {it['method']} | `{it['path']}` | {', '.join(it['versions'])} | {fmt_sources(it['sources'])} |\n")
+                f.write(
+                    f"| {it['method']} | `{it['path']}` | {', '.join(it['versions'])} | {fmt_sources(it['sources'])} |\n"
+                )
             f.write("\n")
-        f.write("\n---\n生成于扫描 docs/src/tests/integration_tests，可能包含文档草拟接口或已废弃接口，请结合源码确认。\n")
+        f.write(
+            "\n---\n生成于扫描 docs/src/tests/integration_tests，可能包含文档草拟接口或已废弃接口，请结合源码确认。\n"
+        )
+
 
 def main():
     eps = scan_all()
     write_outputs(eps)
     print(f"[DONE] 提取完成 -> {ENDPOINTS_JSON} / {ENDPOINTS_MD} (总计 {len(eps)} 端点)")
+
 
 if __name__ == "__main__":
     main()

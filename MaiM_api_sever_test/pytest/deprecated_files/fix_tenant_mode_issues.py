@@ -53,7 +53,6 @@ async def fix_database_schema():
 
         # 检查 Messages 表是否需要租户字段
         try:
-
             # 为现有消息设置默认的租户信息
             # 这里我们可能需要添加租户字段，或者使用其他方式处理
             logger.info("检查 Messages 表的租户字段...")

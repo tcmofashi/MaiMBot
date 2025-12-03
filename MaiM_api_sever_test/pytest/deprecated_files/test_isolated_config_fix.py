@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.common.logger import get_logger
 from src.chat.message_receive.chat_stream import ChatStream
 from src.plugin_system.apis import generator_api
-from maim_message import UserInfo, GroupInfo
+from maim_message.message import UserInfo, GroupInfo
 
 logger = get_logger("test_isolated_config_fix")
 

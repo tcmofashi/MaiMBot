@@ -7,7 +7,7 @@ import time
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel
 from peewee import DoesNotExist
 
@@ -20,7 +20,6 @@ from ..utils.isolated_api_utils import (
     log_api_request,
     ResponseMessage,
 )
-from src.api.routes.auth_api import get_current_user
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -195,88 +194,9 @@ async def chat_v2(request: Request, chat_request: ChatRequestV2, credentials=Non
         return handle_api_error(e, request_id, tenant_id)
 
 
-@router.post("/chat/auth")
-async def chat_v2_auth(request: Request, chat_request: ChatRequestV2, current_user=Depends(get_current_user)):
-    """
-    需要认证的聊天API接口
-
-    自动使用当前用户的租户信息，无需在请求体中提供tenant_id
-    """
-    start_time = time.time()
-    request_id = str(time.time())
-
-    try:
-        # 使用当前用户的租户ID，忽略请求体中的tenant_id
-        tenant_id = current_user.tenant_id
-        agent_id = chat_request.agent_id
-
-        # 验证Agent是否存在
-        await _validate_agent_exists(tenant_id, agent_id)
-
-        # 创建隔离上下文
-        isolation_context = create_isolation_context(
-            tenant_id=tenant_id, agent_id=agent_id, platform=chat_request.platform
-        )
-
-        # 更新请求中的租户ID
-        chat_request.tenant_id = tenant_id
-
-        # 处理消息
-        response_data = await _process_chat_request_v2(chat_request, isolation_context, request)
-
-        # 计算执行时间
-        execution_time = time.time() - start_time
-
-        # 记录日志
-        log_api_request(
-            request=request, tenant_id=tenant_id, agent_id=agent_id, execution_time=execution_time, status_code=200
-        )
-
-        # 创建响应
-        chat_response = ChatResponseV2(
-            response=response_data["response"],
-            agent_id=agent_id,
-            platform=chat_request.platform,
-            chat_identifier=chat_request.chat_identifier,
-            tenant_id=tenant_id,
-            metadata={
-                **response_data.get("metadata", {}),
-                "authenticated_user": current_user.username,
-                "auth_mode": True,
-            },
-            timestamp=datetime.utcnow(),
-        )
-
-        return success_response(
-            message=ResponseMessage.SUCCESS,
-            data=chat_response.dict(),
-            request_id=request_id,
-            tenant_id=tenant_id,
-            execution_time=execution_time,
-        )
-
-    except HTTPException:
-        execution_time = time.time() - start_time
-        log_api_request(
-            request=request,
-            tenant_id=current_user.tenant_id,
-            agent_id=chat_request.agent_id,
-            execution_time=execution_time,
-            status_code=403,
-        )
-        raise
-    except Exception as e:
-        execution_time = time.time() - start_time
-        log_api_request(
-            request=request,
-            tenant_id=current_user.tenant_id,
-            agent_id=chat_request.agent_id,
-            execution_time=execution_time,
-            status_code=500,
-            error=str(e),
-        )
-
-        return handle_api_error(e, request_id, current_user.tenant_id)
+# 注释：已移除需要认证的聊天接口 (/chat/auth)
+# 配置器后端作为内部服务，无需认证功能
+# 原接口的聊天功能可使用现有的 /chat 接口（无需认证，支持API密钥）
 
 
 @router.get("/chat-agents")

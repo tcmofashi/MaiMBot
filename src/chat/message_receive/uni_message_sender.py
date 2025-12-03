@@ -3,7 +3,9 @@ import traceback
 from typing import Optional
 
 from rich.traceback import install
-from maim_message import Seg
+
+# 从maim_message.message导入最新的消息组件
+from maim_message.message import Seg
 
 from src.common.logger import get_logger
 from src.chat.message_receive.message import MessageSending

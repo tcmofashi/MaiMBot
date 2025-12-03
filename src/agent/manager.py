@@ -52,7 +52,7 @@ class AgentManager:
                 "states": ["开心", "平静", "兴奋", "思考"],
                 "state_probability": 0.1,
             }
-        except (ValueError) as e:
+        except ValueError as e:
             LOGGER.warning(f"Agent '{record.agent_id}' (租户: {record.tenant_id}) 的persona字段无效，使用默认配置: {e}")
             # 使用默认的persona配置
             persona_data = {
@@ -294,7 +294,7 @@ class IsolatedAgentManager:
                 "states": ["开心", "平静", "兴奋", "思考"],
                 "state_probability": 0.1,
             }
-        except (ValueError) as e:
+        except ValueError as e:
             LOGGER.warning(f"租户 '{self.tenant_id}' 的Agent '{record.agent_id}' 的persona字段无效，使用默认配置: {e}")
             # 使用默认的persona配置
             persona_data = {

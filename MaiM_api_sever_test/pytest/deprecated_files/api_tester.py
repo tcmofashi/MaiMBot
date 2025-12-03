@@ -28,13 +28,16 @@ from typing import Any, Dict, List, Optional, Tuple
 ENDPOINTS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "api-index", "endpoints.json")
 LAST_CONF_PATH = os.path.join(os.path.dirname(__file__), ".api_tester_last.json")
 
+
 def ensure_requests_available():
     try:
         import requests  # noqa: F401
+
         return True
     except ImportError:
         print("[ERROR] 未找到 requests 库。请先安装：pip install requests")
         return False
+
 
 def load_endpoints() -> Dict[str, List[Dict[str, Any]]]:
     if not os.path.exists(ENDPOINTS_JSON_PATH):
@@ -48,6 +51,7 @@ def load_endpoints() -> Dict[str, List[Dict[str, Any]]]:
         "memory_service_endpoints": data.get("memory_service_endpoints", []),
     }
 
+
 def normalize_endpoint(ep: Dict[str, Any], source_group: str) -> Dict[str, Any]:
     return {
         "method": ep.get("method"),
@@ -57,6 +61,7 @@ def normalize_endpoint(ep: Dict[str, Any], source_group: str) -> Dict[str, Any]:
         "group": source_group,  # docs | code | memory_service
         "router_prefix": ep.get("router_prefix", ""),
     }
+
 
 def merge_endpoints(raw: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
     merged: List[Dict[str, Any]] = []
@@ -74,11 +79,13 @@ def merge_endpoints(raw: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]
             merged.append(n)
     return merged
 
+
 def pretty_json(obj: Any) -> str:
     try:
         return json.dumps(obj, ensure_ascii=False, indent=2)
     except Exception:
         return str(obj)
+
 
 def print_endpoint_list(endpoints: List[Dict[str, Any]], limit: Optional[int] = None):
     print("\n可选端点列表:")
@@ -91,11 +98,13 @@ def print_endpoint_list(endpoints: List[Dict[str, Any]], limit: Optional[int] = 
             break
     print(f"\n共 {len(endpoints)} 个端点。")
 
+
 def input_with_default(prompt: str, default: Optional[str] = None) -> str:
     if default:
         text = input(f"{prompt} [{default}]: ").strip()
         return text or default
     return input(f"{prompt}: ").strip()
+
 
 def filter_endpoints(endpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     while True:
@@ -108,9 +117,11 @@ def filter_endpoints(endpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if choice == "1":
             kw = input("输入关键词(支持多个, 空格分隔): ").strip()
             kws = [k.lower() for k in kw.split()] if kw else []
+
             def match(ep):
-                text = f"{ep.get('path','')} {ep.get('module','')}".lower()
+                text = f"{ep.get('path', '')} {ep.get('module', '')}".lower()
                 return all(k in text for k in kws)
+
             endpoints = [ep for ep in endpoints if match(ep)]
             print_endpoint_list(endpoints, limit=50)
         elif choice == "2":
@@ -123,6 +134,7 @@ def filter_endpoints(endpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             return endpoints
         else:
             print("无效选择，请重试。")
+
 
 def choose_endpoint(endpoints: List[Dict[str, Any]]) -> Dict[str, Any]:
     print_endpoint_list(endpoints, limit=50)
@@ -141,6 +153,7 @@ def choose_endpoint(endpoints: List[Dict[str, Any]]) -> Dict[str, Any]:
             continue
         return endpoints[idx - 1]
 
+
 def parse_query_params(qs: str) -> Dict[str, str]:
     params: Dict[str, str] = {}
     if not qs:
@@ -155,6 +168,7 @@ def parse_query_params(qs: str) -> Dict[str, str]:
         else:
             params[p] = ""
     return params
+
 
 def input_headers() -> Dict[str, str]:
     headers: Dict[str, str] = {}
@@ -182,6 +196,7 @@ def input_headers() -> Dict[str, str]:
                 print("格式错误，应为 Key=Value")
     return headers
 
+
 def input_body(method: str) -> Optional[Any]:
     if method.upper() in ("POST", "PUT", "PATCH"):
         print("\n请求体输入选项:")
@@ -208,6 +223,7 @@ def input_body(method: str) -> Optional[Any]:
             return None
     return None
 
+
 def save_last_config(conf: Dict[str, Any]):
     try:
         with open(LAST_CONF_PATH, "w", encoding="utf-8") as f:
@@ -215,6 +231,7 @@ def save_last_config(conf: Dict[str, Any]):
         print(f"[INFO] 已保存本次配置到 {LAST_CONF_PATH}")
     except Exception as e:
         print(f"[WARN] 保存配置失败: {e}")
+
 
 def load_last_config() -> Optional[Dict[str, Any]]:
     if not os.path.exists(LAST_CONF_PATH):
@@ -226,23 +243,29 @@ def load_last_config() -> Optional[Dict[str, Any]]:
         print(f"[WARN] 读取历史配置失败: {e}")
         return None
 
-def perform_request(base_url: str, method: str, path: str, headers: Dict[str, str], params: Dict[str, str], body: Optional[Any]) -> Tuple[int, Dict[str, str], Any]:
+
+def perform_request(
+    base_url: str, method: str, path: str, headers: Dict[str, str], params: Dict[str, str], body: Optional[Any]
+) -> Tuple[int, Dict[str, str], Any]:
     import requests
+
     url = base_url.rstrip("/") + path
     t0 = time.time()
     try:
-        resp = requests.request(method=method.upper(), url=url, headers=headers or None, params=params or None, json=body, timeout=30)
+        resp = requests.request(
+            method=method.upper(), url=url, headers=headers or None, params=params or None, json=body, timeout=30
+        )
     except Exception as e:
         print(f"[ERROR] 请求失败: {e}")
         raise
     elapsed = (time.time() - t0) * 1000.0
-    print(f"\n=== 请求信息 ===")
+    print("\n=== 请求信息 ===")
     print(f"URL:      {resp.request.url}")
     print(f"Method:   {method.upper()}")
     print(f"Headers:  {pretty_json(dict(resp.request.headers))}")
     if body is not None:
         print(f"Body:     {pretty_json(body)}")
-    print(f"=== 响应信息 ===")
+    print("=== 响应信息 ===")
     print(f"Status:   {resp.status_code}")
     try:
         content_type = resp.headers.get("Content-Type", "")
@@ -264,6 +287,7 @@ def perform_request(base_url: str, method: str, path: str, headers: Dict[str, st
         data = text
     print(f"Elapsed:  {elapsed:.2f} ms")
     return resp.status_code, dict(resp.headers), data
+
 
 def main():
     print("== MaiMBot API 交互式测试 ==")
@@ -327,19 +351,22 @@ def main():
         sys.exit(2)
 
     # 保存本次配置
-    save_last_config({
-        "base_url": base_url,
-        "method": method,
-        "path": path,
-        "headers": headers,
-        "params": params,
-        "body": body,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-    })
+    save_last_config(
+        {
+            "base_url": base_url,
+            "method": method,
+            "path": path,
+            "headers": headers,
+            "params": params,
+            "body": body,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    )
 
     # 结束
     print("\n=== 测试结束 ===")
     print(f"状态码: {status_code}")
+
 
 if __name__ == "__main__":
     main()

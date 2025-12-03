@@ -9,7 +9,7 @@ from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime
 from enum import Enum
 
-from maim_message import BaseMessageInfo, Seg
+from maim_message.message import BaseMessageInfo, Seg
 
 from src.common.logger import get_logger
 from .message import MessageRecv

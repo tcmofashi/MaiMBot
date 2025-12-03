@@ -1114,6 +1114,7 @@ def create_user_session(
 
 class AgentApiKeys(BaseModel):
     """Agent API密钥管理表"""
+
     id = AutoField()  # 主键
     tenant_id = TextField(index=True)  # 租户ID
     agent_id = TextField(index=True)  # 智能体ID
@@ -1135,8 +1136,8 @@ class AgentApiKeys(BaseModel):
         table_name = "agent_api_keys"
         indexes = (
             # 创建复合索引用于快速查找
-            (('tenant_id', 'agent_id'), False),
-            (('user_identifier', 'status'), False),
+            (("tenant_id", "agent_id"), False),
+            (("user_identifier", "status"), False),
         )
 
 
@@ -1211,9 +1212,9 @@ def validate_agent_api_key(api_key: str) -> dict:
         user_identifier, auth_token = api_key.split(".", 1)
 
         key_record = AgentApiKeys.get_or_none(
-            (AgentApiKeys.user_identifier == user_identifier) &
-            (AgentApiKeys.auth_token == auth_token) &
-            (AgentApiKeys.status == "active")
+            (AgentApiKeys.user_identifier == user_identifier)
+            & (AgentApiKeys.auth_token == auth_token)
+            & (AgentApiKeys.status == "active")
         )
 
         if not key_record:

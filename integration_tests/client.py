@@ -13,12 +13,15 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import uuid
 
-from maim_message import BaseMessageInfo, UserInfo, GroupInfo, SenderInfo, ReceiverInfo, Seg
-from maim_message.message import APIMessageBase, MessageDim
+# 从maim_message.message导入最新的消息组件
+from maim_message.message import (
+    BaseMessageInfo, UserInfo, GroupInfo, SenderInfo, ReceiverInfo, Seg,
+    APIMessageBase, MessageDim
+)
 from maim_message.client import WebSocketClient, create_client_config
 
-from .config import TestConfig, TestScenario
-from .message_generator import LLMMessageGenerator, GeneratedMessage
+from config import TestConfig, TestScenario
+from message_generator import LLMMessageGenerator, GeneratedMessage
 
 logger = logging.getLogger(__name__)
 

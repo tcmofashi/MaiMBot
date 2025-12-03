@@ -3,7 +3,7 @@ import warnings
 from enum import Enum
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
-from maim_message import Seg
+from maim_message.message import Seg
 
 from src.llm_models.payload_content.tool_option import ToolParamType as ToolParamType
 from src.llm_models.payload_content.tool_option import ToolCall as ToolCall

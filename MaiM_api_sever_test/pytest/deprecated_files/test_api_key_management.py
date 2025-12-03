@@ -23,7 +23,7 @@ async def test_api_key_management():
             "username": "api_key_test_user",
             "password": "testpass123",
             "email": "api_key_test@example.com",
-            "tenant_name": "API密钥测试租户"
+            "tenant_name": "API密钥测试租户",
         }
 
         try:
@@ -31,8 +31,8 @@ async def test_api_key_management():
                 if resp.status in [200, 201]:
                     user_info = await resp.json()
                     print(f"   ✅ 用户创建成功: {user_info['username']}")
-                    access_token = user_info.get('access_token')
-                    tenant_id = user_info.get('tenant_id')
+                    access_token = user_info.get("access_token")
+                    tenant_id = user_info.get("tenant_id")
                 else:
                     print(f"   ❌ 用户创建失败: {resp.status}")
                     return
@@ -49,20 +49,18 @@ async def test_api_key_management():
             "name": "测试客户端API密钥",
             "description": "用于测试API密钥管理功能",
             "permissions": ["chat", "read"],
-            "expires_days": 30
+            "expires_days": 30,
         }
 
         headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
             async with session.post(
-                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys",
-                json=api_key_data,
-                headers=headers
+                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys", json=api_key_data, headers=headers
             ) as resp:
                 if resp.status == 200:
                     api_key_info = await resp.json()
-                    created_api_key = api_key_info['api_key']
+                    created_api_key = api_key_info["api_key"]
                     print(f"   ✅ API密钥创建成功: {created_api_key}")
                     print("   📋 密钥信息:")
                     print(f"      - 租户ID: {api_key_info['tenant_id']}")
@@ -84,13 +82,10 @@ async def test_api_key_management():
         validation_data = {"api_key": created_api_key}
 
         try:
-            async with session.post(
-                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys/validate",
-                json=validation_data
-            ) as resp:
+            async with session.post(f"{API_BASE_URL}{API_V1_PREFIX}/api-keys/validate", json=validation_data) as resp:
                 if resp.status == 200:
                     validation_result = await resp.json()
-                    if validation_result['valid']:
+                    if validation_result["valid"]:
                         print("   ✅ API密钥验证成功")
                         print("   📋 验证结果:")
                         print(f"      - 租户ID: {validation_result['tenant_id']}")
@@ -106,15 +101,12 @@ async def test_api_key_management():
         # 4. 列出API密钥
         print("\n4. 列出API密钥...")
         try:
-            async with session.get(
-                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys",
-                headers=headers
-            ) as resp:
+            async with session.get(f"{API_BASE_URL}{API_V1_PREFIX}/api-keys", headers=headers) as resp:
                 if resp.status == 200:
                     api_keys_list = await resp.json()
                     print("   ✅ 获取API密钥列表成功")
                     print(f"   📋 总数: {api_keys_list['total']} 个密钥")
-                    for i, api_key in enumerate(api_keys_list['api_keys'][:3], 1):  # 只显示前3个
+                    for i, api_key in enumerate(api_keys_list["api_keys"][:3], 1):  # 只显示前3个
                         print(f"      {i}. {api_key['name']} ({api_key['user_identifier']}) - {api_key['status']}")
                 else:
                     print(f"   ❌ 获取API密钥列表失败: {resp.status}")
@@ -130,18 +122,16 @@ async def test_api_key_management():
             "name": "测试客户端API密钥2",
             "description": "用于测试同一用户标识符多个智能体",
             "permissions": ["chat"],
-            "expires_days": 15
+            "expires_days": 15,
         }
 
         try:
             async with session.post(
-                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys",
-                json=api_key_data2,
-                headers=headers
+                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys", json=api_key_data2, headers=headers
             ) as resp:
                 if resp.status == 200:
                     api_key_info2 = await resp.json()
-                    created_api_key2 = api_key_info2['api_key']
+                    created_api_key2 = api_key_info2["api_key"]
                     print(f"   ✅ 第二个API密钥创建成功: {created_api_key2}")
                     print(f"   📋 智能体ID: {api_key_info2['agent_id']}")
                 else:
@@ -158,14 +148,12 @@ async def test_api_key_management():
             "agent_id": "test_agent_001",  # 相同的智能体ID
             "user_identifier": "testclient",  # 相同的用户标识符
             "name": "重复密钥测试",
-            "description": "这个应该失败"
+            "description": "这个应该失败",
         }
 
         try:
             async with session.post(
-                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys",
-                json=duplicate_data,
-                headers=headers
+                f"{API_BASE_URL}{API_V1_PREFIX}/api-keys", json=duplicate_data, headers=headers
             ) as resp:
                 if resp.status == 409:
                     print(f"   ✅ 重复用户标识符被正确拒绝: {resp.status}")
@@ -193,8 +181,8 @@ async def check_server_status():
                     info = await resp.json()
                     print(f"✅ 服务器运行正常: {info.get('message', 'Unknown')}")
                     print("📋 可用端点:")
-                    for endpoint, path in info.get('endpoints', {}).items():
-                        if endpoint == 'api_keys':
+                    for endpoint, path in info.get("endpoints", {}).items():
+                        if endpoint == "api_keys":
                             print(f"   🔑 {endpoint}: {path} (新增)")
                         else:
                             print(f"   📡 {endpoint}: {path}")

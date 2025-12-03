@@ -8,7 +8,7 @@ from src.plugin_system import (
     ReplyContentType,
     emoji_api,
 )
-from maim_message import Seg
+from maim_message.message import Seg
 from src.common.logger import get_logger
 
 logger = get_logger("emoji_manage_plugin")

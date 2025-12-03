@@ -8,7 +8,7 @@ import hashlib
 import time
 from typing import Dict, Optional, TYPE_CHECKING
 from rich.traceback import install
-from maim_message import GroupInfo, UserInfo, SenderInfo
+from maim_message.message import GroupInfo, UserInfo, SenderInfo
 
 from .isolation_context import IsolationContext, generate_isolated_id
 

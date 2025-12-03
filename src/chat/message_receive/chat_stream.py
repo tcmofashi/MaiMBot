@@ -3,7 +3,7 @@ import hashlib
 import time
 from typing import Dict, Optional, TYPE_CHECKING, List
 from rich.traceback import install
-from maim_message import GroupInfo, UserInfo, SenderInfo, ReceiverInfo
+from maim_message.message import GroupInfo, UserInfo, SenderInfo, ReceiverInfo
 
 from src.common.logger import get_logger
 from src.common.database.database import db

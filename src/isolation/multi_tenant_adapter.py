@@ -9,7 +9,7 @@ from enum import Enum
 import asyncio
 from datetime import datetime
 
-from maim_message import Seg
+from maim_message.message import Seg
 
 from ..isolation import IsolationContext, create_isolation_context, get_isolated_chat_manager
 from ..chat.message_receive.message import MessageRecv, MessageSending

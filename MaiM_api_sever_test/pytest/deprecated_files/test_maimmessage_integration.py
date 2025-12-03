@@ -9,16 +9,13 @@ import logging
 import sys
 
 # 添加项目路径
-sys.path.insert(0, '/home/tcmofashi/proj/MaiMBot')
+sys.path.insert(0, "/home/tcmofashi/proj/MaiMBot")
 
 from integration_tests.api_client import create_test_scenario
 from integration_tests.simple_websocket_test import run_simple_websocket_tests
 
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -36,13 +33,11 @@ async def test_maimmessage_integration():
         # 阶段1: 创建测试场景
         logger.info("📝 阶段1: 创建测试用户和Agent")
         manager = await create_test_scenario(
-            config_api_url="http://localhost:18000",
-            user_count=user_count,
-            agents_per_user=agents_per_user
+            config_api_url="http://localhost:18000", user_count=user_count, agents_per_user=agents_per_user
         )
 
-        users = manager['users']
-        all_agents = manager['all_agents']
+        users = manager["users"]
+        all_agents = manager["all_agents"]
 
         logger.info(f"✅ 创建了 {len(users)} 个用户，{len(all_agents)} 个Agent")
 
@@ -68,23 +63,33 @@ async def test_maimmessage_integration():
         logger.info(f"  成功发送: {websocket_results['successful_messages']}")
         logger.info(f"  收到回复: {websocket_results['responses_received']}")
 
-        if websocket_results['errors']:
+        if websocket_results["errors"]:
             logger.warning("❌ 发现错误:")
-            for error in websocket_results['errors']:
+            for error in websocket_results["errors"]:
                 logger.warning(f"  - {error}")
 
         # 打印详细测试信息
         logger.info("\n📋 详细测试结果:")
-        for detail in websocket_results['test_details'][:10]:  # 只显示前10个
-            status = "✅" if detail['success'] else "❌"
+        for detail in websocket_results["test_details"][:10]:  # 只显示前10个
+            status = "✅" if detail["success"] else "❌"
             logger.info(f"  {status} {detail['user']} -> {detail['agent']}: {detail['message']}")
-            if detail['response']:
-                response_preview = detail['response'][:100] + "..." if len(detail['response']) > 100 else detail['response']
+            if detail["response"]:
+                response_preview = (
+                    detail["response"][:100] + "..." if len(detail["response"]) > 100 else detail["response"]
+                )
                 logger.info(f"      回复: {response_preview}")
 
         # 测试评估
-        success_rate = websocket_results['successful_connections'] / websocket_results['total_connections'] if websocket_results['total_connections'] > 0 else 0
-        message_success_rate = websocket_results['successful_messages'] / websocket_results['total_messages'] if websocket_results['total_messages'] > 0 else 0
+        success_rate = (
+            websocket_results["successful_connections"] / websocket_results["total_connections"]
+            if websocket_results["total_connections"] > 0
+            else 0
+        )
+        message_success_rate = (
+            websocket_results["successful_messages"] / websocket_results["total_messages"]
+            if websocket_results["total_messages"] > 0
+            else 0
+        )
 
         logger.info("\n📈 测试评估:")
         logger.info(f"  连接成功率: {success_rate:.1%}")
@@ -101,6 +106,7 @@ async def test_maimmessage_integration():
     except Exception as e:
         logger.error(f"❌ 测试过程中发生错误: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

@@ -43,7 +43,7 @@ def test_complete_isolated_heartflow():
             print("📝 聊天流不存在，尝试创建...")
 
             # 创建一个基本的聊天流对象
-            from maim_message import UserInfo
+            from maim_message.message import UserInfo
 
             user_info = UserInfo(
                 platform="test_platform", user_id="test_user", user_nickname="测试用户", user_cardname="测试用户"

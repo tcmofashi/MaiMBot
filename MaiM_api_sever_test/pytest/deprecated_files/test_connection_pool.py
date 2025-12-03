@@ -31,8 +31,8 @@ async def test_connection_pool():
         agent = user.agents[0]
 
         logger.info(f"✅ 创建用户: {user.username} (租户: {user.tenant_id})")
-        agent_name = agent.name if hasattr(agent, 'name') else agent.get('name', 'Unknown')
-        agent_id = agent.agent_id if hasattr(agent, 'agent_id') else agent.get('agent_id')
+        agent_name = agent.name if hasattr(agent, "name") else agent.get("name", "Unknown")
+        agent_id = agent.agent_id if hasattr(agent, "agent_id") else agent.get("agent_id")
         logger.info(f"✅ 创建Agent: {agent_name} (ID: {agent_id})")
 
     except Exception as e:
@@ -55,9 +55,9 @@ async def test_connection_pool():
 
             connected = await client.connect(user, agent)
             if connected:
-                logger.info(f"✅ 客户端 {i+1} 连接成功")
+                logger.info(f"✅ 客户端 {i + 1} 连接成功")
             else:
-                logger.error(f"❌ 客户端 {i+1} 连接失败")
+                logger.error(f"❌ 客户端 {i + 1} 连接失败")
                 return False
 
         # 4. 检查连接池状态
@@ -68,18 +68,20 @@ async def test_connection_pool():
         logger.info(f"   闲置连接数: {stats['idle_connections']}")
 
         # 验证是否每个客户端都有独立的连接
-        if stats['total_connections'] == 3 and stats['active_connections'] == 3:
+        if stats["total_connections"] == 3 and stats["active_connections"] == 3:
             logger.info("✅ 连接池正常：3个客户端创建了3个独立连接")
             success = True
         else:
-            logger.error(f"❌ 连接池异常：预期3个连接3个活跃，实际{stats['total_connections']}个连接{stats['active_connections']}个活跃")
+            logger.error(
+                f"❌ 连接池异常：预期3个连接3个活跃，实际{stats['total_connections']}个连接{stats['active_connections']}个活跃"
+            )
             success = False
 
         # 5. 关闭所有客户端
         logger.info("🧹 关闭所有客户端...")
         for i, client in enumerate(clients):
             await client.close()
-            logger.info(f"✅ 客户端 {i+1} 已关闭")
+            logger.info(f"✅ 客户端 {i + 1} 已关闭")
 
         # 6. 再次检查连接池状态
         stats = connection_pool.get_stats()
@@ -88,7 +90,7 @@ async def test_connection_pool():
         logger.info(f"   活跃连接数: {stats['active_connections']}")
         logger.info(f"   闲置连接数: {stats['idle_connections']}")
 
-        if stats['total_connections'] == 1 and stats['active_connections'] == 0 and stats['idle_connections'] == 1:
+        if stats["total_connections"] == 1 and stats["active_connections"] == 0 and stats["idle_connections"] == 1:
             logger.info("✅ 连接释放正常：连接保留在池中但未活跃")
         else:
             logger.warning(f"⚠️ 连接状态异常：{stats}")

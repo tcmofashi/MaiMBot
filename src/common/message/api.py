@@ -1,5 +1,7 @@
 import os
 import asyncio
+
+# 从maim_message导入最新的API-Server组件
 from maim_message.server import WebSocketServer, create_server_config
 from src.common.logger import get_logger
 
@@ -45,7 +47,7 @@ def get_global_api() -> WebSocketServer:  # sourcery skip: extract-method
                 api_key = headers.get("x-apikey", "")
 
             logger = get_logger(__name__)
-            logger.info(f"🔐 认证请求: api_key={api_key}, metadata={list(metadata.keys())}")
+            logger.info(f"🔐 认证请求: api_key={api_key[:10]}..., metadata={list(metadata.keys())}")
 
             # 基本的认证检查：只要有api_key就通过
             auth_result = bool(api_key)
@@ -62,7 +64,7 @@ def get_global_api() -> WebSocketServer:  # sourcery skip: extract-method
                 api_key = headers.get("x-apikey", "")
 
             logger = get_logger(__name__)
-            logger.info(f"👤 用户提取: api_key={api_key}")
+            logger.info(f"👤 用户提取: api_key={api_key[:10]}...")
 
             # 解析API密钥以提取tenant_id和agent_id
             # API密钥格式可能是: "tenant_id:agent_id" 或用户API key (mb_...)

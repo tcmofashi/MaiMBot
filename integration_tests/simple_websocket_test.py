@@ -10,7 +10,7 @@ import time
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
-from .api_client import TestUser
+from api_client import TestUser
 from maim_message.client import WebSocketClient, create_client_config
 from maim_message.message import APIMessageBase, BaseMessageInfo, Seg, MessageDim, SenderInfo, UserInfo, GroupInfo
 

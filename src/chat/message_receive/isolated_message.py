@@ -9,7 +9,7 @@ from typing import Optional, Any, List, Dict, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from maim_message import (
+from maim_message.message import (
     Seg,
     UserInfo,
     BaseMessageInfo,

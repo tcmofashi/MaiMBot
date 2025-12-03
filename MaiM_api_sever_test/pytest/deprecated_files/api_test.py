@@ -89,9 +89,7 @@ def call_rest_api(
         body = _json.dumps(json, ensure_ascii=False).encode("utf-8")
     elif data is not None:
         if isinstance(data, dict):
-            hdrs.setdefault(
-                "Content-Type", "application/x-www-form-urlencoded; charset=utf-8"
-            )
+            hdrs.setdefault("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
             body = _urlparse.urlencode(data, doseq=True).encode("utf-8")
         elif isinstance(data, str):
             body = data.encode("utf-8")
@@ -128,13 +126,14 @@ def Call_api_get(port: int, path: str):
             path,
             method="GET",
         )
-        res =  f"{path}请求成功"
+        res = f"{path}请求成功"
         res += f"\tStatus:{status}\nHeaders:,{headers}\nBody:{body.decode('utf-8', errors='ignore')}\n\n"
-        
+
         return res
-    
+
     except Exception as e:
         print(f"{path}请求失败:", repr(e))
+
 
 def Call_api_post(port: int, path: str, json_data: Dict[str, Any]):
     """简单演示POST请求。需要你的服务在相应端口与路径可用。"""
@@ -145,51 +144,55 @@ def Call_api_post(port: int, path: str, json_data: Dict[str, Any]):
             method="POST",
             json=json_data,
         )
-        res =  f"{path} POST请求成功"
+        res = f"{path} POST请求成功"
         res += f"\tStatus:{status}\nHeaders:,{headers}\nBody:{body.decode('utf-8', errors='ignore')}\n\n"
 
         return res
-    
+
     except Exception as e:
         print(f"{path} POST请求失败:", repr(e))
 
+
 if __name__ == "__main__":
     # 将端口按需修改为你本地正在运行的 API 服务端口，例如 8000/3000/8080 等
-    results = {
-        "test_run": "API 测试运行",
-        "timestamp": datetime.now().isoformat(),
-        "results": []
-    }
-    
+    results = {"test_run": "API 测试运行", "timestamp": datetime.now().isoformat(), "results": []}
+
     # 执行所有请求并自动收集结果
     results["results"].append(Call_api_get(port=18000, path="/health"))
     results["results"].append(Call_api_get(port=18000, path="/docs"))
     results["results"].append(Call_api_get(port=18000, path="/api/v1/agents/templates"))
-    results["results"].append(Call_api_post(
-    port=18000, 
-    path="/api/v1/auth/register", 
-    json_data={"username": "maple123", 
+    results["results"].append(
+        Call_api_post(
+            port=18000,
+            path="/api/v1/auth/register",
+            json_data={
+                "username": "maple123",
                 "password": "maple123",
                 "email": "maple123@example.com",
                 "tenant_name": "mapleの测试租户",
-                "tenant_type": "personal"}))
+                "tenant_type": "personal",
+            },
+        )
+    )
 
-    results["results"].append(Call_api_post(
-        port=18000, 
-        path="/api/v1/auth/login", 
-        json_data={"tenant_id": "tenant_20f7f2c47825531a",
-                   "username": "maple123", 
-                   "password": "maple123"}))
+    results["results"].append(
+        Call_api_post(
+            port=18000,
+            path="/api/v1/auth/login",
+            json_data={"tenant_id": "tenant_20f7f2c47825531a", "username": "maple123", "password": "maple123"},
+        )
+    )
 
-    results["results"].append(Call_api_post(
-        port=18000, 
-        path="/api/v1/auth/me", 
-        json_data={"tenant_id": "tenant_20f7f2c47825531a",
-                   "username": "maple123", 
-                   "password": "maple123"}))
+    results["results"].append(
+        Call_api_post(
+            port=18000,
+            path="/api/v1/auth/me",
+            json_data={"tenant_id": "tenant_20f7f2c47825531a", "username": "maple123", "password": "maple123"},
+        )
+    )
 
     # 自动保存到 JSON 文件
     with open("api_test_results.json", "w", encoding="utf-8") as f:
         _json.dump(results, f, ensure_ascii=False, indent=2)
-    
+
     print("测试完成！结果已保存到 api_test_results.json")

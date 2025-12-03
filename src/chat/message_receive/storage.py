@@ -3,7 +3,7 @@ import json
 import traceback
 from typing import Union
 
-from maim_message import SenderInfo, ReceiverInfo, UserInfo
+from maim_message.message import SenderInfo, ReceiverInfo, UserInfo
 
 from src.common.database.database_model import Messages, Images
 from src.common.logger import get_logger

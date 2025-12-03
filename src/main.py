@@ -1,5 +1,7 @@
 import asyncio
 import time
+
+# 从maim_message导入最新的API-Server组件
 from maim_message.server import WebSocketServer as MessageServer
 
 from src.common.remote import TelemetryHeartBeatTask
@@ -263,7 +265,7 @@ class MainSystem:
                 "processed_plain_text": message_segment.get("data", ""),
                 "display_message": message_segment.get("data", ""),
                 "tenant_id": tenant_id,  # 使用上面提取的值，确保不为None
-                "agent_id": agent_id,   # 使用上面提取的值，确保不为None
+                "agent_id": agent_id,  # 使用上面提取的值，确保不为None
                 "platform": message_info.get("platform") or message_dim.get("platform"),
             }
 
@@ -307,8 +309,16 @@ class MainSystem:
 
             # 从metadata中提取租户和用户信息
             # 确保tenant_id和agent_id不为None
-            tenant_id = metadata.get("tenant_id", self.default_tenant_id) if metadata and metadata.get("tenant_id") else self.default_tenant_id
-            agent_id = metadata.get("agent_id", self.default_agent_id) if metadata and metadata.get("agent_id") else self.default_agent_id
+            tenant_id = (
+                metadata.get("tenant_id", self.default_tenant_id)
+                if metadata and metadata.get("tenant_id")
+                else self.default_tenant_id
+            )
+            agent_id = (
+                metadata.get("agent_id", self.default_agent_id)
+                if metadata and metadata.get("agent_id")
+                else self.default_agent_id
+            )
         except Exception as e:
             logger.error(f"解析消息信息失败: {e}")
             message_id = "unknown"
@@ -408,7 +418,7 @@ class MainSystem:
             logger.info("WebSocket服务器已启动")
 
             # 保持服务器运行
-            while self.app.running:
+            while self.app.is_running():
                 await asyncio.sleep(1)
 
         except Exception as e:

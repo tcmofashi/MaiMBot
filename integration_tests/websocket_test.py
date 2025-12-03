@@ -1,6 +1,6 @@
 """
 WebSocket多路连接对话测试
-使用maim_message库的租户模式创建多个WebSocket连接与回复器对话
+使用maim_message库的API-Server版本创建多个WebSocket连接与回复器对话
 """
 
 import asyncio
@@ -11,8 +11,11 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
+# 从maim_message导入最新的API-Server组件
+from maim_message.client import WebSocketClient, create_client_config
+from maim_message.message import APIMessageBase, BaseMessageInfo, Seg, MessageDim
 
-from .api_client import TestUser, TestAgent
+from api_client import TestUser, TestAgent
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +33,11 @@ class ConversationScenario:
 
 
 class WebSocketChatClient:
-    """WebSocket聊天客户端 - 使用maim_message租户模式"""
+    """WebSocket聊天客户端 - 使用maim_message API-Server版本"""
 
     def __init__(self, reply_server_url: str = "ws://localhost:8095"):
         self.reply_server_url = reply_server_url
-        self.tenant_client: Optional[TenantMessageClient] = None
+        self.ws_client: Optional[WebSocketClient] = None
         self.user: Optional[TestUser] = None
         self.agent: Optional[TestAgent] = None
         self.chat_stream_id: Optional[str] = None
@@ -46,34 +49,26 @@ class WebSocketChatClient:
         """连接到回复后端"""
         try:
             # 创建客户端配置
-            client_config = ClientConfig(
-                tenant_id=user.tenant_id,
-                agent_id=agent.agent_id,
+            config = create_client_config(
+                url=self.reply_server_url,
+                api_key=f"{user.tenant_id}:{agent.agent_id}",
                 platform=platform,
-                server_url=self.reply_server_url,
-                max_retries=3,
-                heartbeat_interval=30,
-                message_timeout=30.0,
+                # 消息处理回调
+                on_message=self._handle_message,
             )
 
-            self.tenant_client = TenantMessageClient(client_config)
+            self.ws_client = WebSocketClient(config)
 
-            # 设置消息回调
-            self.tenant_client.register_callback(
-                callback=self._handle_message,
-                message_types=["chat_response", "message", "response"],
-                tenant_filter=user.tenant_id,
-                platform_filter=platform,
-            )
+            # 启动并连接客户端
+            await self.ws_client.start()
+            connected = await self.ws_client.connect()
 
-            # 连接到服务器
-            if await self.tenant_client.connect():
+            if connected:
                 self.user = user
                 self.agent = agent
 
                 # 生成聊天流ID
                 import uuid
-
                 self.chat_stream_id = f"test_chat_{uuid.uuid4().hex[:8]}"
 
                 logger.info(f"租户模式WebSocket连接成功: {user.username} -> {agent.name}")
@@ -86,65 +81,65 @@ class WebSocketChatClient:
             logger.error(f"WebSocket连接失败: {e}")
             return False
 
-    def _handle_message(self, message: Dict[str, Any]) -> None:
+    async def _handle_message(self, message: APIMessageBase, metadata: Dict[str, Any]) -> None:
         """处理接收到的消息"""
+        # 从APIMessageBase中提取内容
+        content = ""
+        if hasattr(message, 'message_segment') and message.message_segment:
+            content = message.message_segment.data or ""
+
         self.messages_received.append(
             {
-                "content": message.get("data", {}).get("response", ""),
+                "content": content,
                 "timestamp": datetime.now().isoformat(),
-                "agent_id": message.get("data", {}).get("agent_id"),
-                "chat_stream_id": message.get("data", {}).get("chat_stream_id"),
+                "platform": metadata.get("platform", "test"),
+                "message_id": message.message_info.message_id if hasattr(message, 'message_info') and message.message_info else "unknown",
                 "raw_message": message,
             }
         )
         self.message_received_event.set()
-        logger.debug(f"收到回复: {message.get('data', {}).get('response', '')[:50]}...")
+        logger.debug(f"收到回复: {content[:50]}...")
 
     async def send_message(self, content: str, message_id: str = None) -> bool:
         """发送消息"""
-        if not self.tenant_client:
-            logger.error("租户客户端未连接")
+        if not self.ws_client:
+            logger.error("WebSocket客户端未连接")
             return False
 
         if not message_id:
             message_id = f"msg_{int(time.time() * 1000)}_{random.randint(1000, 9999)}"
 
         try:
-            # 创建符合MaiMBot期望格式的消息
-            message = {
-                "type": "chat",
-                "message_info": {
-                    "message_id": message_id,
-                    "time": time.time(),
-                    "platform": "test",
-                    "sender_info": {
-                        "user_info": {
-                            "platform": "test",
-                            "user_id": self.user.user_id,
-                            "user_nickname": self.user.username,
-                        },
-                        "group_info": {
-                            "platform": "test",
-                            "group_id": f"test_group_{self.user.tenant_id}",
-                            "group_name": f"{self.user.username}的测试群",
-                        },
-                    },
-                },
-                "message_segment": {
-                    "type": "text",
-                    "data": content,
-                },
-                "raw_message": content,
-                "processed_plain_text": content,
-                "display_message": content,
-                "chat_stream_id": self.chat_stream_id,
-                "tenant_id": self.user.tenant_id,
-                "agent_id": self.agent.agent_id,
-                "platform": "test",
-            }
+            # 创建APIMessageBase对象
+            from maim_message.message import SenderInfo, UserInfo, GroupInfo
+
+            message = APIMessageBase(
+                message_info=BaseMessageInfo(
+                    message_id=message_id,
+                    time=time.time(),
+                    platform="test",
+                    sender_info=SenderInfo(
+                        user_info=UserInfo(
+                            platform="test",
+                            user_id=self.user.user_id,
+                            user_nickname=self.user.username,
+                        ),
+                        group_info=GroupInfo(
+                            platform="test",
+                            group_id=f"test_group_{self.user.tenant_id}",
+                            group_name=f"{self.user.username}的测试群",
+                        ),
+                    ),
+                ),
+                message_segment=Seg(type="text", data=content),
+                message_dim=MessageDim(
+                    api_key=f"{self.user.tenant_id}:{self.agent.agent_id}",
+                    platform="test"
+                ),
+            )
 
             # 发送消息
-            success = await self.tenant_client.send_message(message)
+            success = await self.ws_client.send_message(message)
 
             if success:
                 # 记录发送的消息
@@ -168,8 +163,8 @@ class WebSocketChatClient:
 
     async def listen_for_responses(self, timeout: float = 30.0) -> List[Dict]:
         """监听回复消息"""
-        if not self.tenant_client:
-            logger.error("租户客户端未连接")
+        if not self.ws_client:
+            logger.error("WebSocket客户端未连接")
             return []
 
         # 清空之前的接收消息列表
@@ -189,14 +184,15 @@ class WebSocketChatClient:
 
     async def close(self):
         """关闭连接"""
-        if self.tenant_client:
+        if self.ws_client:
             try:
-                await self.tenant_client.disconnect()
-                logger.info(f"租户模式WebSocket连接已关闭: {self.user.username}")
+                await self.ws_client.disconnect()
+                await self.ws_client.stop()
+                logger.info(f"WebSocket连接已关闭: {self.user.username}")
             except Exception as e:
                 logger.error(f"关闭连接失败: {e}")
             finally:
-                self.tenant_client = None
+                self.ws_client = None
 
 
 class MultiWebSocketTestRunner:
