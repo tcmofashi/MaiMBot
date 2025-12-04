@@ -337,3 +337,8 @@ class ChatBot:
 
 # 创建全局ChatBot实例
 chat_bot = ChatBot()
+
+
+def get_message_handler() -> ChatBot:
+    """获取全局消息处理器实例"""
+    return chat_bot
