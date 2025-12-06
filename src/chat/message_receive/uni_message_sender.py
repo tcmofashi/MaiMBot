@@ -4,7 +4,7 @@ import traceback
 from rich.traceback import install
 from maim_message import Seg
 
-from src.common.message.api import get_global_api
+from src.common.message.api import get_global_api, convert_message_sending_to_api_message
 from src.common.logger import get_logger
 from src.chat.message_receive.message import MessageSending
 from src.chat.message_receive.storage import MessageStorage
@@ -50,7 +50,7 @@ async def _send_message(message: MessageSending, show_log=True) -> bool:
         # 检查是否是 WebUI 平台的消息，或者是 WebUI 虚拟群的消息
         chat_manager, webui_platform = get_webui_chat_broadcaster()
         is_webui_message = (platform == webui_platform) or is_webui_virtual_group(group_id)
-        
+
         if is_webui_message and chat_manager is not None:
             # WebUI 聊天室消息（包括虚拟身份模式），通过 WebSocket 广播
             import time
@@ -82,10 +82,23 @@ async def _send_message(message: MessageSending, show_log=True) -> bool:
             return True
 
         # 直接调用API发送消息
-        await get_global_api().send_message(message)
+        api_message = convert_message_sending_to_api_message(message)
+        send_results = await get_global_api().send_message(api_message)
+        send_results = send_results or {}
+
+        success_count = sum(1 for ok in send_results.values() if ok)
+        total_targets = len(send_results)
+        success = success_count > 0
+
         if show_log:
-            logger.info(f"已将消息  '{message_preview}'  发往平台'{message.message_info.platform}'")
-        return True
+            if success:
+                logger.info(
+                    f"已将消息  '{message_preview}'  发往平台'{message.message_info.platform}'，"
+                    f"成功 {success_count}/{total_targets} 个连接"
+                )
+            else:
+                logger.warning(f"消息  '{message_preview}'  发往平台'{message.message_info.platform}' 失败：无可用连接")
+        return success
 
     except Exception as e:
         logger.error(f"发送消息   '{message_preview}'   发往平台'{message.message_info.platform}' 失败: {str(e)}")

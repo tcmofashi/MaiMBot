@@ -9,6 +9,7 @@ from maim_message import GroupInfo, UserInfo
 from src.common.logger import get_logger
 from src.common.database.database import db
 from src.common.database.database_model import ChatStreams  # 新增导入
+from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id
 
 # 避免循环导入，使用TYPE_CHECKING进行类型提示
 if TYPE_CHECKING:
@@ -170,28 +171,36 @@ class ChatManager:
         # logger.debug(f"注册消息到聊天流: {stream_id}")
 
     @staticmethod
+    def _hash_components(components: list[str]) -> str:
+        """Hash helper that enforces tenant/agent context."""
+        tenant_id = get_current_tenant_id()
+        agent_id = get_current_agent_id()
+        if not tenant_id or not agent_id:
+            raise RuntimeError("chat_id 生成需要有效的租户和代理上下文")
+
+        full_components = [tenant_id, agent_id, *components]
+        key = "_".join(str(component) for component in full_components)
+        return hashlib.md5(key.encode()).hexdigest()
+
+    @classmethod
     def _generate_stream_id(
-        platform: str, user_info: Optional[UserInfo], group_info: Optional[GroupInfo] = None
+        cls, platform: str, user_info: Optional[UserInfo], group_info: Optional[GroupInfo] = None
     ) -> str:
-        """生成聊天流唯一ID"""
+        """生成聊天流唯一ID（租户/代理上下文必需）"""
         if not user_info and not group_info:
             raise ValueError("用户信息或群组信息必须提供")
 
         if group_info:
-            # 组合关键信息
             components = [platform, str(group_info.group_id)]
         else:
             components = [platform, str(user_info.user_id), "private"]  # type: ignore
 
-        # 使用MD5生成唯一ID
-        key = "_".join(components)
-        return hashlib.md5(key.encode()).hexdigest()
+        return cls._hash_components(components)
 
     def get_stream_id(self, platform: str, id: str, is_group: bool = True) -> str:
-        """获取聊天流ID"""
+        """获取聊天流ID（租户/代理上下文必需）"""
         components = [platform, id] if is_group else [platform, id, "private"]
-        key = "_".join(components)
-        return hashlib.md5(key.encode()).hexdigest()
+        return self._hash_components(components)
 
     async def get_or_create_stream(
         self, platform: str, user_info: UserInfo, group_info: Optional[GroupInfo] = None

@@ -3,6 +3,7 @@ from .database import db, SAAS_MODE
 import datetime
 import os
 from src.common.logger import get_logger
+from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id
 
 logger = get_logger("database_model")
 
@@ -11,26 +12,152 @@ try:
     if SAAS_MODE:
         # 导入统一数据库核心库的BusinessBaseModel
         import sys
+
         sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "maim_db", "src"))
         from src.core.models import BusinessBaseModel
 
-        # 使用SaaS版本的BaseModel（支持多租户）
-        BaseModel = BusinessBaseModel
-        logger.info("使用SaaS版本的BusinessBaseModel，支持多租户数据隔离")
+        def _require_ids(require_agent: bool) -> tuple[str, str | None]:
+            tenant_id = get_current_tenant_id()
+            agent_id = get_current_agent_id()
+            if not tenant_id:
+                raise RuntimeError("Tenant context missing for database access")
+            if require_agent and not agent_id:
+                raise RuntimeError("Agent context missing for database access")
+            return tenant_id, agent_id
+
+        class BaseModel(BusinessBaseModel):
+            # 允许不同租户复用相同 agent_id，强制为所有模型增加 tenant_id 列
+            tenant_id = TextField(index=True, null=False)
+
+            class Meta:
+                database = BusinessBaseModel._meta.database
+
+            @classmethod
+            def _apply_scope(cls, query):
+                tenant_id, agent_id = _require_ids(hasattr(cls, "agent_id"))
+                if hasattr(cls, "tenant_id"):
+                    query = query.where(cls.tenant_id == tenant_id)
+                if hasattr(cls, "agent_id"):
+                    query = query.where(cls.agent_id == agent_id)
+                return query
+
+            @classmethod
+            def select(cls, *fields):
+                query = super().select(*fields)
+                return cls._apply_scope(query)
+
+            @classmethod
+            def create(cls, **query):
+                tenant_id, agent_id = _require_ids(hasattr(cls, "agent_id"))
+                if hasattr(cls, "tenant_id"):
+                    query.setdefault("tenant_id", tenant_id)
+                if hasattr(cls, "agent_id"):
+                    query.setdefault("agent_id", agent_id)
+                return super().create(**query)
+
+            def save(self, *args, **kwargs):
+                tenant_id, agent_id = _require_ids(hasattr(self.__class__, "agent_id"))
+                if hasattr(self, "tenant_id") and not getattr(self, "tenant_id", None):
+                    self.tenant_id = tenant_id
+                if hasattr(self, "agent_id") and not getattr(self, "agent_id", None):
+                    self.agent_id = agent_id
+                return super().save(*args, **kwargs)
+
+            @classmethod
+            def update(cls, **update):
+                query = super().update(**update)
+                return cls._apply_scope(query)
+
+            @classmethod
+            def delete(cls):
+                query = super().delete()
+                return cls._apply_scope(query)
+
+            def delete_instance(self, *args, **kwargs):
+                tenant_id, agent_id = _require_ids(hasattr(self.__class__, "agent_id"))
+                if hasattr(self, "tenant_id") and getattr(self, "tenant_id", None) not in (None, tenant_id):
+                    raise RuntimeError("Tenant context mismatch for delete_instance")
+                if hasattr(self, "agent_id") and getattr(self, "agent_id", None) not in (None, agent_id):
+                    raise RuntimeError("Agent context mismatch for delete_instance")
+                return super().delete_instance(*args, **kwargs)
+
+        logger.info("使用SaaS版本的BusinessBaseModel，支持tenant+agent双层隔离并强制上下文校验")
 
     else:
         # 回退到原有的简单BaseModel（单用户模式）
         class BaseModel(Model):
             class Meta:
                 database = db
+
         logger.info("使用单用户版本的BaseModel")
 
 except ImportError:
-    # 最终回退选项
+    # 最终回退选项（本地 SQLite 模式），仍然强制 tenant/agent 上下文
+    def _require_ids_fallback(require_agent: bool) -> tuple[str, str | None]:
+        tenant_id = get_current_tenant_id()
+        agent_id = get_current_agent_id()
+        if not tenant_id:
+            raise RuntimeError("Tenant context missing for database access")
+        if require_agent and not agent_id:
+            raise RuntimeError("Agent context missing for database access")
+        return tenant_id, agent_id
+
     class BaseModel(Model):
+        tenant_id = TextField(index=True, null=False)
+
         class Meta:
             database = db
-    logger.warning("回退到基础BaseModel，多租户功能不可用")
+
+        @classmethod
+        def _apply_scope(cls, query):
+            tenant_id, agent_id = _require_ids_fallback(hasattr(cls, "agent_id"))
+            if hasattr(cls, "tenant_id"):
+                query = query.where(cls.tenant_id == tenant_id)
+            if hasattr(cls, "agent_id"):
+                query = query.where(cls.agent_id == agent_id)
+            return query
+
+        @classmethod
+        def select(cls, *fields):
+            query = super().select(*fields)
+            return cls._apply_scope(query)
+
+        @classmethod
+        def create(cls, **query):
+            tenant_id, agent_id = _require_ids_fallback(hasattr(cls, "agent_id"))
+            if hasattr(cls, "tenant_id"):
+                query.setdefault("tenant_id", tenant_id)
+            if hasattr(cls, "agent_id"):
+                query.setdefault("agent_id", agent_id)
+            return super().create(**query)
+
+        def save(self, *args, **kwargs):
+            tenant_id, agent_id = _require_ids_fallback(hasattr(self.__class__, "agent_id"))
+            if hasattr(self, "tenant_id") and not getattr(self, "tenant_id", None):
+                self.tenant_id = tenant_id
+            if hasattr(self, "agent_id") and not getattr(self, "agent_id", None):
+                self.agent_id = agent_id
+            return super().save(*args, **kwargs)
+
+        @classmethod
+        def update(cls, **update):
+            query = super().update(**update)
+            return cls._apply_scope(query)
+
+        @classmethod
+        def delete(cls):
+            query = super().delete()
+            return cls._apply_scope(query)
+
+        def delete_instance(self, *args, **kwargs):
+            tenant_id, agent_id = _require_ids_fallback(hasattr(self.__class__, "agent_id"))
+            if hasattr(self, "tenant_id") and getattr(self, "tenant_id", None) not in (None, tenant_id):
+                raise RuntimeError("Tenant context mismatch for delete_instance")
+            if hasattr(self, "agent_id") and getattr(self, "agent_id", None) not in (None, agent_id):
+                raise RuntimeError("Agent context mismatch for delete_instance")
+            return super().delete_instance(*args, **kwargs)
+
+    logger.warning("回退到基础BaseModel，但仍强制 tenant/agent 上下文校验")
 
 
 class ChatStreams(BaseModel):

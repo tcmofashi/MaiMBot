@@ -2,16 +2,20 @@ import os
 import tomlkit
 import shutil
 import sys
+import asyncio
+import threading
 
+from collections import OrderedDict
 from datetime import datetime
 from tomlkit import TOMLDocument
 from tomlkit.items import Table, KeyType
 from dataclasses import field, dataclass
 from rich.traceback import install
-from typing import List, Optional
+from typing import Any, Callable, List, Optional
 
 from src.common.logger import get_logger
 from src.common.toml_utils import format_toml_string
+from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id
 from src.config.config_base import ConfigBase
 from src.config.official_configs import (
     BotConfig,
@@ -416,6 +420,235 @@ class APIAdapterConfig(ConfigBase):
         return self.api_providers_dict[provider_name]
 
 
+GlobalConfig = Config
+"""Alias retained for agent配置融合器."""
+
+
+class _BackgroundAsyncRunner:
+    """Runs async loaders inside a dedicated event-loop thread."""
+
+    def __init__(self):
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._thread: Optional[threading.Thread] = None
+        self._lock = threading.Lock()
+
+    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
+        with self._lock:
+            if self._loop and self._thread and self._thread.is_alive():
+                return self._loop
+
+            loop = asyncio.new_event_loop()
+
+            def _run() -> None:
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            thread = threading.Thread(target=_run, name="tenant-config-loop", daemon=True)
+            thread.start()
+            self._loop = loop
+            self._thread = thread
+            return loop
+
+    def run(self, coro: "asyncio.Future[Any]") -> Any:
+        loop = self._ensure_loop()
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result()
+
+
+class _LRUCache:
+    """Minimal thread-safe LRU cache for agent configs."""
+
+    def __init__(self, maxsize: int = 64):
+        self._maxsize = maxsize
+        self._data: "OrderedDict[str, Any]" = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, key: Optional[str], loader: Callable[[], Any]) -> Any:
+        if not key:
+            return None
+        with self._lock:
+            if key in self._data:
+                self._data.move_to_end(key)
+                return self._data[key]
+
+        value = loader()
+        if value is None:
+            return None
+
+        with self._lock:
+            self._data[key] = value
+            if len(self._data) > self._maxsize:
+                self._data.popitem(last=False)
+        return value
+
+    def clear(self, key: Optional[str] = None) -> None:
+        with self._lock:
+            if key:
+                self._data.pop(key, None)
+            else:
+                self._data.clear()
+
+
+class _TenantConfigProvider:
+    """Fetches and caches agent-specific global/model configs."""
+
+    def __init__(self, cache_size: int = 64):
+        self._logger = get_logger("tenant_config_provider")
+        self._runner = _BackgroundAsyncRunner()
+        self._global_cache = _LRUCache(cache_size)
+        self._model_cache = _LRUCache(cache_size)
+        self._global_factory: Optional[Callable[[str], Any]] = None
+        self._model_factory: Optional[Callable[[str], Any]] = None
+        self._factory_error_reported = False
+
+    def _build_route_key(self, tenant_id: Optional[str], agent_id: Optional[str]) -> Optional[str]:
+        if not tenant_id or not agent_id:
+            return None
+        return f"{tenant_id}::{agent_id}"
+
+    def _ensure_factories(self) -> bool:
+        if self._global_factory and self._model_factory:
+            return True
+        try:
+            from src.common.message.config_merger import create_agent_global_config, create_agent_model_config
+
+            self._global_factory = create_agent_global_config
+            self._model_factory = create_agent_model_config
+            self._factory_error_reported = False
+            return True
+        except Exception as exc:  # pragma: no cover - optional dependency guard
+            if not self._factory_error_reported:
+                self._logger.warning("Tenant config loader unavailable: %s", exc)
+                self._factory_error_reported = True
+            return False
+
+    def _load_global(self, agent_id: str) -> Any:
+        if not self._ensure_factories() or not self._global_factory:
+            return None
+        try:
+            return self._runner.run(self._global_factory(agent_id))
+        except Exception as exc:  # pragma: no cover - defensive log
+            self._logger.warning("Failed to load agent global_config (%s): %s", agent_id, exc)
+            return None
+
+    def _load_model(self, agent_id: str) -> Any:
+        if not self._ensure_factories() or not self._model_factory:
+            return None
+        try:
+            return self._runner.run(self._model_factory(agent_id))
+        except Exception as exc:  # pragma: no cover - defensive log
+            self._logger.warning("Failed to load agent model_config (%s): %s", agent_id, exc)
+            return None
+
+    def get_global_config(self, tenant_id: Optional[str], agent_id: Optional[str]) -> Any:
+        # Require both tenant and agent context for tenant-aware lookup.
+        if not tenant_id or not agent_id:
+            raise RuntimeError("Missing tenant_id or agent_id: tenant-aware global config requires both context values")
+        key = self._build_route_key(tenant_id, agent_id)
+        return self._global_cache.get(key, lambda: self._load_global(agent_id or ""))
+
+    def get_model_config(self, tenant_id: Optional[str], agent_id: Optional[str]) -> Any:
+        # Require both tenant and agent context for tenant-aware lookup.
+        if not tenant_id or not agent_id:
+            raise RuntimeError("Missing tenant_id or agent_id: tenant-aware model config requires both context values")
+        key = self._build_route_key(tenant_id, agent_id)
+        return self._model_cache.get(key, lambda: self._load_model(agent_id or ""))
+
+    def clear(
+        self,
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        *,
+        config_type: Optional[str] = None,
+    ) -> None:
+        key = self._build_route_key(tenant_id, agent_id)
+        if key is None and not (tenant_id is None and agent_id is None):
+            self._logger.debug("skip cache clear due to missing tenant/agent context")
+            return
+        if config_type in (None, "global"):
+            self._global_cache.clear(key)
+        if config_type in (None, "model"):
+            self._model_cache.clear(key)
+
+
+_BASIC_VALUE_TYPES = (int, float, bool, str, bytes, type(None))
+
+
+class _ConfigRuntimeAdapter:
+    """Resolves tenant-specific overrides for proxied configs."""
+
+    def __init__(self, source_label: str, fetcher: Callable[[Optional[str], Optional[str]], Any]):
+        self._source_label = source_label
+        self._fetcher = fetcher
+        self._logger = get_logger(f"{source_label}_config_proxy")
+
+    def should_override(self, value: Any) -> bool:
+        return not isinstance(value, _BASIC_VALUE_TYPES)
+
+    def resolve(self, attr_name: str) -> Any:
+        tenant_id = get_current_tenant_id()
+        agent_id = get_current_agent_id()
+        if not tenant_id or not agent_id:
+            raise RuntimeError(
+                "Missing tenant_id or agent_id in context: tenant-aware config access requires both values"
+            )
+        config_obj = self._fetcher(tenant_id, agent_id)
+        if config_obj is None:
+            return None
+        try:
+            return getattr(config_obj, attr_name)
+        except AttributeError:
+            self._logger.debug("Attribute %s missing on tenant config", attr_name)
+            return None
+
+
+class _RuntimeAwareConfig(Config):
+    """`global_config` wrapper that hooks getattr for tenant overrides."""
+
+    _runtime_proxy: Optional[_ConfigRuntimeAdapter] = None
+    _RESERVED = {
+        "__dict__",
+        "__class__",
+        "__annotations__",
+        "__dataclass_fields__",
+        "__dataclass_params__",
+        "__module__",
+    }
+
+    def __getattribute__(self, item):  # noqa: D401
+        if item.startswith("_") or item in self._RESERVED:
+            return super().__getattribute__(item)
+
+        base_value = super().__getattribute__(item)
+        proxy = super().__getattribute__("_runtime_proxy")
+        if proxy and proxy.should_override(base_value):
+            override = proxy.resolve(item)
+            if override is not None:
+                return override
+        return base_value
+
+
+class _RuntimeAwareAPIAdapterConfig(APIAdapterConfig):
+    """`model_config` wrapper with tenant-aware getattr hook."""
+
+    _runtime_proxy: Optional[_ConfigRuntimeAdapter] = None
+
+    def __getattribute__(self, item):  # noqa: D401
+        if item.startswith("_"):
+            return super().__getattribute__(item)
+
+        base_value = super().__getattribute__(item)
+        proxy = super().__getattribute__("_runtime_proxy")
+        if proxy and proxy.should_override(base_value):
+            override = proxy.resolve(item)
+            if override is not None:
+                return override
+        return base_value
+
+
+_TENANT_CONFIG_PROVIDER = _TenantConfigProvider()
+
+
 def load_config(config_path: str) -> Config:
     """
     加载配置文件
@@ -465,3 +698,26 @@ logger.info("正在品鉴配置文件...")
 global_config = load_config(config_path=os.path.join(CONFIG_DIR, "bot_config.toml"))
 model_config = api_ada_load_config(config_path=os.path.join(CONFIG_DIR, "model_config.toml"))
 logger.info("非常的新鲜，非常的美味！")
+
+try:
+    global_config.__class__ = _RuntimeAwareConfig
+    global_config._runtime_proxy = _ConfigRuntimeAdapter("global", _TENANT_CONFIG_PROVIDER.get_global_config)
+except Exception as exc:  # pragma: no cover - defensive guard
+    logger.warning("无法注入 global_config 运行时代理: %s", exc)
+
+try:
+    model_config.__class__ = _RuntimeAwareAPIAdapterConfig
+    model_config._runtime_proxy = _ConfigRuntimeAdapter("model", _TENANT_CONFIG_PROVIDER.get_model_config)
+except Exception as exc:  # pragma: no cover - defensive guard
+    logger.warning("无法注入 model_config 运行时代理: %s", exc)
+
+
+def clear_config_runtime_cache(
+    agent_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+    *,
+    config_type: Optional[str] = None,
+) -> None:
+    """Clear cached tenant configs; useful for tests or manual refresh."""
+
+    _TENANT_CONFIG_PROVIDER.clear(tenant_id, agent_id, config_type=config_type)

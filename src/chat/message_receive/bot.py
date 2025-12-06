@@ -125,7 +125,11 @@ class ChatBot:
                         logger.warning(f"命令执行失败: {command_class.__name__} - {response}")
 
                     # 根据命令的拦截设置决定是否继续处理消息
-                    return True, response, not bool(intercept_message_level)  # 找到命令，根据intercept_message决定是否继续
+                    return (
+                        True,
+                        response,
+                        not bool(intercept_message_level),
+                    )  # 找到命令，根据intercept_message决定是否继续
 
                 except Exception as e:
                     logger.error(f"执行命令时出错: {command_class.__name__} - {e}")
@@ -289,6 +293,8 @@ class ChatBot:
             )
 
             message.update_chat_stream(chat)
+
+            # 活跃上报已迁移到统一入口（第一层 handler / common/message/api.py）
 
             # if await self.check_ban_content(message):
             #     logger.warning(f"检测到消息中含有违法，色情，暴力，反动，敏感内容，消息内容：{message.processed_plain_text}，发送者：{message.message_info.user_info.user_nickname}")

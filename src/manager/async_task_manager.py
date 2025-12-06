@@ -12,7 +12,9 @@ logger = get_logger("async_task_manager")
 class AsyncTask:
     """异步任务基类"""
 
-    def __init__(self, task_name: str | None = None, wait_before_start: int = 0, run_interval: int = 0):
+    def __init__(
+        self, task_name: str | None = None, wait_before_start: int = 0, run_interval: int = 0, per_tenant: bool = True
+    ):
         self.task_name: str = task_name or self.__class__.__name__
         """任务名称"""
 
@@ -22,12 +24,31 @@ class AsyncTask:
         self.run_interval: int = run_interval
         """多次运行的时间间隔（单位：秒，设为0则仅运行一次）"""
 
+        self.per_tenant: bool = per_tenant
+        """如果为 True（默认），任务将在执行时按活跃 tenant-agent 列表并发为每个对运行一次（使用 run_for）。
+        如果找不到任何活跃记录，则本次执行将完全跳过（不会回退为单实例执行）。"""
+
     @abstractmethod
     async def run(self):
         """
         任务的执行过程
         """
         pass
+
+    async def run_for(self, tenant_id: str, agent_id: str):
+        """默认的 per-tenant 运行实现：在 tenant/agent 上下文中调用 `run`。
+
+        子类可重载实现更细粒度的 per-agent 行为。
+        """
+        try:
+            from src.common.message.tenant_context import tenant_context_async
+        except Exception:
+            # 如果上下文不可用，直接调用 run
+            await self.run()
+            return
+
+        async with tenant_context_async(tenant_id, agent_id):
+            await self.run()
 
     async def start_task(self, abort_flag: asyncio.Event):
         if self.wait_before_start > 0:
@@ -105,8 +126,62 @@ class AsyncTaskManager:
 
                 logger.info(f"成功结束任务 '{task.task_name}'")
 
+            # 创建执行器：如果任务声明为 per_tenant，则在每次 run 时获取活跃对并并发执行
+            async def _manager_wrapper():
+                if task.wait_before_start > 0:
+                    await asyncio.sleep(task.wait_before_start)
+
+                while not self.abort_flag.is_set():
+                    try:
+                        if task.per_tenant:
+                            # 尝试获取活跃 tenant-agent 列表
+                            active_records = None
+                            try:
+                                # 动态导入 maim_db 的异步活跃接口
+                                import sys as _sys, os as _os
+
+                                _maim_db_path = _os.path.abspath(
+                                    _os.path.join(_os.path.dirname(__file__), "..", "..", "maim_db")
+                                )
+                                if _maim_db_path not in _sys.path:
+                                    _sys.path.insert(0, _maim_db_path)
+                                from maim_db.src.core import AsyncAgentActiveState  # type: ignore
+
+                                active_records = await AsyncAgentActiveState.list_active()
+                            except Exception:
+                                active_records = None
+
+                            if active_records:
+                                coros = []
+                                for rec in active_records:
+                                    try:
+                                        coros.append(task.run_for(rec.tenant_id, rec.agent_id))
+                                    except Exception:
+                                        # 忽略单个生成失败，继续其他
+                                        logger.exception("为活跃记录生成协程失败")
+
+                                if coros:
+                                    await asyncio.gather(*coros)
+                                else:
+                                    # 没有有效协程，记录并跳过
+                                    logger.debug(f"任务 '{task.task_name}' 没有生成任何 per-tenant 协程，跳过本次执行")
+                            else:
+                                # 无活跃记录，按新策略完全不运行任何任务
+                                logger.debug(
+                                    f"任务 '{task.task_name}' 未找到活跃 tenant-agent，按 per_tenant 策略跳过本次执行"
+                                )
+                        else:
+                            await task.run()
+                    except Exception as e:
+                        logger.error(f"任务 '{task.task_name}' 执行时异常: {e}", exc_info=True)
+
+                    if task.run_interval > 0:
+                        await asyncio.sleep(task.run_interval)
+                    else:
+                        break
+
             # 创建新任务
-            task_inst = asyncio.create_task(task.start_task(self.abort_flag))
+            task_inst = asyncio.create_task(_manager_wrapper())
             task_inst.set_name(task.task_name)
             task_inst.add_done_callback(self._remove_task_call_back)  # 添加完成回调函数-完成任务后自动移除任务
             task_inst.add_done_callback(

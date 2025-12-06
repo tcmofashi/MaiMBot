@@ -1,14 +1,102 @@
+"""
+Message-related helpers for tenant/agent active reporting.
+
+提供一个统一的入口 `upsert_active_from_message`：从 `MessageRecv` 中
+读取 `message_info.additional_config` 的 `tenant_id`/`agent_id`，若缺失
+则回退到 `tenant_context` 获取当前上下文；再调用 `maim_db` 的
+`AsyncAgentActiveState.upsert` 上报活跃（默认 12 小时）。
+"""
+
+from __future__ import annotations
+
 import os
+import sys
+from typing import Optional
+
+from src.common.logger import get_logger
+from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id, tenant_context_async
+
+logger = get_logger(__name__)
+
+
+async def _import_maimdb_active():
+    """尝试延迟导入 maim_db 的 AsyncAgentActiveState，失败返回 None"""
+    try:
+        maim_db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "maim_db"))
+        if maim_db_path not in sys.path:
+            sys.path.insert(0, maim_db_path)
+        from maim_db.src.core import AsyncAgentActiveState  # type: ignore
+
+        return AsyncAgentActiveState
+    except Exception as e:
+        logger.debug(f"无法导入 maim_db 活跃接口: {e}")
+        return None
+
+
+async def upsert_active_from_message(message, ttl_seconds: int = 12 * 3600) -> Optional[bool]:
+    """从消息中提取 tenant_id/agent_id 并上报活跃。
+
+    优先级：`message.message_info.additional_config` -> contextvar 上下文
+
+    返回 True 表示成功上报，False 表示未找到 tenant/agent，None 表示上报失败（导入或执行异常）。
+    """
+    try:
+        add_cfg = getattr(message.message_info, "additional_config", None) or {}
+        tenant_id = add_cfg.get("tenant_id")
+        agent_id = add_cfg.get("agent_id")
+
+        # 回退到上下文获取
+        if not tenant_id:
+            tenant_id = get_current_tenant_id()
+        if not agent_id:
+            agent_id = get_current_agent_id()
+
+        if not tenant_id or not agent_id:
+            logger.debug("没有找到 tenant_id 或 agent_id，跳过活跃上报")
+            return False
+
+        AsyncAgentActiveState = await _import_maimdb_active()
+        if not AsyncAgentActiveState:
+            logger.debug("maim_db AsyncAgentActiveState 不可用，无法上报活跃")
+            return None
+
+        await AsyncAgentActiveState.upsert(tenant_id=tenant_id, agent_id=agent_id, ttl_seconds=ttl_seconds)
+        logger.debug(f"已上报活跃: tenant={tenant_id} agent={agent_id} ttl={ttl_seconds}")
+        return True
+    except Exception as e:
+        logger.exception(f"上报活跃时发生异常: {e}")
+        return None
+
+
+__all__ = [
+    "upsert_active_from_message",
+    "convert_message_sending_to_api_message",
+]
 import asyncio
 import aiohttp
+import json
 import toml
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple, TYPE_CHECKING
 
 # API-Server Version 导入
 from maim_message.server import WebSocketServer, create_server_config
-from maim_message.message import APIMessageBase
+from maim_message.message import (
+    APIMessageBase,
+    MessageDim,
+    BaseMessageInfo as APIBaseMessageInfo,
+    Seg as APISeg,
+    SenderInfo as APISenderInfo,
+    ReceiverInfo as APIReceiverInfo,
+    GroupInfo as APIGroupInfo,
+    UserInfo as APIUserInfo,
+    FormatInfo as APIFormatInfo,
+    TemplateInfo as APITemplateInfo,
+)
 
 from src.common.logger import get_logger
+
+if TYPE_CHECKING:  # pragma: no cover
+    from src.chat.message_receive.message import MessageSending
 
 global_api = None
 _config_cache = None
@@ -244,14 +332,53 @@ async def message_handler(message: APIMessageBase, metadata: Dict[str, Any]) -> 
     """消息处理回调函数 - 将APIMessageBase转换为MessageBase并调用原有处理流程"""
     logger = get_logger("message_handler")
     try:
+        tenant_id: Optional[str] = None
+        agent_id: Optional[str] = None
+        # 第一层：尝试从 API Key 提前解析 tenant/agent 并上报活跃
+        try:
+            api_key = metadata.get("api_key") or getattr(message.message_dim, "api_key", None)
+            if api_key:
+                parsed = await parse_api_key(api_key)
+            else:
+                parsed = None
+
+            if parsed:
+                tenant_id = parsed.get("tenant_id")
+                agent_id = parsed.get("agent_id")
+
+            if tenant_id and agent_id:
+                # 使用一个最小的消息对象包装，交给统一上报函数处理
+                from types import SimpleNamespace
+
+                stub = SimpleNamespace()
+                stub.message_info = SimpleNamespace()
+                stub.message_info.additional_config = {"tenant_id": tenant_id, "agent_id": agent_id}
+                try:
+                    await upsert_active_from_message(stub, ttl_seconds=12 * 3600)
+                except Exception:
+                    logger.debug("第一层上报活跃失败（upsert_active_from_message）")
+        except Exception:
+            logger.debug("在第一层尝试解析 API Key 并上报活跃时出错，继续后续处理")
+
         # 转换消息格式
         legacy_message = convert_api_message_to_legacy(message)
+
+        # 将租户上下文信息注入 legacy message，供下游依赖 additional_config 的模块读取
+        additional_cfg = legacy_message.setdefault("message_info", {}).setdefault("additional_config", {})
+        if tenant_id and "tenant_id" not in additional_cfg:
+            additional_cfg["tenant_id"] = tenant_id
+        if agent_id and "agent_id" not in additional_cfg:
+            additional_cfg["agent_id"] = agent_id
 
         # 调用原有的消息处理逻辑
         from src.chat.message_receive.bot import get_message_handler
 
         handler = get_message_handler()
-        await handler.message_process(legacy_message)
+        if tenant_id and agent_id:
+            async with tenant_context_async(tenant_id, agent_id):
+                await handler.message_process(legacy_message)
+        else:
+            await handler.message_process(legacy_message)
 
         logger.info(f"消息处理完成: {message.message_info.message_id}")
 
@@ -292,7 +419,178 @@ def convert_api_message_to_legacy(api_message: APIMessageBase) -> Dict[str, Any]
             "accept_format": api_message.message_info.format_info.accept_format,
         }
 
+    raw_additional_cfg = getattr(api_message.message_info, "additional_config", None)
+    additional_cfg: Dict[str, Any] = {}
+    if isinstance(raw_additional_cfg, dict):
+        additional_cfg = dict(raw_additional_cfg)
+
+    message_dim_dict = {
+        "api_key": api_message.message_dim.api_key,
+        "platform": api_message.message_dim.platform,
+    }
+
+    additional_cfg.setdefault("api_key", api_message.message_dim.api_key)
+    additional_cfg.setdefault("api_platform", api_message.message_dim.platform)
+
+    existing_dim = additional_cfg.get("message_dim")
+    if isinstance(existing_dim, dict):
+        existing_dim.setdefault("api_key", api_message.message_dim.api_key)
+        existing_dim.setdefault("platform", api_message.message_dim.platform)
+    else:
+        additional_cfg["message_dim"] = message_dim_dict
+
+    if additional_cfg:
+        legacy_data["message_info"]["additional_config"] = additional_cfg
+
     return legacy_data
+
+
+def _normalize_additional_config(additional_config: Any) -> Dict[str, Any]:
+    if not additional_config:
+        return {}
+    if isinstance(additional_config, dict):
+        return additional_config
+    if isinstance(additional_config, str):
+        try:
+            parsed = json.loads(additional_config)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return {}
+    return {}
+
+
+def _extract_route_from_additional(additional_config: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    if not additional_config:
+        return None, None
+
+    message_dim_cfg = additional_config.get("message_dim")
+    if not isinstance(message_dim_cfg, dict):
+        message_dim_cfg = {}
+
+    api_key = additional_config.get("api_key") or message_dim_cfg.get("api_key")
+    platform = additional_config.get("api_platform") or message_dim_cfg.get("platform")
+    return api_key, platform
+
+
+def _iter_route_candidates(message: "MessageSending"):
+    candidates = [message]
+    candidates.append(getattr(message, "reply", None))
+
+    stream = getattr(message, "chat_stream", None)
+    if stream:
+        context = getattr(stream, "context", None)
+        if context is not None:
+            # ChatMessageContext 提供 message 属性与 get_last_message 方法
+            context_message = getattr(context, "message", None)
+            if context_message:
+                candidates.append(context_message)
+            getter = getattr(context, "get_last_message", None)
+            if callable(getter):
+                try:
+                    last_msg = getter()
+                    if last_msg:
+                        candidates.append(last_msg)
+                except Exception:
+                    pass
+
+    seen = set()
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        ident = id(candidate)
+        if ident in seen:
+            continue
+        seen.add(ident)
+        yield candidate
+
+
+def _resolve_api_route(message: "MessageSending") -> Tuple[str, str]:
+    last_platform: Optional[str] = None
+    for candidate in _iter_route_candidates(message):
+        add_cfg = _normalize_additional_config(getattr(candidate.message_info, "additional_config", None))
+        api_key, platform = _extract_route_from_additional(add_cfg)
+        if api_key:
+            resolved_platform = platform or getattr(candidate.message_info, "platform", None)
+            if not resolved_platform:
+                resolved_platform = getattr(message.message_info, "platform", None)
+            if not resolved_platform:
+                resolved_platform = last_platform
+            if not resolved_platform:
+                raise ValueError("无法确定消息路由的平台信息")
+            return api_key, resolved_platform
+        if platform:
+            last_platform = platform
+
+    raise ValueError("无法在消息上下文中找到 API Key，请确保 additional_config 包含 api_key/api_platform 信息")
+
+
+def convert_message_sending_to_api_message(message: "MessageSending") -> APIMessageBase:
+    api_key, target_platform = _resolve_api_route(message)
+
+    chat_stream = getattr(message, "chat_stream", None)
+    group_context = getattr(message.message_info, "group_info", None) or (
+        chat_stream.group_info if chat_stream else None
+    )
+
+    bot_user_info = getattr(message.message_info, "user_info", None)
+    sender_info = None
+    if bot_user_info:
+        sender_group_info = None
+        if group_context:
+            sender_group_info = APIGroupInfo.from_dict(group_context.to_dict())  # type: ignore[arg-type]
+
+        sender_info = APISenderInfo(
+            user_info=APIUserInfo.from_dict(bot_user_info.to_dict()),  # type: ignore[arg-type]
+            group_info=sender_group_info,
+        )
+
+    receiver_user = None
+    receiver_group = None
+    if chat_stream and getattr(chat_stream, "user_info", None):
+        receiver_user = APIUserInfo.from_dict(chat_stream.user_info.to_dict())  # type: ignore[arg-type]
+    target_group = group_context
+    if target_group:
+        receiver_group = APIGroupInfo.from_dict(target_group.to_dict())  # type: ignore[arg-type]
+
+    receiver_info = None
+    if receiver_user or receiver_group:
+        receiver_info = APIReceiverInfo(user_info=receiver_user, group_info=receiver_group)
+
+    format_info = None
+    if getattr(message.message_info, "format_info", None):
+        format_info = APIFormatInfo.from_dict(message.message_info.format_info.to_dict())  # type: ignore[arg-type]
+
+    template_info = None
+    if getattr(message.message_info, "template_info", None):
+        template_info = APITemplateInfo.from_dict(message.message_info.template_info.to_dict())  # type: ignore[arg-type]
+
+    additional_config = getattr(message.message_info, "additional_config", None)
+
+    api_message_info = APIBaseMessageInfo(
+        platform=message.message_info.platform,
+        message_id=message.message_info.message_id,
+        time=message.message_info.time,
+        format_info=format_info,
+        template_info=template_info,
+        additional_config=additional_config,
+        sender_info=sender_info,
+        receiver_info=receiver_info,
+    )
+
+    api_segment = APISeg.from_dict(message.message_segment.to_dict())
+
+    platform = target_platform or api_message_info.platform or message.message_info.platform
+    if not platform:
+        raise ValueError("缺少 message_dim 平台信息，无法发送消息")
+
+    message_dim = MessageDim(api_key=api_key, platform=platform)
+
+    return APIMessageBase(
+        message_info=api_message_info,
+        message_segment=api_segment,
+        message_dim=message_dim,
+    )
 
 
 def get_global_api() -> WebSocketServer:  # sourcery skip: extract-method

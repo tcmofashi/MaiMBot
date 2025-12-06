@@ -13,7 +13,7 @@ from src.common.data_models.llm_data_model import LLMGenerationDataModel
 from src.config.config import global_config, model_config
 from src.llm_models.utils_model import LLMRequest
 from src.chat.message_receive.message import UserInfo, Seg, MessageRecv, MessageSending
-from src.chat.message_receive.chat_stream import ChatStream
+from src.chat.message_receive.chat_stream import ChatStream, ChatManager
 from src.chat.message_receive.uni_message_sender import UniversalMessageSender
 from src.chat.utils.timer_calculator import Timer  # <--- Import Timer
 from src.chat.utils.utils import get_chat_type_and_target_info
@@ -643,15 +643,7 @@ class DefaultReplyer:
             # 判断是否为群聊
             is_group = stream_type == "group"
 
-            # 使用与 ChatStream.get_stream_id 相同的逻辑生成 chat_id
-            import hashlib
-
-            if is_group:
-                components = [platform, str(id_str)]
-            else:
-                components = [platform, str(id_str), "private"]
-            key = "_".join(components)
-            chat_id = hashlib.md5(key.encode()).hexdigest()
+            chat_id = ChatManager().get_stream_id(platform, str(id_str), is_group=is_group)
 
             return chat_id, prompt_content
 
