@@ -15,7 +15,7 @@ import uuid
 
 from typing import Optional, Tuple, List, Dict, Any
 from src.common.logger import get_logger
-from src.chat.emoji_system.emoji_manager import get_emoji_manager, EMOJI_DIR
+from src.chat.emoji_system.emoji_manager import get_emoji_manager, get_emoji_storage_dir
 from src.chat.utils.utils_image import image_path_to_base64, base64_to_image
 
 logger = get_logger("emoji_api")
@@ -361,7 +361,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
             }
 
         # 3. 确保emoji目录存在
-        os.makedirs(EMOJI_DIR, exist_ok=True)
+        emoji_dir = get_emoji_storage_dir()
 
         # 4. 生成文件名
         if not filename:
@@ -385,7 +385,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
             filename = f"{filename}.png"  # 默认使用png格式
 
         # 检查文件名是否已存在，如果存在则重新生成短标识符
-        temp_file_path = os.path.join(EMOJI_DIR, filename)
+        temp_file_path = os.path.join(emoji_dir, filename)
         attempts = 0
         max_attempts = 10
         while os.path.exists(temp_file_path) and attempts < max_attempts:
@@ -401,7 +401,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
             # 去掉原来的标识符，添加新的
             base_name = name_part.rsplit("_", 1)[0]  # 移除最后一个_后的部分
             filename = f"{base_name}_{short_id}{ext}"
-            temp_file_path = os.path.join(EMOJI_DIR, filename)
+            temp_file_path = os.path.join(emoji_dir, filename)
             attempts += 1
 
         # 如果还是冲突，使用UUID作为备用方案
@@ -410,7 +410,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
             name_part, ext = os.path.splitext(filename)
             base_name = name_part.rsplit("_", 1)[0]
             filename = f"{base_name}_{uuid_short}{ext}"
-            temp_file_path = os.path.join(EMOJI_DIR, filename)
+            temp_file_path = os.path.join(emoji_dir, filename)
 
             # 如果UUID方案也冲突，添加序号
             counter = 1
@@ -418,7 +418,7 @@ async def register_emoji(image_base64: str, filename: Optional[str] = None) -> D
             while os.path.exists(temp_file_path):
                 name_part, ext = os.path.splitext(original_filename)
                 filename = f"{name_part}_{counter}{ext}"
-                temp_file_path = os.path.join(EMOJI_DIR, filename)
+                temp_file_path = os.path.join(emoji_dir, filename)
                 counter += 1
 
                 # 防止无限循环，最多尝试100次

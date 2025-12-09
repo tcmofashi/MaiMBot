@@ -10,6 +10,7 @@ from src.chat.utils.prompt_builder import Prompt, global_prompt_manager
 from src.llm_models.payload_content.message import MessageBuilder, RoleType, Message
 from src.plugin_system.apis import llm_api
 from src.llm_models.utils_model import LLMRequest
+from src.manager.async_task_manager import AsyncTask
 
 
 logger = get_logger("dream_agent")
@@ -394,7 +395,13 @@ def init_dream_tools() -> None:
             "finish_maintenance",
             "结束本次 dream 维护任务。当你认为当前 chat_id 下的维护工作已经完成，没有更多需要整理、合并或修改的内容时，调用此工具来主动结束本次运行。",
             [
-                ("reason", ToolParamType.STRING, "结束维护的原因说明（可选），例如 '已完成所有记录的整理' 或 '当前记录质量良好，无需进一步维护'。", False, None),
+                (
+                    "reason",
+                    ToolParamType.STRING,
+                    "结束维护的原因说明（可选），例如 '已完成所有记录的整理' 或 '当前记录质量良好，无需进一步维护'。",
+                    False,
+                    None,
+                ),
             ],
             finish_maintenance,
         )
@@ -412,7 +419,7 @@ async def run_dream_agent_once(
     """
     if max_iterations is None:
         max_iterations = global_config.dream.max_iterations
-    
+
     start_ts = time.time()
     logger.info(f"[dream] 开始对 chat_id={chat_id} 进行 dream 维护，最多迭代 {max_iterations} 轮")
 
@@ -462,13 +469,17 @@ async def run_dream_agent_once(
         conversation_messages.append(round_info_builder.build())
 
         # 调用 LLM 让其决定是否要使用工具
-        success, response, reasoning_content, model_name, tool_calls = (
-            await llm_api.generate_with_model_with_tools_by_message_factory(
-                message_factory,
-                model_config=model_config.model_task_config.tool_use,
-                tool_options=tool_defs,
-                request_type="dream.react",
-            )
+        (
+            success,
+            response,
+            reasoning_content,
+            model_name,
+            tool_calls,
+        ) = await llm_api.generate_with_model_with_tools_by_message_factory(
+            message_factory,
+            model_config=model_config.model_task_config.tool_use,
+            tool_options=tool_defs,
+            request_type="dream.react",
         )
 
         if not success:
@@ -566,7 +577,7 @@ async def _generate_dream_summary(
     """生成梦境总结并输出到日志"""
     try:
         import json
-        
+
         # 第一步：建立工具调用结果映射 (call_id -> result)
         tool_results_map: Dict[str, str] = {}
         for msg in conversation_messages:
@@ -578,11 +589,11 @@ async def _generate_dream_summary(
                     else:
                         content = str(msg.content)
                 tool_results_map[msg.tool_call_id] = content
-        
+
         # 第二步：详细记录所有工具调用操作和结果到日志
         tool_call_count = 0
         logger.info(f"[dream][工具调用详情] 开始记录 chat_id={chat_id} 的所有工具调用操作：")
-        
+
         for msg in conversation_messages:
             if msg.role == RoleType.Assistant and msg.tool_calls:
                 tool_call_count += 1
@@ -590,34 +601,38 @@ async def _generate_dream_summary(
                 thought_content = ""
                 if msg.content:
                     if isinstance(msg.content, list) and msg.content:
-                        thought_content = msg.content[0].text if hasattr(msg.content[0], "text") else str(msg.content[0])
+                        thought_content = (
+                            msg.content[0].text if hasattr(msg.content[0], "text") else str(msg.content[0])
+                        )
                     else:
                         thought_content = str(msg.content)
-                
+
                 logger.info(f"[dream][工具调用详情] === 第 {tool_call_count} 组工具调用 ===")
                 if thought_content:
-                    logger.info(f"[dream][工具调用详情] 思考内容：{thought_content[:500]}{'...' if len(thought_content) > 500 else ''}")
-                
+                    logger.info(
+                        f"[dream][工具调用详情] 思考内容：{thought_content[:500]}{'...' if len(thought_content) > 500 else ''}"
+                    )
+
                 # 记录每个工具调用的详细信息
                 for idx, tool_call in enumerate(msg.tool_calls, 1):
                     tool_name = tool_call.func_name
                     tool_args = tool_call.args or {}
                     tool_call_id = tool_call.call_id
                     tool_result = tool_results_map.get(tool_call_id, "未找到执行结果")
-                    
+
                     # 格式化参数
                     try:
                         args_str = json.dumps(tool_args, ensure_ascii=False, indent=2) if tool_args else "无参数"
                     except Exception:
                         args_str = str(tool_args)
-                    
+
                     logger.info(f"[dream][工具调用详情] --- 工具 {idx}: {tool_name} ---")
                     logger.info(f"[dream][工具调用详情] 调用参数：\n{args_str}")
                     logger.info(f"[dream][工具调用详情] 执行结果：\n{tool_result}")
                     logger.info(f"[dream][工具调用详情] {'-' * 60}")
-        
+
         logger.info(f"[dream][工具调用详情] 共记录了 {tool_call_count} 组工具调用操作")
-        
+
         # 第三步：构建对话历史摘要（用于生成梦境）
         conversation_summary = []
         for msg in conversation_messages:
@@ -625,11 +640,11 @@ async def _generate_dream_summary(
             content = ""
             if msg.content:
                 content = msg.content[0].text if isinstance(msg.content, list) and msg.content else str(msg.content)
-            
+
             if role == "user" and "轮次信息" in content:
                 # 跳过轮次信息消息
                 continue
-            
+
             if role == "assistant":
                 # 只保留思考内容，简化工具调用信息
                 if content:
@@ -642,9 +657,9 @@ async def _generate_dream_summary(
                     # 截取前300字符
                     content_preview = content[:300] + ("..." if len(content) > 300 else "")
                     conversation_summary.append(f"[工具执行] {content_preview}")
-        
+
         conversation_text = "\n".join(conversation_summary[-20:])  # 只保留最后20条消息
-        
+
         # 使用 Prompt 管理器格式化梦境生成 prompt
         dream_prompt = await global_prompt_manager.format_prompt(
             "dream_summary_prompt",
@@ -661,12 +676,12 @@ async def _generate_dream_summary(
             max_tokens=512,
             temperature=0.8,
         )
-        
+
         if dream_content:
             logger.info(f"[dream][梦境总结] 对 chat_id={chat_id} 的整理过程梦境：\n{dream_content}")
         else:
             logger.warning("[dream][梦境总结] 未能生成梦境总结")
-            
+
     except Exception as e:
         logger.error(f"[dream][梦境总结] 生成梦境总结失败: {e}", exc_info=True)
 
@@ -674,12 +689,7 @@ async def _generate_dream_summary(
 def _pick_random_chat_id() -> Optional[str]:
     """从 ChatHistory 中随机选择一个 chat_id，用于 dream agent 本次维护"""
     try:
-        rows = (
-            ChatHistory.select(ChatHistory.chat_id)
-            .distinct()
-            .order_by(ChatHistory.chat_id)
-            .limit(200)
-        )
+        rows = ChatHistory.select(ChatHistory.chat_id).distinct().order_by(ChatHistory.chat_id).limit(200)
         ids = [r.chat_id for r in rows]
         if not ids:
             logger.warning("[dream] ChatHistory 中暂无可用 chat_id，本轮 dream 任务跳过。")
@@ -730,46 +740,26 @@ async def run_dream_cycle_once() -> None:
     )
 
 
-async def start_dream_scheduler(
-    first_delay_seconds: int = 60,
-    interval_seconds: Optional[int] = None,
-    stop_event: Optional[asyncio.Event] = None,
-) -> None:
-    """
-    dream 调度器：
-    - 程序启动后先等待 first_delay_seconds（默认 60s）
-    - 然后每隔 interval_seconds（如果为 None，则使用配置文件中的值，默认 30 分钟）运行一次 dream agent 周期
-    - 如果提供 stop_event，则在 stop_event 被 set() 后优雅退出循环
-    """
-    if interval_seconds is None:
-        interval_seconds = global_config.dream.interval_minutes * 60
-    
-    logger.info(
-        f"[dream] dream 调度器启动：首次延迟 {first_delay_seconds}s，之后每隔 {interval_seconds}s ({interval_seconds // 60} 分钟) 运行一次 dream agent"
-    )
+class DreamMaintenanceTask(AsyncTask):
+    """基于 AsyncTaskManager 的 dream 维护任务。"""
 
-    try:
-        await asyncio.sleep(first_delay_seconds)
-        while True:
-            if stop_event is not None and stop_event.is_set():
-                logger.info("[dream] 收到停止事件，结束 dream 调度器循环。")
-                break
+    DEFAULT_FIRST_DELAY = 60
 
-            start_ts = time.time()
-            try:
-                await run_dream_cycle_once()
-            except Exception as e:
-                logger.error(f"[dream] 单次 dream 周期执行异常: {e}")
+    def __init__(self):
+        interval_seconds = max(60, global_config.dream.interval_minutes * 60)
+        super().__init__(
+            task_name="Dream Maintenance Task",
+            wait_before_start=self.DEFAULT_FIRST_DELAY,
+            run_interval=interval_seconds,
+            per_tenant=True,
+        )
 
-            elapsed = time.time() - start_ts
-            # 保证两次执行之间至少间隔 interval_seconds
-            to_sleep = max(0.0, interval_seconds - elapsed)
-            await asyncio.sleep(to_sleep)
-    except asyncio.CancelledError:
-        logger.info("[dream] dream 调度器任务被取消，准备退出。")
-        raise
+    async def run(self):
+        try:
+            await run_dream_cycle_once()
+        except Exception as exc:
+            logger.error(f"[dream] dream 维护任务执行失败: {exc}", exc_info=True)
 
 
 # 初始化提示词
 init_dream_prompts()
-

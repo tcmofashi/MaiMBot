@@ -60,7 +60,7 @@ class OnlineTimeRecordTask(AsyncTask):
     """在线时间记录任务"""
 
     def __init__(self):
-        super().__init__(task_name="Online Time Record Task", run_interval=60)
+        raise RuntimeError("OnlineTimeRecordTask 已被禁用")
 
         self.record_id: int | None = None  # Changed to int for Peewee's default ID
         """记录ID"""
@@ -174,8 +174,7 @@ class StatisticOutputTask(AsyncTask):
     SEP_LINE = "-" * 84
 
     def __init__(self, record_file_path: str = "maibot_statistics.html"):
-        # 延迟300秒启动，运行间隔300秒
-        super().__init__(task_name="Statistics Data Output Task", wait_before_start=0, run_interval=300)
+        raise RuntimeError("StatisticOutputTask 已被禁用")
 
         self.name_mapping: Dict[str, Tuple[str, float]] = {}
         """
@@ -746,7 +745,7 @@ class StatisticOutputTask(AsyncTask):
         data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}"
 
         total_replies = stats.get(TOTAL_REPLY_CNT, 0)
-        
+
         output = [
             "按模型分类统计:",
             " 模型名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数",
@@ -759,11 +758,11 @@ class StatisticOutputTask(AsyncTask):
             cost = stats[COST_BY_MODEL][model_name]
             avg_time_cost = stats[AVG_TIME_COST_BY_MODEL][model_name]
             std_time_cost = stats[STD_TIME_COST_BY_MODEL][model_name]
-            
+
             # 计算每次回复平均值
             avg_count_per_reply = count / total_replies if total_replies > 0 else 0.0
             avg_tokens_per_reply = tokens / total_replies if total_replies > 0 else 0.0
-            
+
             # 格式化大数字
             formatted_count = _format_large_number(count)
             formatted_in_tokens = _format_large_number(in_tokens)
@@ -771,7 +770,7 @@ class StatisticOutputTask(AsyncTask):
             formatted_tokens = _format_large_number(tokens)
             formatted_avg_count = _format_large_number(avg_count_per_reply) if total_replies > 0 else "N/A"
             formatted_avg_tokens = _format_large_number(avg_tokens_per_reply) if total_replies > 0 else "N/A"
-            
+
             output.append(
                 data_fmt.format(
                     name,
@@ -800,7 +799,7 @@ class StatisticOutputTask(AsyncTask):
         data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}"
 
         total_replies = stats.get(TOTAL_REPLY_CNT, 0)
-        
+
         output = [
             "按模块分类统计:",
             " 模块名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数",
@@ -813,11 +812,11 @@ class StatisticOutputTask(AsyncTask):
             cost = stats[COST_BY_MODULE][module_name]
             avg_time_cost = stats[AVG_TIME_COST_BY_MODULE][module_name]
             std_time_cost = stats[STD_TIME_COST_BY_MODULE][module_name]
-            
+
             # 计算每次回复平均值
             avg_count_per_reply = count / total_replies if total_replies > 0 else 0.0
             avg_tokens_per_reply = tokens / total_replies if total_replies > 0 else 0.0
-            
+
             # 格式化大数字
             formatted_count = _format_large_number(count)
             formatted_in_tokens = _format_large_number(in_tokens)
@@ -825,7 +824,7 @@ class StatisticOutputTask(AsyncTask):
             formatted_tokens = _format_large_number(tokens)
             formatted_avg_count = _format_large_number(avg_count_per_reply) if total_replies > 0 else "N/A"
             formatted_avg_tokens = _format_large_number(avg_tokens_per_reply) if total_replies > 0 else "N/A"
-            
+
             output.append(
                 data_fmt.format(
                     name,

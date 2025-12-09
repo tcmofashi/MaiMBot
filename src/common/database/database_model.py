@@ -165,6 +165,10 @@ class ChatStreams(BaseModel):
     用于存储流式记录数据的模型，类似于提供的 MongoDB 结构。
     """
 
+    # BaseModel 会在 save/create 时自动注入 tenant/agent；这里显式声明字段便于迁移
+    tenant_id = TextField(index=True)
+    agent_id = TextField(index=True, null=True)
+
     # stream_id: "a544edeb1a9b73e3e1d77dff36e41264"
     # 假设 stream_id 是唯一的，并为其创建索引以提高查询性能。
     stream_id = TextField(unique=True, index=True)
@@ -383,6 +387,44 @@ class EmojiDescriptionCache(BaseModel):
 
     class Meta:
         table_name = "emoji_description_cache"
+
+
+class RuntimeState(BaseModel):
+    """跨进程运行时状态存储，取代本地 JSON 记事本。"""
+
+    state_key = TextField(index=True)
+    state_value = TextField(null=True)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "runtime_state"
+        indexes = ((("tenant_id", "agent_id", "state_key"), True),)
+
+
+class HippoTopicCache(BaseModel):
+    """Hippo 话题缓存的持久化记录。"""
+
+    chat_id = TextField(index=True)
+    topics_payload = TextField(null=True)
+    last_topic_check_time = FloatField(default=0.0)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "hippo_topic_cache"
+        indexes = ((("tenant_id", "agent_id", "chat_id"), True),)
+
+
+class HippoBatchState(BaseModel):
+    """Hippo 当前批次状态，记录需要恢复的时间窗口。"""
+
+    chat_id = TextField(index=True)
+    start_time = DoubleField(null=True)
+    end_time = DoubleField(null=True)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    class Meta:
+        table_name = "hippo_batch_state"
+        indexes = ((("tenant_id", "agent_id", "chat_id"), True),)
 
 
 class OnlineTime(BaseModel):

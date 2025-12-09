@@ -15,6 +15,7 @@ from src.common.database.database import db
 from src.common.database.database_model import Images, ImageDescriptions, EmojiDescriptionCache
 from src.config.config import global_config, model_config
 from src.llm_models.utils_model import LLMRequest
+from src.common.utils.tenant_storage import ensure_storage_subdir
 
 install(extra_lines=3)
 
@@ -23,7 +24,6 @@ logger = get_logger("chat_image")
 
 class ImageManager:
     _instance = None
-    IMAGE_DIR = "data"  # 图像存储根目录
 
     def __new__(cls):
         if cls._instance is None:
@@ -57,8 +57,16 @@ class ImageManager:
             self._initialized = True
 
     def _ensure_image_dir(self):
-        """确保图像存储目录存在"""
-        os.makedirs(self.IMAGE_DIR, exist_ok=True)
+        """尽早创建租户图像目录，缺少上下文时记录调试信息"""
+        try:
+            self._tenant_media_dir("image")
+            self._tenant_media_dir("images")
+        except RuntimeError:
+            logger.debug("缺少租户上下文，延迟创建图像目录")
+
+    @staticmethod
+    def _tenant_media_dir(subfolder: str) -> str:
+        return ensure_storage_subdir(subfolder)
 
     @staticmethod
     def _get_description_from_db(image_hash: str, description_type: str) -> Optional[str]:
@@ -175,12 +183,10 @@ class ImageManager:
         if not global_config.emoji.steal_emoji:
             return
         
-        try:
-            from src.chat.emoji_system.emoji_manager import EMOJI_DIR
-            from src.chat.emoji_system.emoji_manager import get_emoji_manager
+            try:
+                from src.chat.emoji_system.emoji_manager import get_emoji_manager, get_emoji_storage_dir
 
-            # 确保目录存在
-            os.makedirs(EMOJI_DIR, exist_ok=True)
+            emoji_dir = get_emoji_storage_dir()
 
             # 检查是否已存在该表情包（通过哈希值）
             emoji_manager = get_emoji_manager()
@@ -191,7 +197,7 @@ class ImageManager:
 
             # 生成文件名：使用哈希值前8位 + 格式
             filename = f"{image_hash[:8]}.{image_format}"
-            file_path = os.path.join(EMOJI_DIR, filename)
+            file_path = os.path.join(emoji_dir, filename)
 
             # 检查文件是否已存在（可能之前保存过但未注册）
             if not os.path.exists(file_path):
@@ -389,8 +395,7 @@ class ImageManager:
             # 保存图片和描述
             current_timestamp = time.time()
             filename = f"{int(current_timestamp)}_{image_hash[:8]}.{image_format}"
-            image_dir = os.path.join(self.IMAGE_DIR, "image")
-            os.makedirs(image_dir, exist_ok=True)
+            image_dir = self._tenant_media_dir("image")
             file_path = os.path.join(image_dir, filename)
 
             try:
@@ -600,8 +605,7 @@ class ImageManager:
 
             # 保存新图片
             current_timestamp = time.time()
-            image_dir = os.path.join(self.IMAGE_DIR, "images")
-            os.makedirs(image_dir, exist_ok=True)
+            image_dir = self._tenant_media_dir("images")
             filename = f"{image_id}.png"
             file_path = os.path.join(image_dir, filename)
 

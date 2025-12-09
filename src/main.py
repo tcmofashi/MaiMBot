@@ -2,12 +2,10 @@ import asyncio
 import time
 from maim_message import MessageServer
 
-from src.common.remote import TelemetryHeartBeatTask
 from src.manager.async_task_manager import async_task_manager
-from src.chat.utils.statistic import OnlineTimeRecordTask, StatisticOutputTask
 
 # from src.chat.utils.token_statistics import TokenStatisticsTask
-from src.chat.emoji_system.emoji_manager import get_emoji_manager
+from src.chat.emoji_system.emoji_manager import EmojiMaintenanceTask, get_emoji_manager
 from src.chat.message_receive.chat_stream import get_chat_manager
 from src.config.config import global_config
 from src.chat.message_receive.bot import chat_bot
@@ -24,7 +22,7 @@ from src.plugin_system.core.plugin_manager import plugin_manager
 
 # 导入消息API和traceback模块
 from src.common.message import get_global_api
-from src.dream.dream_agent import start_dream_scheduler
+from src.dream.dream_agent import DreamMaintenanceTask
 
 # 插件系统现在使用统一的插件加载器
 
@@ -95,22 +93,13 @@ class MainSystem:
         """初始化其他组件"""
         init_start_time = time.time()
 
-        # 添加在线时间统计任务
-        await async_task_manager.add_task(OnlineTimeRecordTask())
-
-        # 添加统计信息输出任务
-        await async_task_manager.add_task(StatisticOutputTask())
-
-        # 添加聊天流统计任务（每5分钟生成一次报告，统计最近30天的数据）
-        # await async_task_manager.add_task(TokenStatisticsTask())
-
-        # 添加遥测心跳任务
-        await async_task_manager.add_task(TelemetryHeartBeatTask())
-
         # 添加记忆遗忘任务
         from src.chat.utils.memory_forget_task import MemoryForgetTask
 
         await async_task_manager.add_task(MemoryForgetTask())
+
+        # 添加 Dream 维护任务
+        await async_task_manager.add_task(DreamMaintenanceTask())
 
         # 启动API服务器
         # start_api_server()
@@ -125,6 +114,7 @@ class MainSystem:
         # 初始化表情管理器
         get_emoji_manager().initialize()
         logger.info("表情包管理器初始化成功")
+        await async_task_manager.add_task(EmojiMaintenanceTask())
 
         # 启动情绪管理器
         if global_config.mood.enable_mood:
@@ -160,8 +150,6 @@ class MainSystem:
         """调度定时任务"""
         try:
             tasks = [
-                get_emoji_manager().start_periodic_check_register(),
-                start_dream_scheduler(),
                 self.app.run(),
                 self.server.run(),
             ]

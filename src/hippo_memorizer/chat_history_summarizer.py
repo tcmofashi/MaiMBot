@@ -4,16 +4,16 @@
 """
 
 import asyncio
+import datetime
 import json
 import time
-import re
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from json_repair import repair_json
 
 from src.common.logger import get_logger
 from src.common.data_models.database_data_model import DatabaseMessages
+from src.common.database.database_model import HippoTopicCache, HippoBatchState
 from src.config.config import global_config, model_config
 from src.llm_models.utils_model import LLMRequest
 from src.plugin_system.apis import message_api
@@ -23,8 +23,6 @@ from src.chat.message_receive.chat_stream import get_chat_manager
 from src.chat.utils.prompt_builder import Prompt, global_prompt_manager
 
 logger = get_logger("chat_history_summarizer")
-
-HIPPO_CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "hippo_memorizer"
 
 
 def init_prompt():
@@ -138,11 +136,8 @@ class ChatHistorySummarizer:
         # 当前累积的消息批次
         self.current_batch: Optional[MessageBatch] = None
 
-        # 话题缓存：topic_str -> TopicCacheItem
-        # 在内存中维护，并通过本地文件实时持久化
+        # 话题缓存：topic_str -> TopicCacheItem，在内存中维护并通过数据库持久化
         self.topic_cache: Dict[str, TopicCacheItem] = {}
-        self._safe_chat_id = self._sanitize_chat_id(self.chat_id)
-        self._topic_cache_file = HIPPO_CACHE_DIR / f"{self._safe_chat_id}.json"
         # 注意：批次加载需要异步查询消息，所以在 start() 中调用
 
         # LLM请求器，用于压缩聊天内容
@@ -171,59 +166,54 @@ class ChatHistorySummarizer:
                 return f"{self.chat_id[:8]}..."
             return self.chat_id
 
-    def _sanitize_chat_id(self, chat_id: str) -> str:
-        """用于生成可作为文件名的 chat_id"""
-        return re.sub(r"[^a-zA-Z0-9_.-]", "_", chat_id)
-
-    def _load_topic_cache_from_disk(self):
-        """在启动时加载本地话题缓存（同步部分），支持重启后继续"""
+    def _load_topic_cache_from_db(self):
+        """在启动时加载数据库中的话题缓存，支持重启后继续"""
         try:
-            if not self._topic_cache_file.exists():
+            record = HippoTopicCache.get_or_none(HippoTopicCache.chat_id == self.chat_id)
+            if not record:
                 return
 
-            with self._topic_cache_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
+            payload = {}
+            if record.topics_payload:
+                try:
+                    payload = json.loads(record.topics_payload)
+                except json.JSONDecodeError:
+                    logger.warning(f"{self.log_prefix} 话题缓存 JSON 损坏，忽略并重建")
 
-            self.last_topic_check_time = data.get("last_topic_check_time", self.last_topic_check_time)
-            topics_data = data.get("topics", {})
+            payload_last_time = payload.get("last_topic_check_time")
+            if payload_last_time is not None:
+                self.last_topic_check_time = payload_last_time
+            elif record.last_topic_check_time:
+                self.last_topic_check_time = record.last_topic_check_time
+
+            topics_data = payload.get("topics", {})
+            self.topic_cache.clear()
             loaded_count = 0
-            for topic, payload in topics_data.items():
+            for topic, topic_payload in topics_data.items():
                 self.topic_cache[topic] = TopicCacheItem(
                     topic=topic,
-                    messages=payload.get("messages", []),
-                    participants=set(payload.get("participants", [])),
-                    no_update_checks=payload.get("no_update_checks", 0),
+                    messages=topic_payload.get("messages", []),
+                    participants=set(topic_payload.get("participants", [])),
+                    no_update_checks=topic_payload.get("no_update_checks", 0),
                 )
                 loaded_count += 1
 
             if loaded_count:
-                logger.info(f"{self.log_prefix} 已加载 {loaded_count} 个话题缓存，继续追踪")
+                logger.info(f"{self.log_prefix} 已从数据库加载 {loaded_count} 个话题缓存，继续追踪")
         except Exception as e:
-            logger.error(f"{self.log_prefix} 加载话题缓存失败: {e}")
+            logger.error(f"{self.log_prefix} 加载数据库话题缓存失败: {e}")
 
-    async def _load_batch_from_disk(self):
-        """在启动时加载聊天批次，支持重启后继续"""
+    async def _load_batch_from_db(self):
+        """在启动时加载数据库中的聊天批次，支持重启后继续"""
         try:
-            if not self._topic_cache_file.exists():
+            record = HippoBatchState.get_or_none(HippoBatchState.chat_id == self.chat_id)
+            if not record or not record.start_time or not record.end_time:
                 return
 
-            with self._topic_cache_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            batch_data = data.get("current_batch")
-            if not batch_data:
-                return
-
-            start_time = batch_data.get("start_time")
-            end_time = batch_data.get("end_time")
-            if not start_time or not end_time:
-                return
-
-            # 根据时间范围重新查询消息
             messages = message_api.get_messages_by_time_in_chat(
                 chat_id=self.chat_id,
-                start_time=start_time,
-                end_time=end_time,
+                start_time=record.start_time,
+                end_time=record.end_time,
                 limit=0,
                 limit_mode="latest",
                 filter_mai=False,
@@ -233,45 +223,70 @@ class ChatHistorySummarizer:
             if messages:
                 self.current_batch = MessageBatch(
                     messages=messages,
-                    start_time=start_time,
-                    end_time=end_time,
+                    start_time=record.start_time,
+                    end_time=record.end_time,
                 )
-                logger.info(f"{self.log_prefix} 已恢复聊天批次，包含 {len(messages)} 条消息")
+                logger.info(f"{self.log_prefix} 已从数据库恢复聊天批次，包含 {len(messages)} 条消息")
         except Exception as e:
-            logger.error(f"{self.log_prefix} 加载聊天批次失败: {e}")
+            logger.error(f"{self.log_prefix} 加载数据库聊天批次失败: {e}")
 
     def _persist_topic_cache(self):
         """实时持久化话题缓存和聊天批次，避免重启后丢失"""
         try:
-            # 如果既没有话题缓存也没有批次，删除缓存文件
-            if not self.topic_cache and not self.current_batch:
-                if self._topic_cache_file.exists():
-                    self._topic_cache_file.unlink()
-                return
+            has_topics = bool(self.topic_cache)
+            has_batch = self.current_batch is not None
 
-            HIPPO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            data = {
-                "chat_id": self.chat_id,
-                "last_topic_check_time": self.last_topic_check_time,
-                "topics": {
-                    topic: {
-                        "messages": item.messages,
-                        "participants": list(item.participants),
-                        "no_update_checks": item.no_update_checks,
-                    }
-                    for topic, item in self.topic_cache.items()
-                },
-            }
+            if has_topics:
+                serialized = json.dumps(
+                    {
+                        "chat_id": self.chat_id,
+                        "last_topic_check_time": self.last_topic_check_time,
+                        "topics": {
+                            topic: {
+                                "messages": item.messages,
+                                "participants": sorted(item.participants),
+                                "no_update_checks": item.no_update_checks,
+                            }
+                            for topic, item in self.topic_cache.items()
+                        },
+                    },
+                    ensure_ascii=False,
+                )
 
-            # 保存当前批次的时间范围（如果有）
-            if self.current_batch:
-                data["current_batch"] = {
-                    "start_time": self.current_batch.start_time,
-                    "end_time": self.current_batch.end_time,
-                }
+                record = HippoTopicCache.get_or_none(HippoTopicCache.chat_id == self.chat_id)
+                if record:
+                    record.topics_payload = serialized
+                    record.last_topic_check_time = self.last_topic_check_time
+                    record.updated_at = datetime.datetime.utcnow()
+                    record.save()
+                else:
+                    HippoTopicCache.create(
+                        chat_id=self.chat_id,
+                        topics_payload=serialized,
+                        last_topic_check_time=self.last_topic_check_time,
+                        updated_at=datetime.datetime.utcnow(),
+                    )
+            else:
+                HippoTopicCache.delete().where(HippoTopicCache.chat_id == self.chat_id).execute()
 
-            with self._topic_cache_file.open("w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            if has_batch:
+                start_time = self.current_batch.start_time if self.current_batch else None
+                end_time = self.current_batch.end_time if self.current_batch else None
+                record = HippoBatchState.get_or_none(HippoBatchState.chat_id == self.chat_id)
+                if record:
+                    record.start_time = start_time
+                    record.end_time = end_time
+                    record.updated_at = datetime.datetime.utcnow()
+                    record.save()
+                else:
+                    HippoBatchState.create(
+                        chat_id=self.chat_id,
+                        start_time=start_time,
+                        end_time=end_time,
+                        updated_at=datetime.datetime.utcnow(),
+                    )
+            else:
+                HippoBatchState.delete().where(HippoBatchState.chat_id == self.chat_id).execute()
         except Exception as e:
             logger.error(f"{self.log_prefix} 持久化话题缓存失败: {e}")
 
@@ -316,7 +331,9 @@ class ChatHistorySummarizer:
                 before_count = len(self.current_batch.messages)
                 self.current_batch.messages.extend(new_messages)
                 self.current_batch.end_time = current_time
-                logger.info(f"{self.log_prefix} 更新聊天检查批次: {before_count} -> {len(self.current_batch.messages)} 条消息")
+                logger.info(
+                    f"{self.log_prefix} 更新聊天检查批次: {before_count} -> {len(self.current_batch.messages)} 条消息"
+                )
                 # 更新批次后持久化
                 self._persist_topic_cache()
             else:
@@ -362,9 +379,7 @@ class ChatHistorySummarizer:
         else:
             time_str = f"{time_since_last_check / 3600:.1f}小时"
 
-        logger.debug(
-            f"{self.log_prefix} 批次状态检查 | 消息数: {message_count} | 距上次检查: {time_str}"
-        )
+        logger.debug(f"{self.log_prefix} 批次状态检查 | 消息数: {message_count} | 距上次检查: {time_str}")
 
         # 检查“话题检查”触发条件
         should_check = False
@@ -414,7 +429,7 @@ class ChatHistorySummarizer:
         # 说明 bot 没有参与这段对话，不应该记录
         bot_user_id = str(global_config.bot.qq_account)
         has_bot_message = False
-        
+
         for msg in messages:
             if msg.user_info.user_id == bot_user_id:
                 has_bot_message = True
@@ -427,7 +442,9 @@ class ChatHistorySummarizer:
             return
 
         # 2. 构造编号后的消息字符串和参与者信息
-        numbered_lines, index_to_msg_str, index_to_msg_text, index_to_participants = self._build_numbered_messages_for_llm(messages)
+        numbered_lines, index_to_msg_str, index_to_msg_text, index_to_participants = (
+            self._build_numbered_messages_for_llm(messages)
+        )
 
         # 3. 调用 LLM 识别话题，并得到 topic -> indices（失败时最多重试 3 次）
         existing_topics = list(self.topic_cache.keys())
@@ -456,9 +473,7 @@ class ChatHistorySummarizer:
             )
 
         if not success or not topic_to_indices:
-            logger.error(
-                f"{self.log_prefix} 话题识别连续 {max_retries} 次失败或始终无有效话题，本次检查放弃"
-            )
+            logger.error(f"{self.log_prefix} 话题识别连续 {max_retries} 次失败或始终无有效话题，本次检查放弃")
             # 即使识别失败，也认为是一次“检查”，但不更新 no_update_checks（保持原状）
             return
 
@@ -610,9 +625,7 @@ class ChatHistorySummarizer:
         if not numbered_lines:
             return False, {}
 
-        history_topics_block = (
-            "\n".join(f"- {t}" for t in existing_topics) if existing_topics else "（当前无历史话题）"
-        )
+        history_topics_block = "\n".join(f"- {t}" for t in existing_topics) if existing_topics else "（当前无历史话题）"
         messages_block = "\n".join(numbered_lines)
 
         prompt = await global_prompt_manager.format_prompt(
@@ -635,17 +648,17 @@ class ChatHistorySummarizer:
             json_str = None
             json_pattern = r"```json\s*(.*?)\s*```"
             matches = re.findall(json_pattern, response, re.DOTALL)
-            
+
             if matches:
                 # 找到JSON代码块，使用第一个匹配
                 json_str = matches[0].strip()
             else:
                 # 如果没有找到代码块，尝试查找JSON数组的开始和结束位置
                 # 查找第一个 [ 和最后一个 ]
-                start_idx = response.find('[')
-                end_idx = response.rfind(']')
+                start_idx = response.find("[")
+                end_idx = response.rfind("]")
                 if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                    json_str = response[start_idx:end_idx + 1].strip()
+                    json_str = response[start_idx : end_idx + 1].strip()
                 else:
                     # 如果还是找不到，尝试直接使用整个响应（移除可能的markdown标记）
                     json_str = response.strip()
@@ -902,8 +915,9 @@ class ChatHistorySummarizer:
             logger.warning(f"{self.log_prefix} 后台循环已在运行，无需重复启动")
             return
 
-        # 加载聊天批次（如果有）
-        await self._load_batch_from_disk()
+        # 加载数据库中持久化的话题缓存与聊天批次（如果有）
+        self._load_topic_cache_from_db()
+        await self._load_batch_from_db()
 
         self._running = True
         self._periodic_task = asyncio.create_task(self._periodic_check_loop())
@@ -942,4 +956,3 @@ class ChatHistorySummarizer:
 
 
 init_prompt()
-

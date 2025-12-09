@@ -9,7 +9,7 @@ from maim_message import GroupInfo, UserInfo
 from src.common.logger import get_logger
 from src.common.database.database import db
 from src.common.database.database_model import ChatStreams  # 新增导入
-from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id
+from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id, tenant_context
 
 # 避免循环导入，使用TYPE_CHECKING进行类型提示
 if TYPE_CHECKING:
@@ -68,6 +68,9 @@ class ChatStream:
         platform: str,
         user_info: UserInfo,
         group_info: Optional[GroupInfo] = None,
+        *,
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
         data: Optional[dict] = None,
     ):
         self.stream_id = stream_id
@@ -78,6 +81,13 @@ class ChatStream:
         self.last_active_time = data.get("last_active_time", self.create_time) if data else self.create_time
         self.saved = False
         self.context: ChatMessageContext = None  # type: ignore # 用于存储该聊天的上下文信息
+        # 持久化所需的租户/Agent 信息
+        if data:
+            self.tenant_id = data.get("tenant_id")
+            self.agent_id = data.get("agent_id")
+        else:
+            self.tenant_id = tenant_id
+            self.agent_id = agent_id
 
     def to_dict(self) -> dict:
         """转换为字典格式"""
@@ -88,6 +98,8 @@ class ChatStream:
             "group_info": self.group_info.to_dict() if self.group_info else None,
             "create_time": self.create_time,
             "last_active_time": self.last_active_time,
+            "tenant_id": self.tenant_id,
+            "agent_id": self.agent_id,
         }
 
     @classmethod
@@ -101,6 +113,8 @@ class ChatStream:
             platform=data["platform"],
             user_info=user_info,  # type: ignore
             group_info=group_info,
+            tenant_id=data.get("tenant_id"),
+            agent_id=data.get("agent_id"),
             data=data,
         )
 
@@ -216,6 +230,11 @@ class ChatManager:
             ChatStream: 聊天流对象
         """
         # 生成stream_id
+        tenant_id = get_current_tenant_id()
+        agent_id = get_current_agent_id()
+        if not tenant_id or not agent_id:
+            raise RuntimeError("获取聊天流需要有效的租户与代理上下文")
+
         try:
             stream_id = self._generate_stream_id(platform, user_info, group_info)
 
@@ -239,10 +258,11 @@ class ChatManager:
                 return stream
 
             # 检查数据库中是否存在
-            def _db_find_stream_sync(s_id: str):
-                return ChatStreams.get_or_none(ChatStreams.stream_id == s_id)
+            def _db_find_stream_sync(s_id: str, tenant: str, agent: str):
+                with tenant_context(tenant, agent):
+                    return ChatStreams.get_or_none(ChatStreams.stream_id == s_id)
 
-            model_instance = await asyncio.to_thread(_db_find_stream_sync, stream_id)
+            model_instance = await asyncio.to_thread(_db_find_stream_sync, stream_id, tenant_id, agent_id)
 
             if model_instance:
                 # 从 Peewee 模型转换回 ChatStream.from_dict 期望的格式
@@ -267,6 +287,8 @@ class ChatManager:
                     "group_info": group_info_data,
                     "create_time": model_instance.create_time,
                     "last_active_time": model_instance.last_active_time,
+                    "tenant_id": model_instance.tenant_id,
+                    "agent_id": model_instance.agent_id,
                 }
                 stream = ChatStream.from_dict(data_for_from_dict)
                 # 更新用户信息和群组信息
@@ -281,6 +303,8 @@ class ChatManager:
                     platform=platform,
                     user_info=user_info,
                     group_info=group_info,
+                    tenant_id=tenant_id,
+                    agent_id=agent_id,
                 )
         except Exception as e:
             logger.error(f"获取或创建聊天流失败: {e}", exc_info=True)
@@ -332,9 +356,13 @@ class ChatManager:
         """保存聊天流到数据库"""
         if stream.saved:
             return
+        tenant_id = getattr(stream, "tenant_id", None)
+        agent_id = getattr(stream, "agent_id", None)
+        if not tenant_id or not agent_id:
+            raise RuntimeError("保存聊天流需要已记录的 tenant_id 与 agent_id")
         stream_data_dict = stream.to_dict()
 
-        def _db_save_stream_sync(s_data_dict: dict):
+        def _db_save_stream_sync(s_data_dict: dict, tenant: str, agent: str):
             user_info_d = s_data_dict.get("user_info")
             group_info_d = s_data_dict.get("group_info")
 
@@ -350,11 +378,14 @@ class ChatManager:
                 "group_id": group_info_d["group_id"] if group_info_d else "",
                 "group_name": group_info_d["group_name"] if group_info_d else "",
             }
+            fields_to_save["tenant_id"] = tenant
+            fields_to_save["agent_id"] = agent
 
-            ChatStreams.replace(stream_id=s_data_dict["stream_id"], **fields_to_save).execute()
+            with tenant_context(tenant, agent):
+                ChatStreams.replace(stream_id=s_data_dict["stream_id"], **fields_to_save).execute()
 
         try:
-            await asyncio.to_thread(_db_save_stream_sync, stream_data_dict)
+            await asyncio.to_thread(_db_save_stream_sync, stream_data_dict, tenant_id, agent_id)
             stream.saved = True
         except Exception as e:
             logger.error(f"保存聊天流 {stream.stream_id} 到数据库失败 (Peewee): {e}", exc_info=True)
@@ -367,37 +398,44 @@ class ChatManager:
     async def load_all_streams(self):
         """从数据库加载所有聊天流"""
         logger.info("正在从数据库加载所有聊天流")
+        tenant_id = get_current_tenant_id()
+        agent_id = get_current_agent_id()
+        if not tenant_id or not agent_id:
+            raise RuntimeError("加载聊天流需要有效的租户与代理上下文")
 
-        def _db_load_all_streams_sync():
+        def _db_load_all_streams_sync(tenant: str, agent: str):
             loaded_streams_data = []
-            for model_instance in ChatStreams.select():
-                user_info_data = {
-                    "platform": model_instance.user_platform,
-                    "user_id": model_instance.user_id,
-                    "user_nickname": model_instance.user_nickname,
-                    "user_cardname": model_instance.user_cardname or "",
-                }
-                group_info_data = None
-                if model_instance.group_id:
-                    group_info_data = {
-                        "platform": model_instance.group_platform,
-                        "group_id": model_instance.group_id,
-                        "group_name": model_instance.group_name,
+            with tenant_context(tenant, agent):
+                for model_instance in ChatStreams.select():
+                    user_info_data = {
+                        "platform": model_instance.user_platform,
+                        "user_id": model_instance.user_id,
+                        "user_nickname": model_instance.user_nickname,
+                        "user_cardname": model_instance.user_cardname or "",
                     }
+                    group_info_data = None
+                    if model_instance.group_id:
+                        group_info_data = {
+                            "platform": model_instance.group_platform,
+                            "group_id": model_instance.group_id,
+                            "group_name": model_instance.group_name,
+                        }
 
-                data_for_from_dict = {
-                    "stream_id": model_instance.stream_id,
-                    "platform": model_instance.platform,
-                    "user_info": user_info_data,
-                    "group_info": group_info_data,
-                    "create_time": model_instance.create_time,
-                    "last_active_time": model_instance.last_active_time,
-                }
-                loaded_streams_data.append(data_for_from_dict)
+                    data_for_from_dict = {
+                        "stream_id": model_instance.stream_id,
+                        "platform": model_instance.platform,
+                        "user_info": user_info_data,
+                        "group_info": group_info_data,
+                        "create_time": model_instance.create_time,
+                        "last_active_time": model_instance.last_active_time,
+                        "tenant_id": model_instance.tenant_id,
+                        "agent_id": model_instance.agent_id,
+                    }
+                    loaded_streams_data.append(data_for_from_dict)
             return loaded_streams_data
 
         try:
-            all_streams_data_list = await asyncio.to_thread(_db_load_all_streams_sync)
+            all_streams_data_list = await asyncio.to_thread(_db_load_all_streams_sync, tenant_id, agent_id)
             self.streams.clear()
             for data in all_streams_data_list:
                 stream = ChatStream.from_dict(data)

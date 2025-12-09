@@ -59,19 +59,8 @@ def init_prompt() -> None:
     Prompt(learn_style_prompt, "learn_style_prompt")
 
 
-
-
 class ExpressionLearner:
     def __init__(self, chat_id: str) -> None:
-        self.express_learn_model: LLMRequest = LLMRequest(
-            model_set=model_config.model_task_config.utils, request_type="expression.learner"
-        )
-        self.summary_model: LLMRequest = LLMRequest(
-            model_set=model_config.model_task_config.utils_small, request_type="expression.summary"
-        )
-        self.embedding_model: LLMRequest = LLMRequest(
-            model_set=model_config.model_task_config.embedding, request_type="expression.embedding"
-        )
         self.chat_id = chat_id
         self.chat_stream = get_chat_manager().get_stream(chat_id)
         self.chat_name = get_chat_manager().get_stream_name(chat_id) or chat_id
@@ -82,12 +71,21 @@ class ExpressionLearner:
         # 学习锁，防止并发执行学习任务
         self._learning_lock = asyncio.Lock()
 
-        # 学习参数
-        _, self.enable_learning, self.learning_intensity = global_config.expression.get_expression_config_for_chat(
-            self.chat_id
-        )
-        self.min_messages_for_learning = 15 / self.learning_intensity  # 触发学习所需的最少消息数
-        self.min_learning_interval = 120 / self.learning_intensity
+    def _build_express_learn_model(self) -> LLMRequest:
+        return LLMRequest(model_set=model_config.model_task_config.utils, request_type="expression.learner")
+
+    def _build_summary_model(self) -> LLMRequest:
+        return LLMRequest(model_set=model_config.model_task_config.utils_small, request_type="expression.summary")
+
+    def _build_embedding_model(self) -> LLMRequest:
+        return LLMRequest(model_set=model_config.model_task_config.embedding, request_type="expression.embedding")
+
+    def _resolve_learning_thresholds(self) -> Tuple[bool, float, float]:
+        _, enable_learning, learning_intensity = global_config.expression.get_expression_config_for_chat(self.chat_id)
+        intensity = learning_intensity or 1.0
+        min_messages_for_learning = 15 / intensity
+        min_learning_interval = 120 / intensity
+        return enable_learning, min_messages_for_learning, min_learning_interval
 
     def should_trigger_learning(self) -> bool:
         """
@@ -99,13 +97,15 @@ class ExpressionLearner:
         Returns:
             bool: 是否应该触发学习
         """
+        enable_learning, min_messages_for_learning, min_learning_interval = self._resolve_learning_thresholds()
+
         # 检查是否允许学习
-        if not self.enable_learning:
+        if not enable_learning:
             return False
 
         # 检查时间间隔
         time_diff = time.time() - self.last_learning_time
-        if time_diff < self.min_learning_interval:
+        if time_diff < min_learning_interval:
             return False
 
         # 检查消息数量（只检查指定聊天流的消息）
@@ -115,7 +115,7 @@ class ExpressionLearner:
             timestamp_end=time.time(),
         )
 
-        if not recent_messages or len(recent_messages) < self.min_messages_for_learning:
+        if not recent_messages or len(recent_messages) < min_messages_for_learning:
             return False
 
         return True
@@ -140,7 +140,7 @@ class ExpressionLearner:
             # 保存学习开始前的时间戳，用于获取消息范围
             learning_start_timestamp = time.time()
             previous_learning_time = self.last_learning_time
-            
+
             # 立即更新学习时间，防止并发触发
             self.last_learning_time = learning_start_timestamp
 
@@ -160,10 +160,12 @@ class ExpressionLearner:
                 # 即使失败也保持时间戳更新，避免频繁重试
                 return
 
-    async def learn_and_store(self, num: int = 10, timestamp_start: Optional[float] = None) -> List[Tuple[str, str, str]]:
+    async def learn_and_store(
+        self, num: int = 10, timestamp_start: Optional[float] = None
+    ) -> List[Tuple[str, str, str]]:
         """
         学习并存储表达方式
-        
+
         Args:
             num: 学习数量
             timestamp_start: 学习开始的时间戳，如果为None则使用self.last_learning_time
@@ -201,7 +203,9 @@ class ExpressionLearner:
 
         return learnt_expressions
 
-    async def learn_expression(self, num: int = 10, timestamp_start: Optional[float] = None) -> Optional[List[Tuple[str, str, str]]]:
+    async def learn_expression(
+        self, num: int = 10, timestamp_start: Optional[float] = None
+    ) -> Optional[List[Tuple[str, str, str]]]:
         """从指定聊天流学习表达方式
 
         Args:
@@ -209,7 +213,7 @@ class ExpressionLearner:
             timestamp_start: 学习开始的时间戳，如果为None则使用self.last_learning_time
         """
         current_time = time.time()
-        
+
         # 使用传入的时间戳，如果没有则使用self.last_learning_time
         start_timestamp = timestamp_start if timestamp_start is not None else self.last_learning_time
 
@@ -235,8 +239,10 @@ class ExpressionLearner:
         # print(f"random_msg_str:{random_msg_str}")
         # logger.info(f"学习{type_str}的prompt: {prompt}")
 
+        model = self._build_express_learn_model()
+
         try:
-            response, _ = await self.express_learn_model.generate_response_async(prompt, temperature=0.3)
+            response, _ = await model.generate_response_async(prompt, temperature=0.3)
         except Exception as e:
             logger.error(f"学习表达方式失败,模型生成出错: {e}")
             return None
@@ -468,13 +474,15 @@ class ExpressionLearner:
         )
 
         try:
-            summary, _ = await self.summary_model.generate_response_async(prompt, temperature=0.2)
+            summary_model = self._build_summary_model()
+            summary, _ = await summary_model.generate_response_async(prompt, temperature=0.2)
             summary = summary.strip()
             if summary:
                 return summary
         except Exception as e:
             logger.error(f"概括表达情境失败: {e}")
         return None
+
 
 init_prompt()
 
