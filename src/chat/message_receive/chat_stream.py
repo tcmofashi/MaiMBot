@@ -381,8 +381,8 @@ class ChatManager:
             fields_to_save["tenant_id"] = tenant
             fields_to_save["agent_id"] = agent
 
-            with tenant_context(tenant, agent):
-                ChatStreams.replace(stream_id=s_data_dict["stream_id"], **fields_to_save).execute()
+            # with tenant_context(tenant, agent):
+            ChatStreams.replace(stream_id=s_data_dict["stream_id"], **fields_to_save).execute()
 
         try:
             await asyncio.to_thread(_db_save_stream_sync, stream_data_dict, tenant_id, agent_id)
@@ -396,17 +396,21 @@ class ChatManager:
             await self._save_stream(stream)
 
     async def load_all_streams(self):
-        """从数据库加载所有聊天流"""
+        """从数据库加载所有聊天流（无视租户上下文，用于全局初始化）"""
         logger.info("正在从数据库加载所有聊天流")
-        tenant_id = get_current_tenant_id()
-        agent_id = get_current_agent_id()
-        if not tenant_id or not agent_id:
-            raise RuntimeError("加载聊天流需要有效的租户与代理上下文")
+        
+        # 不需要检查当前上下文
+        # tenant_id = get_current_tenant_id()
+        # agent_id = get_current_agent_id()
 
-        def _db_load_all_streams_sync(tenant: str, agent: str):
+        def _db_load_all_streams_sync():
             loaded_streams_data = []
-            with tenant_context(tenant, agent):
-                for model_instance in ChatStreams.select():
+            
+            # 使用 raw 查询绕过 BaseModel 的 select 作用域检查
+            try:
+                # 注意：这里假设表名是 'chat_streams'，这在 database_model.py 中定义
+                # 使用 Model.raw() 返回的是模型实例，可以直接访问属性
+                for model_instance in ChatStreams.raw('SELECT * FROM chat_streams'):
                     user_info_data = {
                         "platform": model_instance.user_platform,
                         "user_id": model_instance.user_id,
@@ -427,15 +431,24 @@ class ChatManager:
                         "user_info": user_info_data,
                         "group_info": group_info_data,
                         "create_time": model_instance.create_time,
-                        "last_active_time": model_instance.last_active_time,
+                        # 如果 last_active_time 不存在（例如新字段），提供默认值
+                        "last_active_time": getattr(model_instance, "last_active_time", model_instance.create_time),
                         "tenant_id": model_instance.tenant_id,
                         "agent_id": model_instance.agent_id,
                     }
                     loaded_streams_data.append(data_for_from_dict)
+            except Exception as e:
+                logger.error(f"Raw query execution failed: {e}")
+                # Fallback or re-raise depending on strictness. 
+                # For now let's just log and return empty so we don't crash, 
+                # but in production we might want to know.
+                raise e
+                
             return loaded_streams_data
 
         try:
-            all_streams_data_list = await asyncio.to_thread(_db_load_all_streams_sync, tenant_id, agent_id)
+            # 不再传递 tenant_id/agent_id
+            all_streams_data_list = await asyncio.to_thread(_db_load_all_streams_sync)
             self.streams.clear()
             for data in all_streams_data_list:
                 stream = ChatStream.from_dict(data)

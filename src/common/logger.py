@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Callable, Optional
 from datetime import datetime, timedelta
 
+from src.common.env_loader import get_project_env
+
 # 创建logs目录
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
@@ -313,10 +315,34 @@ def load_log_config():  # sourcery skip: use-contextlib-suppress
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
                 config = tomlkit.load(f)
-                return config.get("log", default_config)
+                return _apply_env_log_overrides(config.get("log", default_config))
     except Exception as e:
         print(f"[日志系统] 加载日志配置失败: {e}")
-    return default_config
+    return _apply_env_log_overrides(default_config)
+
+
+def _apply_env_log_overrides(config_section):
+    """Override logger settings when corresponding .env keys are present."""
+
+    config = dict(config_section)
+    env = get_project_env()
+
+    def _override(key: str, value: Optional[str]) -> None:
+        if value:
+            config[key] = value
+
+    if env.has("MAIMBOT_LOG_LEVEL"):
+        _override("log_level", env.log_level)
+        config.setdefault("console_log_level", env.log_level)
+        config.setdefault("file_log_level", env.log_level)
+
+    if env.has("MAIMBOT_CONSOLE_LOG_LEVEL"):
+        _override("console_log_level", env.console_log_level)
+
+    if env.has("MAIMBOT_FILE_LOG_LEVEL"):
+        _override("file_log_level", env.file_log_level)
+
+    return config
 
 
 LOG_CONFIG = load_log_config()

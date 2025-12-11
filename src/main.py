@@ -109,7 +109,7 @@ class MainSystem:
         lpmm_start_up()
 
         # 加载所有actions，包括默认的和插件的
-        plugin_manager.load_all_plugins()
+        # plugin_manager.load_all_plugins()
 
         # 初始化表情管理器
         get_emoji_manager().initialize()
@@ -130,8 +130,8 @@ class MainSystem:
         # await asyncio.sleep(0.5) #防止logger输出飞了
 
         # 将bot.py中的chat_bot.message_process消息处理函数注册到api.py的消息处理基类中
-        self.app.register_message_handler(chat_bot.message_process)
-        self.app.register_custom_message_handler("message_id_echo", chat_bot.echo_message_process)
+        # self.app.register_message_handler(chat_bot.message_process)
+        self.app.register_custom_handler("message_id_echo", chat_bot.echo_message_process)
 
         # 触发 ON_START 事件
         from src.plugin_system.core.events_manager import events_manager
@@ -150,7 +150,7 @@ class MainSystem:
         """调度定时任务"""
         try:
             tasks = [
-                self.app.run(),
+                self.app.start(),
                 self.server.run(),
             ]
 

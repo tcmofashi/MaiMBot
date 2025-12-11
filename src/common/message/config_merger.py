@@ -35,51 +35,179 @@ class ConfigMerger:
     def _load_base_configs(self) -> None:
         """加载基础配置"""
         try:
-            from src.config.config import global_config
+            from src.config.config import base_global_config
 
-            # 获取当前全局配置作为基础配置
-            self._base_global_config = global_config
+            # 使用预先保存的、包含环境变量但无代理逻辑的基础配置副本
+            self._base_global_config = base_global_config
             self.logger.info("基础配置加载成功")
         except Exception as e:
             self.logger.error(f"加载基础配置失败: {e}")
             raise
 
+    def _deep_copy_sanitize(self, obj: Any) -> Any:
+        """
+        深拷贝并转换配置对象为标准Python类型
+        主要用于处理 tomlkit 的 InlineTable 等特殊类型在 deepcopy 时的问题
+        """
+        from collections.abc import Mapping, Sequence
+        
+        # 基础类型直接返回
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+            
+        # 映射类型转换为标准字典
+        # 增加对 hasattr("items") 的检查，以覆盖不继承 Mapping 但表现像 dict 的类型
+        if isinstance(obj, Mapping) or hasattr(obj, "items"):
+            try:
+                return {k: self._deep_copy_sanitize(v) for k, v in obj.items()}
+            except Exception:
+                # 如果 items() 失败，尝试 fallback
+                pass
+            
+        # 序列类型转换为标准列表 (注意排除字符串，已在上面处理)
+        if isinstance(obj, Sequence):
+            return [self._deep_copy_sanitize(v) for v in obj]
+            
+        # 其他类型尝试深拷贝
+        try:
+            return copy.deepcopy(obj)
+        except Exception as e:
+            # 如果深拷贝失败，记录日志并返回 str(obj) 或原对象，防止崩溃
+            # 针对 InlineTable 错误，尝试转换
+            if "InlineTable" in str(type(obj)) or "InlineTable" in str(e):
+               self.logger.warning(f"Encountered InlineTable deepcopy error for {obj}, converting to dict forcefully")
+               try:
+                   return dict(obj)
+               except:
+                   pass
+            
+            self.logger.warning(f"Deepcopy failed for type {type(obj)}: {e}")
+            return obj # 返回原对象，虽然可能不安全但比崩溃好
+
+
     def _merge_dict(self, base: Dict[str, Any], override: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """递归合并字典"""
         if not override:
-            return base
+            return self._deep_copy_sanitize(base)
 
-        result = copy.deepcopy(base)
+        result = self._deep_copy_sanitize(base)
         for key, value in override.items():
-            if value is not None:
-                if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                    result[key] = self._merge_dict(result[key], value)
-                else:
-                    result[key] = value
+            if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+                result[key] = self._merge_dict(result[key], value)
+            else:
+                result[key] = self._deep_copy_sanitize(value)
         return result
 
-    def _merge_config_object(self, base_config_obj: Any, overrides: Dict[str, Any]) -> Any:
-        """合并配置对象"""
-        if not overrides:
-            return base_config_obj
+    def _sanitize_recursive_copy(self, obj: Any, seen: set = None) -> Any:
+        """
+        递归复制并净化对象。
+        对于 Dataclass，创建新实例（DeepCopy）并净化字段。
+        对于 列表/字典，创建新容器并净化元素。
+        对于 tomlkit 类型，转换为标准 Python 类型。
+        """
+        import dataclasses
+        if seen is None:
+            seen = set()
 
-        # 获取基础配置的字典表示
-        base_dict = asdict(base_config_obj) if hasattr(base_config_obj, "__dict__") else {}
+        # 避免循环引用
+        if id(obj) in seen:
+            return obj
+        seen.add(id(obj))
 
-        # 合并覆盖项
-        merged_dict = self._merge_dict(base_dict, overrides)
+        if dataclasses.is_dataclass(obj):
+            init_kwargs = {}
+            non_init_fields = {}
+            
+            for f in dataclasses.fields(obj):
+                if hasattr(obj, f.name):
+                    val = getattr(obj, f.name)
+                    clean_val = self._sanitize_recursive_copy(val, seen)
+                    if f.init:
+                        init_kwargs[f.name] = clean_val
+                    else:
+                        non_init_fields[f.name] = clean_val
+            
+            # 尝试重建对象
+            try:
+                new_obj = obj.__class__(**init_kwargs)
+                # 设置 init=False 的字段 (如 MMC_VERSION)
+                for k, v in non_init_fields.items():
+                    setattr(new_obj, k, v)
+                return new_obj
+            except Exception as e:
+                self.logger.warning(f"Recreating dataclass {type(obj)} failed: {e}, falling back to dict")
+                # 合并所有字段作为降级字典
+                return {**init_kwargs, **non_init_fields}
+        
+        if isinstance(obj, list):
+            return [self._sanitize_recursive_copy(item, seen) for item in obj]
+        
+        if isinstance(obj, dict):
+            return {k: self._sanitize_recursive_copy(v) for k, v in obj.items()}
+            
+        return self._deep_copy_sanitize(obj)
 
-        # 创建新的配置对象
-        config_class = type(base_config_obj)
-        try:
-            return config_class(**merged_dict)
-        except TypeError as e:
-            self.logger.warning(f"无法创建配置对象 {config_class.__name__}: {e}")
-            # 如果创建失败，返回修改后的原对象
+    def _apply_overrides_recursive(self, obj: Any, overrides: Dict[str, Any]) -> Any:
+        """
+        递归应用覆盖配置到对象上，保留原对象结构（不转换为字典）。
+        支持 Dataclass 递归覆盖。
+        """
+        import dataclasses
+        from collections.abc import Mapping
+        
+        if dataclasses.is_dataclass(obj):
             for key, value in overrides.items():
-                if value is not None and hasattr(base_config_obj, key):
-                    setattr(base_config_obj, key, value)
-            return base_config_obj
+                if not hasattr(obj, key):
+                    continue
+                
+                current_val = getattr(obj, key)
+                
+                # 情况1：子字段也是 Dataclass，且覆盖值是映射 -> 递归
+                if isinstance(value, Mapping) and dataclasses.is_dataclass(current_val):
+                    # 递归修改子对象 (current_val 已经是深拷贝的一部分，可以直接修改)
+                    self._apply_overrides_recursive(current_val, value)
+                
+                # 情况2：当前值是字典，覆盖值也是映射 -> 字典合并
+                elif isinstance(current_val, dict) and isinstance(value, Mapping):
+                    # 先净化覆盖值
+                    clean_val = self._deep_copy_sanitize(value)
+                    # 合并字典
+                    new_dict = self._merge_dict(current_val, clean_val)
+                    setattr(obj, key, new_dict)
+                    
+                # 情况3：其他情况 (列表替换、基本类型替换) -> 直接替换
+                else:
+                    setattr(obj, key, self._deep_copy_sanitize(value))
+            return obj
+            
+        elif isinstance(obj, dict):
+            return self._merge_dict(obj, overrides)
+        else:
+            return self._deep_copy_sanitize(overrides)
+
+    def _merge_config_object(self, base_config_obj: Any, overrides: Dict[str, Any]) -> Any:
+        """
+        合并单个配置对象（如 ChatConfig）
+        """
+        # 1. 获取基础配置的纯净深拷贝（保留对象结构）
+        # 如果没有基础配置，返回空对象? 不，_sanitize_recursive_copy 处理 None
+        clean_base = self._sanitize_recursive_copy(base_config_obj)
+        
+        if not overrides:
+            return clean_base if clean_base else {}
+
+        # 2. 如果基础配置是 None，无法应用 object-level overrides，
+        # 只能尝试根据 overrides 创建对象? 
+        # 但我们不知道类。所以如果 base 是 None，只能返回 overrides (字典)
+        if clean_base is None:
+            return self._deep_copy_sanitize(overrides)
+
+        # 3. 递归应用覆盖
+        return self._apply_overrides_recursive(clean_base, overrides)
+
+
+
+
 
     def merge_bot_config(self, agent_config: AgentConfig) -> BotConfig:
         """融合Bot配置"""
@@ -109,23 +237,34 @@ class ConfigMerger:
             self._load_base_configs()
 
         base_personality_config = self._base_global_config.personality
+        if not base_personality_config:
+            self.logger.warning("基础配置中缺失 personality 配置，将使用默认空配置")
+            from src.config.official_configs import PersonalityConfig as DefaultPersonalityConfig
+            base_personality_config = DefaultPersonalityConfig(personality="")
 
+        # 确保 agent_config.persona 存在
+        agent_persona = agent_config.persona
+        if not agent_persona:
+             # 如果缺失，使用默认空配置
+             from src.config.official_configs import PersonalityConfig as DefaultPersonalityConfig
+             agent_persona = DefaultPersonalityConfig(personality="")
+        
         # 优先使用Agent的persona配置
         overrides = {
-            "personality": agent_config.persona.personality or base_personality_config.personality,
-            "reply_style": agent_config.persona.reply_style or base_personality_config.reply_style,
-            "interest": agent_config.persona.interest or base_personality_config.interest,
-            "plan_style": agent_config.persona.plan_style or base_personality_config.plan_style,
-            "private_plan_style": agent_config.persona.private_plan_style or base_personality_config.private_plan_style,
-            "visual_style": agent_config.persona.visual_style or base_personality_config.visual_style,
-            "states": agent_config.persona.states or base_personality_config.states,
-            "state_probability": agent_config.persona.state_probability
-            if agent_config.persona.state_probability > 0
+            "personality": agent_persona.personality or base_personality_config.personality,
+            "reply_style": agent_persona.reply_style or base_personality_config.reply_style,
+            "interest": agent_persona.interest or base_personality_config.interest,
+            "plan_style": agent_persona.plan_style or base_personality_config.plan_style,
+            "private_plan_style": agent_persona.private_plan_style or base_personality_config.private_plan_style,
+            "visual_style": agent_persona.visual_style or base_personality_config.visual_style,
+            "states": agent_persona.states or base_personality_config.states,
+            "state_probability": agent_persona.state_probability
+            if agent_persona.state_probability > 0
             else base_personality_config.state_probability,
         }
 
         # 检查是否有额外的覆盖配置
-        if agent_config.config_overrides.personality:
+        if agent_config.config_overrides and agent_config.config_overrides.personality:
             personality_overrides = agent_config.config_overrides.personality
             if personality_overrides.personality:
                 overrides["personality"] = personality_overrides.personality
@@ -349,26 +488,97 @@ class ConfigMerger:
             self._load_base_configs()
 
         try:
-            merged_config = {
-                "bot": self.merge_bot_config(agent_config),
-                "personality": self.merge_personality_config(agent_config),
-                "chat": self.merge_chat_config(agent_config),
-                "relationship": self.merge_relationship_config(agent_config),
-                "expression": self.merge_expression_config(agent_config),
-                "memory": self.merge_memory_config(agent_config),
-                "mood": self.merge_mood_config(agent_config),
-                "emoji": self.merge_emoji_config(agent_config),
-                "tool": self.merge_tool_config(agent_config),
-                "voice": self.merge_voice_config(agent_config),
-                # "plugin": self.merge_plugin_config(agent_config),  # 暂时跳过插件配置
-                "keyword_reaction": self.merge_keyword_reaction_config(agent_config),
-            }
+            merged_config = {}
+            
+            try:
+                merged_config["bot"] = self.merge_bot_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_bot_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["personality"] = self.merge_personality_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_personality_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["chat"] = self.merge_chat_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_chat_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["relationship"] = self.merge_relationship_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_relationship_config 失败: {e}")
+                raise
+            
+            try:
+                merged_config["expression"] = self.merge_expression_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_expression_config 失败: {e}")
+                raise
+            
+            try:
+                merged_config["memory"] = self.merge_memory_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_memory_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["mood"] = self.merge_mood_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_mood_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["emoji"] = self.merge_emoji_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_emoji_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["tool"] = self.merge_tool_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_tool_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["voice"] = self.merge_voice_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_voice_config 失败: {e}")
+                raise
+
+            # "plugin": self.merge_plugin_config(agent_config),  # 暂时跳过插件配置
+            
+            try:
+                merged_config["keyword_reaction"] = self.merge_keyword_reaction_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_keyword_reaction_config 失败: {e}")
+                raise
 
             # 复制其他不需要修改的配置
-            base_config_dict = asdict(self._base_global_config)
-            for key, value in base_config_dict.items():
-                if key not in merged_config:
-                    merged_config[key] = value
+            # 务必进行 sanitization，防止 tomlkit 对象泄露
+            # 使用 _sanitize_recursive_copy 替代 _conf_obj_to_dict，获取干净的对象实例
+            import dataclasses
+            base_config_obj = self._sanitize_recursive_copy(self._base_global_config)
+            
+            # 将未修改的字段（已净化为对象）复制到 merged_config
+            if dataclasses.is_dataclass(base_config_obj):
+                for f in dataclasses.fields(base_config_obj):
+                    # 跳过 init=False 的字段（如 MMC_VERSION），否则会导致 GlobalConfig 初始化失败
+                    if not f.init:
+                        continue
+                        
+                    if f.name not in merged_config:
+                        merged_config[f.name] = getattr(base_config_obj, f.name)
+            else:
+                # Fallback if base_config_obj is for some reason a dict (unlikely)
+                base_dict = base_config_obj if isinstance(base_config_obj, dict) else {}
+                for key, value in base_dict.items():
+                    if key not in merged_config:
+                        merged_config[key] = value
 
             self.logger.info(f"Agent {agent_config.agent_id} 配置融合完成")
             return merged_config
@@ -423,19 +633,9 @@ async def create_agent_global_config(agent_id: str) -> Optional[Any]:
     try:
         from src.config.config import GlobalConfig
 
-        # 从基础配置获取不需要修改的部分
-        if not merger._base_global_config:
-            merger._load_base_configs()
-
-        base_dict = asdict(merger._base_global_config)
-
-        # 用融合后的配置替换对应部分
-        for key, value in merged_dict.items():
-            if key in base_dict:
-                base_dict[key] = value
-
-        # 创建新的GlobalConfig对象
-        return GlobalConfig(**base_dict)
+        # merged_dict 现在包含了完整配置的所有字段，并且值都是干净的对象实例
+        # 直接使用它来创建 GlobalConfig
+        return GlobalConfig(**merged_dict)
 
     except Exception as e:
         merger.logger.error(f"创建global_config失败: {e}")
@@ -461,13 +661,14 @@ async def create_agent_model_config(agent_id: str) -> Optional[Any]:
 
     try:
         # 尝试加载模型配置
-        from src.config.config import model_config
+        from src.config.config import base_model_config
 
         # 如果有Agent特定的模型配置覆盖，在这里处理
         # 目前直接返回基础模型配置
         # 未来可以从Agent配置中读取模型相关设置
 
-        return model_config
+        # 使用预先保存的基础配置副本
+        return base_model_config
 
     except Exception as e:
         merger = get_config_merger()

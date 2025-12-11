@@ -400,7 +400,7 @@ class EmojiManager:
         peewee_db.connect(reuse_if_open=True)
         if peewee_db.is_closed():
             raise RuntimeError("数据库连接失败")
-        _ensure_emoji_dir()
+        # _ensure_emoji_dir()
         Emoji.create_table(safe=True)  # Ensures table exists
         EmojiDescriptionCache.create_table(safe=True)
         self._initialized = True

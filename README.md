@@ -67,6 +67,36 @@
 > - QQ 机器人存在被限制风险，请自行了解，谨慎使用。
 > - 由于程序处于开发中，可能消耗较多 token。
 
+### 安装 maim_db 核心库
+
+- 麦麦的数据库层统一由 `maim_db`（Python 包名 `maim_db`）提供，请在进入虚拟环境后执行：
+
+```bash
+pip install maim_db
+# 或在源码共存的情况下
+pip install -e ../maim_db
+```
+
+- 未安装该依赖将无法初始化数据库，程序会在启动时直接报错。
+
+### 环境变量配置 (.env)
+
+- `bot.py` 启动时会自动加载项目根目录下的 `.env`，首次运行会根据 `template/template.env` 生成一份默认文件。
+- 你可以在 `.env` 中集中维护项目级别的敏感配置：
+  - **数据库**：`DATABASE_URL`（或 `DATABASE_HOST/PORT/NAME/USER/PASSWORD`）供 `maim_db` 使用。
+  - **日志级别**：`MAIMBOT_LOG_LEVEL`、`MAIMBOT_CONSOLE_LOG_LEVEL`、`MAIMBOT_FILE_LOG_LEVEL` 覆盖 `config/bot_config.toml` 中的 log 设置。
+  - **maim_message 服务**：`MAIM_MESSAGE_HOST`、`MAIM_MESSAGE_PORT`（以及可选的 `MAIM_MESSAGE_MODE`、`MAIM_MESSAGE_USE_WSS`）。
+- 示例：
+
+```dotenv
+DATABASE_URL=postgresql://maimbot:password@db.internal:5432/maimbot
+MAIMBOT_LOG_LEVEL=DEBUG
+MAIM_MESSAGE_HOST=maim-message.internal
+MAIM_MESSAGE_PORT=9000
+```
+
+更新 `.env` 后重启麦麦即可生效，所有入口（含测试脚本）都会通过统一的加载器读取这些配置。
+
 ## 💬 讨论
 
 **技术交流群：**

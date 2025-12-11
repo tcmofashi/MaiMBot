@@ -9,7 +9,7 @@ from .agent_config import AgentConfig, PersonalityConfig, BotOverrides, ConfigOv
 from src.common.logger import get_logger
 
 try:
-    from maim_db.src.core.models.agent_config import (
+    from maim_db.core.models.agent_config import (
         PersonalityConfig as DBPersonalityConfig,
         BotConfigOverrides as DBBotConfigOverrides,
         ChatConfigOverrides as DBChatConfigOverrides,

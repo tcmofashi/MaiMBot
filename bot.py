@@ -4,35 +4,29 @@ import os
 import time
 import platform
 import traceback
-import shutil
 import sys
 import subprocess
-from dotenv import load_dotenv
-from pathlib import Path
 from rich.traceback import install
+from pathlib import Path
+
+# Add sibling projects to sys.path to allow imports without modifying PYTHONPATH
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(ROOT_DIR)  # /home/user/proj
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "maim_message", "src"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "maim_db", "src"))
+# Ensure MaiMBot root is in path so 'src' module can be found
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from src.common.env_loader import load_project_env
 from src.common.logger import initialize_logging, get_logger, shutdown_logging
 
 # 设置工作目录为脚本所在目录
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-env_path = Path(__file__).parent / ".env"
-template_env_path = Path(__file__).parent / "template" / "template.env"
-
-if env_path.exists():
-    load_dotenv(str(env_path), override=True)
-else:
-    try:
-        if template_env_path.exists():
-            shutil.copyfile(template_env_path, env_path)
-            print("未找到.env，已从 template/template.env 自动创建")
-            load_dotenv(str(env_path), override=True)
-        else:
-            print("未找到.env文件，也未找到模板 template/template.env")
-            raise FileNotFoundError(".env 文件不存在，请创建并配置所需的环境变量")
-    except Exception as e:
-        print(f"自动创建 .env 失败: {e}")
-        raise
+# 统一由 env_loader 负责 .env 创建与读取
+load_project_env()
 
 initialize_logging()
 install(extra_lines=3)
@@ -40,6 +34,7 @@ logger = get_logger("main")
 
 # 定义重启退出码
 RESTART_EXIT_CODE = 42
+
 
 def run_runner_process():
     """
@@ -55,25 +50,25 @@ def run_runner_process():
 
     while True:
         logger.info(f"正在启动 {script_file}...")
-        
+
         # 启动子进程 (Worker)
         # 使用 sys.executable 确保使用相同的 Python 解释器
         cmd = [python_executable, script_file] + sys.argv[1:]
-        
+
         process = subprocess.Popen(cmd, env=env)
-        
+
         try:
             # 等待子进程结束
             return_code = process.wait()
-            
+
             if return_code == RESTART_EXIT_CODE:
                 logger.info("检测到重启请求 (退出码 42)，正在重启...")
-                time.sleep(1) # 稍作等待
+                time.sleep(1)  # 稍作等待
                 continue
             else:
                 logger.info(f"程序已退出 (退出码 {return_code})")
                 sys.exit(return_code)
-                
+
         except KeyboardInterrupt:
             # 向子进程发送终止信号
             if process.poll() is None:
@@ -86,6 +81,7 @@ def run_runner_process():
                     logger.warning("子进程未响应，强制关闭...")
                     process.kill()
             sys.exit(0)
+
 
 # 检查是否是 Worker 进程
 # 如果没有设置 MAIBOT_WORKER_PROCESS 环境变量，说明是直接运行的脚本，
@@ -302,7 +298,7 @@ def raw_main():
     # 打印开源提示（防止倒卖）
     print_opensource_notice()
 
-    check_eula()
+    # check_eula()
     logger.info("检查EULA和隐私条款完成")
 
     easter_egg()

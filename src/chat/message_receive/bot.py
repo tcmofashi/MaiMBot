@@ -239,8 +239,10 @@ class ChatBot:
         - 性能计时
         """
         try:
+            logger.info(f"ChatBot.message_process 开始处理消息: {message_data.get('message_info', {}).get('message_id')}")
             # 确保所有任务已启动
             await self._ensure_started()
+            logger.info("Bot started ensure done")
 
             if message_data["message_info"].get("group_info") is not None:
                 message_data["message_info"]["group_info"]["group_id"] = str(
@@ -253,12 +255,16 @@ class ChatBot:
             # print(message_data)
             # logger.debug(str(message_data))
             message = MessageRecv(message_data)
+            logger.info("MessageRecv inited")
+
             group_info = message.message_info.group_info
             user_info = message.message_info.user_info
 
             continue_flag, modified_message = await events_manager.handle_mai_events(
                 EventType.ON_MESSAGE_PRE_PROCESS, message
             )
+            logger.info(f"handle_mai_events done, continue: {continue_flag}")
+
             if not continue_flag:
                 return
             if modified_message and modified_message._modify_flags.modify_message_segments:
@@ -269,21 +275,33 @@ class ChatBot:
 
             # 处理消息内容，生成纯文本
             await message.process()
+            logger.info("message.process() done")
 
             # 平台层的 @ 检测由底层 is_mentioned_bot_in_message 统一处理；此处不做用户名硬编码匹配
 
             # 过滤检查
-            if _check_ban_words(
-                message.processed_plain_text,
-                user_info,  # type: ignore
-                group_info,
-            ) or _check_ban_regex(
-                message.raw_message,  # type: ignore
-                user_info,  # type: ignore
-                group_info,
-            ):
-                return
+            # 过滤检查
+            logger.info(f"UserId: {user_info}, GroupId: {group_info}")
+            if user_info:
+                try:
+                    if _check_ban_words(
+                        message.processed_plain_text,
+                        user_info,  # type: ignore
+                        group_info,
+                    ) or _check_ban_regex(
+                        message.raw_message,  # type: ignore
+                        user_info,  # type: ignore
+                        group_info,
+                    ):
+                        return
+                    pass
+                except Exception as e:
+                    logger.error(f"Ban check failed: {e}")
+                    traceback.print_exc()
+            else:
+                 logger.info("Skipping ban check due to missing user_info")
 
+            logger.info("ban check done")
             get_chat_manager().register_message(message)
 
             chat = await get_chat_manager().get_or_create_stream(
@@ -328,7 +346,9 @@ class ChatBot:
                 template_group_name = None
 
             async def preprocess():
+                logger.info(f"正在调用 HeartFCMessageReceiver处理消息: {message.message_info.message_id}")
                 await self.heartflow_message_receiver.process_message(message)
+                logger.info(f"HeartFCMessageReceiver处理消息完成: {message.message_info.message_id}")
 
             if template_group_name:
                 async with global_prompt_manager.async_message_scope(template_group_name):

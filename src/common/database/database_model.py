@@ -2,6 +2,7 @@ from peewee import Model, DoubleField, IntegerField, BooleanField, TextField, Fl
 from .database import db, SAAS_MODE
 import datetime
 import os
+from typing import Optional
 from src.common.logger import get_logger
 from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id
 
@@ -16,7 +17,7 @@ try:
         sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "maim_db", "src"))
         from src.core.models import BusinessBaseModel
 
-        def _require_ids(require_agent: bool) -> tuple[str, str | None]:
+        def _require_ids(require_agent: bool) -> tuple[str | None, str | None]:
             tenant_id = get_current_tenant_id()
             agent_id = get_current_agent_id()
             if not tenant_id:
@@ -93,7 +94,7 @@ try:
 
 except ImportError:
     # 最终回退选项（本地 SQLite 模式），仍然强制 tenant/agent 上下文
-    def _require_ids_fallback(require_agent: bool) -> tuple[str, str | None]:
+    def _require_ids_fallback(require_agent: bool) -> tuple[str | None, str | None]:
         tenant_id = get_current_tenant_id()
         agent_id = get_current_agent_id()
         if not tenant_id:
@@ -621,52 +622,21 @@ def initialize_database(sync_constraints=False):
                 existing_columns = {row[1] for row in cursor.fetchall()}
                 model_fields = set(model._meta.fields.keys())
 
-                if missing_fields := model_fields - existing_columns:
-                    logger.warning(f"表 '{table_name}' 缺失字段: {missing_fields}")
+                missing_fields = model_fields - existing_columns
+                if missing_fields:
+                    logger.warning(
+                        "表 '%s' 缺失字段: %s（已停止自动添加，请手动迁移数据库）",
+                        table_name,
+                        missing_fields,
+                    )
 
-                for field_name, field_obj in model._meta.fields.items():
-                    if field_name not in existing_columns:
-                        logger.info(f"表 '{table_name}' 缺失字段 '{field_name}'，正在添加...")
-                        field_type = field_obj.__class__.__name__
-                        sql_type = {
-                            "TextField": "TEXT",
-                            "IntegerField": "INTEGER",
-                            "FloatField": "FLOAT",
-                            "DoubleField": "DOUBLE",
-                            "BooleanField": "INTEGER",
-                            "DateTimeField": "DATETIME",
-                        }.get(field_type, "TEXT")
-                        alter_sql = f"ALTER TABLE {table_name} ADD COLUMN {field_name} {sql_type}"
-                        alter_sql += " NULL" if field_obj.null else " NOT NULL"
-                        if hasattr(field_obj, "default") and field_obj.default is not None:
-                            # 正确处理不同类型的默认值，跳过lambda函数
-                            default_value = field_obj.default
-                            if callable(default_value):
-                                # 跳过lambda函数或其他可调用对象，这些无法在SQL中表示
-                                pass
-                            elif isinstance(default_value, str):
-                                alter_sql += f" DEFAULT '{default_value}'"
-                            elif isinstance(default_value, bool):
-                                alter_sql += f" DEFAULT {int(default_value)}"
-                            else:
-                                alter_sql += f" DEFAULT {default_value}"
-                        try:
-                            db.execute_sql(alter_sql)
-                            logger.info(f"字段 '{field_name}' 添加成功")
-                        except Exception as e:
-                            logger.error(f"添加字段 '{field_name}' 失败: {e}")
-
-                # 检查并删除多余字段（新增逻辑）
                 extra_fields = existing_columns - model_fields
                 if extra_fields:
-                    logger.warning(f"表 '{table_name}' 存在多余字段: {extra_fields}")
-                for field_name in extra_fields:
-                    try:
-                        logger.warning(f"表 '{table_name}' 存在多余字段 '{field_name}'，正在尝试删除...")
-                        db.execute_sql(f"ALTER TABLE {table_name} DROP COLUMN {field_name}")
-                        logger.info(f"字段 '{field_name}' 删除成功")
-                    except Exception as e:
-                        logger.error(f"删除字段 '{field_name}' 失败: {e}")
+                    logger.warning(
+                        "表 '%s' 存在多余字段: %s（已停止自动删除，请手动迁移数据库）",
+                        table_name,
+                        extra_fields,
+                    )
 
         # 如果启用了约束同步，执行约束检查和修复
         if sync_constraints:

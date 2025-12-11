@@ -141,11 +141,11 @@ class AsyncTaskManager:
                                 import sys as _sys, os as _os
 
                                 _maim_db_path = _os.path.abspath(
-                                    _os.path.join(_os.path.dirname(__file__), "..", "..", "maim_db")
+                                    _os.path.join(_os.path.dirname(__file__), "..", "..", "..", "maim_db", "src")
                                 )
                                 if _maim_db_path not in _sys.path:
                                     _sys.path.insert(0, _maim_db_path)
-                                from maim_db.src.core import AsyncAgentActiveState  # type: ignore
+                                from maim_db.core import AsyncAgentActiveState  # type: ignore
 
                                 active_records = await AsyncAgentActiveState.list_active()
                             except Exception:

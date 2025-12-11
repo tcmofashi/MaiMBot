@@ -14,6 +14,7 @@ from rich.traceback import install
 from typing import Any, Callable, List, Optional
 
 from src.common.logger import get_logger
+from src.common.env_loader import get_project_env
 from src.common.toml_utils import format_toml_string
 from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id
 from src.config.config_base import ConfigBase
@@ -149,7 +150,7 @@ def compare_default_values(new, old, path=None, logs=None, changes=None):
     return logs, changes
 
 
-def _get_version_from_toml(toml_path) -> Optional[str]:
+def _get_version_from_toml(toml_path) -> str | None:
     """从TOML文件中获取版本号"""
     if not os.path.exists(toml_path):
         return None
@@ -577,9 +578,16 @@ _BASIC_VALUE_TYPES = (int, float, bool, str, bytes, type(None))
 class _ConfigRuntimeAdapter:
     """Resolves tenant-specific overrides for proxied configs."""
 
-    def __init__(self, source_label: str, fetcher: Callable[[Optional[str], Optional[str]], Any]):
+    def __init__(
+        self,
+        source_label: str,
+        fetcher: Callable[[Optional[str], Optional[str]], Any],
+        *,
+        require_context: bool = True,
+    ):
         self._source_label = source_label
         self._fetcher = fetcher
+        self._require_context = require_context
         self._logger = get_logger(f"{source_label}_config_proxy")
 
     def should_override(self, value: Any) -> bool:
@@ -589,9 +597,11 @@ class _ConfigRuntimeAdapter:
         tenant_id = get_current_tenant_id()
         agent_id = get_current_agent_id()
         if not tenant_id or not agent_id:
-            raise RuntimeError(
-                "Missing tenant_id or agent_id in context: tenant-aware config access requires both values"
-            )
+            if self._require_context:
+                raise RuntimeError(
+                    "Missing tenant_id or agent_id in context: tenant-aware config access requires both values"
+                )
+            return None
         config_obj = self._fetcher(tenant_id, agent_id)
         if config_obj is None:
             return None
@@ -697,17 +707,45 @@ update_model_config()
 logger.info("正在品鉴配置文件...")
 global_config = load_config(config_path=os.path.join(CONFIG_DIR, "bot_config.toml"))
 model_config = api_ada_load_config(config_path=os.path.join(CONFIG_DIR, "model_config.toml"))
+
+_env = get_project_env()
+if _env.has("MAIM_MESSAGE_HOST") and _env.maim_message_host:
+    global_config.maim_message.host = _env.maim_message_host
+
+if _env.has("MAIM_MESSAGE_PORT") and _env.maim_message_port is not None:
+    global_config.maim_message.port = _env.maim_message_port
+
+if _env.has("MAIM_MESSAGE_MODE") and _env.maim_message_mode:
+    global_config.maim_message.mode = _env.maim_message_mode
+
+if _env.has("MAIM_MESSAGE_USE_WSS"):
+    global_config.maim_message.use_wss = _env.maim_message_use_wss
 logger.info("非常的新鲜，非常的美味！")
+
+# 在注入运行时代理之前，保存一份纯净的基础配置副本
+# 这份副本包含了环境变量的修改，但没有代理逻辑
+# 专门提供给 ConfigMerger 使用，以避免递归死锁
+import copy
+base_global_config = copy.deepcopy(global_config)
+base_model_config = copy.deepcopy(model_config)
 
 try:
     global_config.__class__ = _RuntimeAwareConfig
-    global_config._runtime_proxy = _ConfigRuntimeAdapter("global", _TENANT_CONFIG_PROVIDER.get_global_config)
+    global_config._runtime_proxy = _ConfigRuntimeAdapter(
+        "global",
+        _TENANT_CONFIG_PROVIDER.get_global_config,
+        require_context=False,
+    )
 except Exception as exc:  # pragma: no cover - defensive guard
     logger.warning("无法注入 global_config 运行时代理: %s", exc)
 
 try:
     model_config.__class__ = _RuntimeAwareAPIAdapterConfig
-    model_config._runtime_proxy = _ConfigRuntimeAdapter("model", _TENANT_CONFIG_PROVIDER.get_model_config)
+    model_config._runtime_proxy = _ConfigRuntimeAdapter(
+        "model",
+        _TENANT_CONFIG_PROVIDER.get_model_config,
+        require_context=False,
+    )
 except Exception as exc:  # pragma: no cover - defensive guard
     logger.warning("无法注入 model_config 运行时代理: %s", exc)
 

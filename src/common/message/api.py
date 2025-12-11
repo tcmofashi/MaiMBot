@@ -25,7 +25,7 @@ async def _import_maimdb_active():
         maim_db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "maim_db"))
         if maim_db_path not in sys.path:
             sys.path.insert(0, maim_db_path)
-        from maim_db.src.core import AsyncAgentActiveState  # type: ignore
+        from maim_db.core import AsyncAgentActiveState  # type: ignore
 
         return AsyncAgentActiveState
     except Exception as e:
@@ -91,6 +91,15 @@ from maim_message.message import (
     UserInfo as APIUserInfo,
     FormatInfo as APIFormatInfo,
     TemplateInfo as APITemplateInfo,
+)
+from maim_message import (
+    MessageBase,
+    BaseMessageInfo,
+    Seg,
+    UserInfo,
+    GroupInfo,
+    FormatInfo,
+    TemplateInfo,
 )
 
 from src.common.logger import get_logger
@@ -162,7 +171,7 @@ class MaimConfigClient:
             raise RuntimeError("MaimConfigClient must be used as async context manager")
 
         # 调用MaimConfig的API Key解析端点
-        url = f"{self.url}/auth/parse-api-key"
+        url = f"{self.url}/api/v2/auth/parse-api-key"
         data = {"api_key": api_key}
 
         try:
@@ -234,7 +243,7 @@ async def parse_api_key(api_key: str) -> Optional[Dict[str, Any]]:
             retry_count=maim_config_config["retry_count"],
         ) as client:
             # 调用MaimConfig的API Key解析端点
-            url = f"{client.url}/auth/parse-api-key"
+            url = f"{client.url}/api/v2/auth/parse-api-key"
             data = {"api_key": api_key}
 
             async with client.session.post(url, json=data) as response:
@@ -374,11 +383,19 @@ async def message_handler(message: APIMessageBase, metadata: Dict[str, Any]) -> 
         from src.chat.message_receive.bot import get_message_handler
 
         handler = get_message_handler()
-        if tenant_id and agent_id:
-            async with tenant_context_async(tenant_id, agent_id):
+        # 使用 Config 上下文
+        try:
+            if tenant_id and agent_id:
+                async with tenant_context_async(tenant_id, agent_id):
+                    logger.info("进入 agent context, 准备调用 message_process")
+                    await handler.message_process(legacy_message)
+                    logger.info("message_process 调用完成")
+            else:
                 await handler.message_process(legacy_message)
-        else:
-            await handler.message_process(legacy_message)
+        except Exception as e:
+            logger.error(f"消息处理异常: {e}")
+            import traceback
+            traceback.print_exc()
 
         logger.info(f"消息处理完成: {message.message_info.message_id}")
 
@@ -394,55 +411,71 @@ def convert_api_message_to_legacy(api_message: APIMessageBase) -> Dict[str, Any]
 
     if api_message.message_info.sender_info:
         if api_message.message_info.sender_info.user_info:
-            user_info = api_message.message_info.sender_info.user_info
+            api_user_info = api_message.message_info.sender_info.user_info
+            user_info = UserInfo.from_dict(api_user_info.to_dict())
 
         if api_message.message_info.sender_info.group_info:
-            group_info = api_message.message_info.sender_info.group_info
+            api_group_info = api_message.message_info.sender_info.group_info
+            group_info = GroupInfo.from_dict(api_group_info.to_dict())
 
-    # 构建兼容的消息格式
-    legacy_data = {
-        "message_info": {
-            "platform": api_message.message_info.platform,
-            "message_id": api_message.message_info.message_id,
-            "time": api_message.message_info.time,
-        },
-        "message_segment": {"type": api_message.message_segment.type, "data": api_message.message_segment.data},
-        "user_info": user_info,
-        "group_info": group_info,
-        "message_dim": {"api_key": api_message.message_dim.api_key, "platform": api_message.message_dim.platform},
-    }
-
-    # 添加格式信息（如果有）
+    # 格式信息转换
+    format_info = None
     if api_message.message_info.format_info:
-        legacy_data["message_info"]["format_info"] = {
-            "content_format": api_message.message_info.format_info.content_format,
-            "accept_format": api_message.message_info.format_info.accept_format,
-        }
+        format_info = FormatInfo.from_dict(api_message.message_info.format_info.to_dict())
 
+    # 模板信息转换
+    template_info = None
+    if api_message.message_info.template_info:
+        template_info = TemplateInfo.from_dict(api_message.message_info.template_info.to_dict())
+
+    # 处理 additional_config
     raw_additional_cfg = getattr(api_message.message_info, "additional_config", None)
     additional_cfg: Dict[str, Any] = {}
     if isinstance(raw_additional_cfg, dict):
         additional_cfg = dict(raw_additional_cfg)
-
-    message_dim_dict = {
-        "api_key": api_message.message_dim.api_key,
-        "platform": api_message.message_dim.platform,
-    }
-
+    
+    # 注入 API Key 和 Platform 到 additional_config (兼容逻辑)
     additional_cfg.setdefault("api_key", api_message.message_dim.api_key)
     additional_cfg.setdefault("api_platform", api_message.message_dim.platform)
-
+    
     existing_dim = additional_cfg.get("message_dim")
     if isinstance(existing_dim, dict):
         existing_dim.setdefault("api_key", api_message.message_dim.api_key)
         existing_dim.setdefault("platform", api_message.message_dim.platform)
     else:
-        additional_cfg["message_dim"] = message_dim_dict
+        additional_cfg["message_dim"] = {
+            "api_key": api_message.message_dim.api_key,
+            "platform": api_message.message_dim.platform,
+        }
 
-    if additional_cfg:
-        legacy_data["message_info"]["additional_config"] = additional_cfg
+    # 构造 BaseMessageInfo (Legacy)
+    # 注意：这里我们将 sender_info 中的 user_info/group_info 放入了 BaseMessageInfo 的废弃字段中
+    # 以支持 MaiMBot 的旧逻辑
+    legacy_message_info = BaseMessageInfo(
+        platform=api_message.message_info.platform,
+        message_id=api_message.message_info.message_id,
+        time=api_message.message_info.time,
+        group_info=group_info,
+        user_info=user_info,
+        format_info=format_info,
+        template_info=template_info,
+        additional_config=additional_cfg,
+        sender_info=None, # Legacy BaseMessageInfo 有 sender_info 吗？根据 message_base.py 源码，有。但不作为主要使用。
+        # 我们主要填充 user_info / group_info
+    )
 
-    return legacy_data
+    # 处理 Message Segment
+    legacy_segment = Seg.from_dict(api_message.message_segment.to_dict())
+
+    # 构造 MessageBase (Legacy)
+    legacy_message = MessageBase(
+        message_info=legacy_message_info,
+        message_segment=legacy_segment,
+        raw_message=None # 原始 payload 不再传递
+    )
+
+    # 转换为字典，供 bot.py MessageRecv 使用
+    return legacy_message.to_dict()
 
 
 def _normalize_additional_config(additional_config: Any) -> Dict[str, Any]:

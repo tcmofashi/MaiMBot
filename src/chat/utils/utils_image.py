@@ -138,12 +138,10 @@ class ImageManager:
         try:
             # 清理Images表中type为emoji的记录
             deleted_images = Images.delete().where(Images.type == "emoji").execute()
-            
+
             # 清理ImageDescriptions表中type为emoji的记录
-            deleted_descriptions = (
-                ImageDescriptions.delete().where(ImageDescriptions.type == "emoji").execute()
-            )
-            
+            deleted_descriptions = ImageDescriptions.delete().where(ImageDescriptions.type == "emoji").execute()
+
             total_deleted = deleted_images + deleted_descriptions
             if total_deleted > 0:
                 logger.info(
@@ -174,7 +172,7 @@ class ImageManager:
 
     async def _save_emoji_file_if_needed(self, image_base64: str, image_hash: str, image_format: str) -> None:
         """如果启用了steal_emoji且表情包未注册，保存文件到data/emoji目录
-        
+
         Args:
             image_base64: 图片的base64编码
             image_hash: 图片的MD5哈希值
@@ -182,9 +180,9 @@ class ImageManager:
         """
         if not global_config.emoji.steal_emoji:
             return
-        
-            try:
-                from src.chat.emoji_system.emoji_manager import get_emoji_manager, get_emoji_storage_dir
+
+        try:
+            from src.chat.emoji_system.emoji_manager import get_emoji_manager, get_emoji_storage_dir
 
             emoji_dir = get_emoji_storage_dir()
 
@@ -242,12 +240,16 @@ class ImageManager:
                     # 优先使用情感标签，如果没有则使用详细描述
                     result_text = ""
                     if cache_record.emotion_tags:
-                        logger.info(f"[缓存命中] 使用EmojiDescriptionCache表中的情感标签: {cache_record.emotion_tags[:50]}...")
+                        logger.info(
+                            f"[缓存命中] 使用EmojiDescriptionCache表中的情感标签: {cache_record.emotion_tags[:50]}..."
+                        )
                         result_text = f"[表情包：{cache_record.emotion_tags}]"
                     elif cache_record.description:
-                        logger.info(f"[缓存命中] 使用EmojiDescriptionCache表中的描述: {cache_record.description[:50]}...")
+                        logger.info(
+                            f"[缓存命中] 使用EmojiDescriptionCache表中的描述: {cache_record.description[:50]}..."
+                        )
                         result_text = f"[表情包：{cache_record.description}]"
-                    
+
                     # 即使缓存命中，如果启用了steal_emoji，也检查是否需要保存文件
                     if result_text:
                         await self._save_emoji_file_if_needed(image_base64, image_hash, image_format)

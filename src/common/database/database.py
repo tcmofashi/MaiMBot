@@ -1,43 +1,19 @@
-import os
-from peewee import SqliteDatabase
 from rich.traceback import install
+
+from src.common.env_loader import load_project_env
 
 install(extra_lines=3)
 
-# 尝试导入统一数据库配置
+# 提前加载项目级环境变量，确保 maim_db 可以读取数据库配置
+load_project_env()
+
 try:
-    # 优先使用统一数据库配置（SaaS模式）
-    import sys
-    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "maim_db", "src"))
-    from src.core import get_database, init_database
+    from maim_db import get_database, init_database
+except Exception as exc:
+    raise RuntimeError(
+        "maim_db 包未找到，请先通过 `pip install maim_db` 或 `pip install -e ../maim_db` 安装依赖"
+    ) from exc
 
-    # 使用统一数据库配置
-    init_database()
-    db = get_database()
-    SAAS_MODE = True
-
-except ImportError:
-    # 回退到本地SQLite配置（单用户模式）
-    print("Warning: 统一数据库配置不可用，回退到本地SQLite模式")
-
-    # 定义数据库文件路径
-    ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    _DB_DIR = os.path.join(ROOT_PATH, "data")
-    _DB_FILE = os.path.join(_DB_DIR, "MaiBot.db")
-
-    # 确保数据库目录存在
-    os.makedirs(_DB_DIR, exist_ok=True)
-
-    # 全局 Peewee SQLite 数据库访问点
-    db = SqliteDatabase(
-        _DB_FILE,
-        pragmas={
-            "journal_mode": "wal",  # WAL模式提高并发性能
-            "cache_size": -64 * 1000,  # 64MB缓存
-            "foreign_keys": 1,
-            "ignore_check_constraints": 0,
-            "synchronous": 0,  # 异步写入提高性能
-            "busy_timeout": 1000,  # 1秒超时而不是3秒
-        },
-    )
-    SAAS_MODE = False
+init_database()
+db = get_database()
+SAAS_MODE = True
