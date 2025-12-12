@@ -316,7 +316,7 @@ async def clear_temp_emoji() -> None:
     当目录中文件数超过100时，会全部删除
     """
 
-    logger.info("[清理] 开始清理缓存...")
+    logger.debug("[清理] 开始清理缓存...")
 
     targets = (
         get_emoji_storage_dir(),
@@ -596,7 +596,7 @@ class EmojiManager:
                 logger.info(f"[清理] 已清理 {removed_count} 个失效/文件丢失的表情包记录")
                 logger.info(f"[统计] 清理前记录数: {total_count} | 清理后有效记录数: {len(self.emoji_objects)}")
             else:
-                logger.info(f"[检查] 已检查 {total_count} 个表情包记录，全部完好")
+                logger.debug(f"[检查] 已检查 {total_count} 个表情包记录，全部完好")
 
         except Exception as e:
             logger.error(f"[错误] 检查表情包完整性失败: {str(e)}")
@@ -609,12 +609,12 @@ class EmojiManager:
         # logger.info("[扫描] 开始检查表情包完整性...")
         await self.check_emoji_file_integrity()
         await clear_temp_emoji()
-        logger.info("[扫描] 开始扫描新表情包...")
+        logger.debug("[扫描] 开始扫描新表情包...")
 
         emoji_dir = get_emoji_storage_dir()
         files = os.listdir(emoji_dir)
         if not files:
-            logger.warning(f"[警告] 表情包目录为空: {emoji_dir}")
+            logger.debug(f"[扫描] 表情包目录为空: {emoji_dir}")
             return
 
         # 检查是否需要处理表情包(数量超过最大值或不足)
@@ -656,7 +656,7 @@ class EmojiManager:
         """获取所有表情包并初始化为MaiEmoji类对象，更新 self.emoji_objects"""
         try:
             self._ensure_db()
-            logger.debug("[数据库] 开始加载所有表情包记录 (Peewee)...")
+            # logger.debug("[数据库] 开始加载所有表情包记录 (Peewee)...")
 
             emoji_peewee_instances = Emoji.select()
             emoji_objects, load_errors = _to_emoji_objects(emoji_peewee_instances)
@@ -665,7 +665,7 @@ class EmojiManager:
             self.emoji_objects = emoji_objects
             self.emoji_num = len(emoji_objects)
 
-            logger.info(f"[数据库] 加载完成: 共加载 {self.emoji_num} 个表情包记录。")
+            logger.debug(f"[数据库] 加载完成: 共加载 {self.emoji_num} 个表情包记录。")
             if load_errors > 0:
                 logger.warning(f"[数据库] 加载过程中出现 {load_errors} 个错误。")
 

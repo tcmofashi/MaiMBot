@@ -801,7 +801,64 @@ def configure_structlog():
     )
 
 
+import contextvars
+from contextlib import contextmanager
+
+# ContextVar to control log suppression
+# When True, INFO and DEBUG logs will be dropped
+SUPPRESS_LOGS = contextvars.ContextVar("suppress_logs", default=False)
+
+
+@contextmanager
+def suppress_logs_context():
+    """Context manager to suppress INFO/DEBUG/SUCCESS/WARNING logs within the context.
+    Only ERROR and CRITICAL logs will be emitted.
+    """
+    token = SUPPRESS_LOGS.set(True)
+    try:
+        yield
+    finally:
+        SUPPRESS_LOGS.reset(token)
+
+
+def suppress_logs_processor(logger, method_name, event_dict):
+    """Structlog processor to drop logs if suppression is active"""
+    if SUPPRESS_LOGS.get():
+        # Drop logs with level lower than ERROR
+        # method_name corresponds to the log level (debug, info, warning, error, critical)
+        if method_name in ("debug", "info", "success", "warning"):
+            raise structlog.DropEvent
+    return event_dict
+
+
 # 配置structlog
+def configure_structlog():
+    """配置structlog"""
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            # Add suppression processor early
+            suppress_logs_processor,
+            structlog.processors.CallsiteParameterAdder(
+                parameters=[
+                    structlog.processors.CallsiteParameter.PATHNAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            ),
+            convert_pathname_to_module,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper(fmt=get_timestamp_format(), utc=False),
+            # 根据输出类型选择不同的渲染器
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+    
 configure_structlog()
 
 # 为文件输出配置JSON格式

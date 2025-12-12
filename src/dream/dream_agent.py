@@ -692,7 +692,7 @@ def _pick_random_chat_id() -> Optional[str]:
         rows = ChatHistory.select(ChatHistory.chat_id).distinct().order_by(ChatHistory.chat_id).limit(200)
         ids = [r.chat_id for r in rows]
         if not ids:
-            logger.warning("[dream] ChatHistory 中暂无可用 chat_id，本轮 dream 任务跳过。")
+            # logger.warning("[dream] ChatHistory 中暂无可用 chat_id，本轮 dream 任务跳过。")
             return None
         return random.choice(ids)
     except Exception as e:

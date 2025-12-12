@@ -134,6 +134,10 @@ class AsyncTaskManager:
                 while not self.abort_flag.is_set():
                     try:
                         if task.per_tenant:
+                            
+                            # 导入日志抑制上下文
+                            from src.common.logger import suppress_logs_context
+
                             # 尝试获取活跃 tenant-agent 列表
                             active_records = None
                             try:
@@ -152,16 +156,53 @@ class AsyncTaskManager:
                                 active_records = None
 
                             if active_records:
+                                # 在抑制日志的上下文中执行任务
                                 coros = []
-                                for rec in active_records:
-                                    try:
-                                        coros.append(task.run_for(rec.tenant_id, rec.agent_id))
-                                    except Exception:
-                                        # 忽略单个生成失败，继续其他
-                                        logger.exception("为活跃记录生成协程失败")
+                                with suppress_logs_context():
+                                    for rec in active_records:
+                                        try:
+                                            # 直接调用 run_for 不等待，收集协程
+                                            coros.append(task.run_for(rec.tenant_id, rec.agent_id))
+                                        except Exception:
+                                            # 忽略单个生成失败，继续其他
+                                            logger.exception("为活跃记录生成协程失败")
 
+                                    if coros:
+                                        # 并发执行所有租户任务
+                                        # 使用 return_exceptions=True 捕获异常，避免单个任务失败影响整体
+                                        results = await asyncio.gather(*coros, return_exceptions=True)
+                                        
+                                        # 统计结果
+                                        success_count = 0
+                                        error_count = 0
+                                        for res in results:
+                                            if isinstance(res, Exception):
+                                                error_count += 1
+                                                # 错误已经在 suppress_logs_context 之外（gather内部捕获）？
+                                                # 不，suppress_logs_context 作用于 coros 生成时？
+                                                # 不对，gather 执行时 coroutine 已经创建。
+                                                # ContextVar 在 asyncio 中会自动传播。
+                                                # 所以 suppress_logs_context 包裹 gather 调用即可生效。
+                                                logger.error(f"任务 '{task.task_name}' 在某租户执行时发生异常: {res}")
+                                            else:
+                                                success_count += 1
+                                        
+                                        # 任务集层面的总结日志 (Context外，Info级别)
+                                        # 注意：这里我们在 suppress_logs_context 内部吗？
+                                        # 如果在内部，Info 会被吞掉。
+                                        # 所以必须把 gather 放在 context 内，summary 放在 context 外。
+                                        pass 
+                                
+                                # 这里已经在 suppress_logs_context 外部
                                 if coros:
-                                    await asyncio.gather(*coros)
+                                    # 重新组织逻辑：gather 必须在 context 内执行才能让 task.run 收到 contextvar
+                                    # 但我们需要 results。
+                                    # 上面的写法有问题，with block 结束后才执行 summary。
+                                    # 但 results 在 block 内。
+                                    # Python 的变量作用域是函数级的，results 在 block 外可见。
+                                    if 'results' in locals():
+                                        logger.info(f"任务 '{task.task_name}' 周期完成: 处理 {len(results)} 个租户 (成功 {success_count}, 失败 {error_count})")
+
                                 else:
                                     # 没有有效协程，记录并跳过
                                     logger.debug(f"任务 '{task.task_name}' 没有生成任何 per-tenant 协程，跳过本次执行")
