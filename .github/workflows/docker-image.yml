@@ -1,6 +1,8 @@
-name: Docker Build and Push (Main)
+name: Docker Build and Push
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
   push:
     branches:
       - main
@@ -11,11 +13,6 @@ on:
       - "*.*.*"
       - "*.*.*-*"
   workflow_dispatch: # 允许手动触发工作流
-    inputs:
-      branch:
-        description: 'Branch to build'
-        required: false
-        default: 'main'
 
 # Workflow's jobs
 jobs:
@@ -28,6 +25,7 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
           fetch-depth: 0
 
       # Clone required dependencies
@@ -81,6 +79,7 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
           fetch-depth: 0
 
       # Clone required dependencies
