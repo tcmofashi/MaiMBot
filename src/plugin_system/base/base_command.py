@@ -8,6 +8,7 @@ from src.plugin_system.apis import send_api
 
 if TYPE_CHECKING:
     from src.common.data_models.database_data_model import DatabaseMessages
+    from src.plugin_system.base.plugin_base import BasePlugin, PluginBase
 
 logger = get_logger("base_command")
 
@@ -31,16 +32,28 @@ class BaseCommand(ABC):
     command_pattern: str = r""
     """命令匹配的正则表达式"""
 
-    def __init__(self, message: MessageRecv, plugin_config: Optional[dict] = None):
+    def __init__(
+        self,
+        message: MessageRecv,
+        plugin_config: Optional[dict] = None,
+        plugin_instance: Optional["PluginBase"] = None,
+    ):
         """初始化Command组件
 
         Args:
             message: 接收到的消息对象
-            plugin_config: 插件配置字典
+            plugin_config: 插件配置字典 (兼容旧方式)
+            plugin_instance: 插件实例 (推荐工厂模式使用)
         """
         self.message = message
         self.matched_groups: Dict[str, str] = {}  # 存储正则表达式匹配的命名组
-        self.plugin_config = plugin_config or {}  # 直接存储插件配置字典
+        self.plugin = plugin_instance
+
+        # 优先使用 plugin_instance 的配置，其次是传入的 plugin_config，最后是空字典
+        if plugin_instance and getattr(plugin_instance, "config", None):
+            self.plugin_config = plugin_instance.config
+        else:
+            self.plugin_config = plugin_config or {}
 
         self.log_prefix = "[Command]"
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Union
+from typing import List, Tuple, Union, Any, Dict, Optional
 import os
 import inspect
 import toml
@@ -12,6 +12,7 @@ from src.plugin_system.base.component_types import (
     PluginInfo,
     PythonDependency,
 )
+from src.common.message.tenant_context import TenantContextState as TenantContext
 from src.plugin_system.base.config_types import (
     ConfigField,
     ConfigSection,
@@ -69,15 +70,25 @@ class PluginBase(ABC):
     # 布局配置（可选，不定义则使用自动布局）
     config_layout: ConfigLayout = None
 
-    def __init__(self, plugin_dir: str):
+    def __init__(
+            self,
+            plugin_dir: str,
+            context: Optional[TenantContext] = None,
+            config: Optional[Dict[str, Any]] = None
+    ):
         """初始化插件
 
         Args:
-            plugin_dir: 插件目录路径，由插件管理器传递
+            plugin_dir: 插件目录路径
+            context: 租户上下文（运行时注入，仅元数据加载时为None）
+            config: 插件配置（运行时注入，仅元数据加载时为None）
         """
-        self.config: Dict[str, Any] = {}  # 插件配置
+        self.context = context
         self.plugin_dir = plugin_dir  # 插件目录路径
         self.log_prefix = f"[Plugin:{self.plugin_name}]"
+
+        # 如果注入了配置，直接使用；否则初始化为空字典（后续可能通过文件加载）
+        self.config: Dict[str, Any] = config if config is not None else {}
 
         # 加载manifest文件
         self._load_manifest()
@@ -85,8 +96,9 @@ class PluginBase(ABC):
         # 验证插件信息
         self._validate_plugin_info()
 
-        # 加载插件配置
-        self._load_plugin_config()
+        # 加载插件配置 (仅在没有注入配置且是元数据加载模式时尝试加载本地默认配置)
+        if self.config is None or not self.config:
+            self._load_plugin_config()
 
         # 从manifest获取显示信息
         self.display_name = self.get_manifest_info("name", self.plugin_name)
@@ -668,3 +680,12 @@ class PluginBase(ABC):
             bool: 是否成功注册插件
         """
         raise NotImplementedError("Subclasses must implement this method")
+
+    def setup(self):
+        """[生命周期] 插件实例化后调用 (仅运行时)"""
+        pass
+
+    def teardown(self):
+        """[生命周期] 插件销毁前调用 (仅运行时)"""
+        pass
+

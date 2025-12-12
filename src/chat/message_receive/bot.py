@@ -13,8 +13,10 @@ from src.chat.message_receive.message import MessageRecv
 from src.chat.message_receive.storage import MessageStorage
 from src.chat.heart_flow.heartflow_message_processor import HeartFCMessageReceiver
 from src.chat.utils.prompt_builder import Prompt, global_prompt_manager
-from src.plugin_system.core import component_registry, events_manager, global_announcement_manager
+from src.plugin_system.core import component_registry, events_manager, global_announcement_manager, plugin_manager
 from src.plugin_system.base import BaseCommand, EventType
+from src.plugin_system.utils.saas_utils import is_plugin_enabled, get_plugin_config
+from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id, get_current_context
 
 # 定义日志配置
 
@@ -106,42 +108,82 @@ class ChatBot:
 
                 message.is_command = True
 
-                # 获取插件配置
-                plugin_config = component_registry.get_plugin_config(plugin_name)
-
-                # 创建命令实例
-                command_instance: BaseCommand = command_class(message, plugin_config)
-                command_instance.set_matched_groups(matched_groups)
-
+                # 定义变量以确保finally块能正确执行
+                plugin_instance = None
+                
                 try:
-                    # 执行命令
-                    success, response, intercept_message_level = await command_instance.execute()
-                    message.intercept_message_level = intercept_message_level
+                    tenant_id = get_current_tenant_id()
+                    agent_id = get_current_agent_id()
 
-                    # 记录命令执行结果
-                    if success:
-                        logger.info(f"命令执行成功: {command_class.__name__} (拦截等级: {intercept_message_level})")
+                    # SaaS 激活检查
+                    if tenant_id and not is_plugin_enabled(tenant_id, agent_id or "", plugin_name):
+                        logger.info(f"插件 {plugin_name} 未对租户 {tenant_id} 启用，跳过命令")
+                        return False, None, True
+
+                    # 插件工厂实例化
+                    plugin_cls = plugin_manager.get_plugin_class(plugin_name)
+                    
+                    if plugin_cls:
+                        plugin_path = plugin_manager.get_plugin_path(plugin_name)
+                        # 获取该租户的插件配置 (传入 agent_id 以支持覆盖)
+                        plugin_config_dict = get_plugin_config(tenant_id, plugin_name, agent_id=agent_id or "") if tenant_id else {}
+                        
+                        # 实例化插件 (Factory Mode)
+                        plugin_instance = plugin_cls(
+                            plugin_dir=plugin_path,
+                            context=get_current_context(),
+                            config=plugin_config_dict
+                        )
+                        # [生命周期] Setup
+                        plugin_instance.setup()
+                        
+                        # 创建命令实例 (注入插件实例)
+                        command_instance: BaseCommand = command_class(message, plugin_instance=plugin_instance)
                     else:
-                        logger.warning(f"命令执行失败: {command_class.__name__} - {response}")
+                        # Fallback (Old Mode) - 仅当无法获取类时
+                        logger.warning(f"无法获取插件类 {plugin_name}，尝试降级模式")
+                        plugin_config = component_registry.get_plugin_config(plugin_name)
+                        command_instance: BaseCommand = command_class(message, plugin_config) # type: ignore
 
-                    # 根据命令的拦截设置决定是否继续处理消息
-                    return (
-                        True,
-                        response,
-                        not bool(intercept_message_level),
-                    )  # 找到命令，根据intercept_message决定是否继续
-
-                except Exception as e:
-                    logger.error(f"执行命令时出错: {command_class.__name__} - {e}")
-                    logger.error(traceback.format_exc())
+                    command_instance.set_matched_groups(matched_groups)
 
                     try:
-                        await command_instance.send_text(f"命令执行出错: {str(e)}")
-                    except Exception as send_error:
-                        logger.error(f"发送错误消息失败: {send_error}")
+                        # 执行命令
+                        success, response, intercept_message_level = await command_instance.execute()
+                        message.intercept_message_level = intercept_message_level
 
-                    # 命令出错时，根据命令的拦截设置决定是否继续处理消息
-                    return True, str(e), False  # 出错时继续处理消息
+                        # 记录命令执行结果
+                        if success:
+                            logger.info(f"命令执行成功: {command_class.__name__} (拦截等级: {intercept_message_level})")
+                        else:
+                            logger.warning(f"命令执行失败: {command_class.__name__} - {response}")
+
+                        # 根据命令的拦截设置决定是否继续处理消息
+                        return (
+                            True,
+                            response,
+                            not bool(intercept_message_level),
+                        )
+
+                    except Exception as e:
+                        logger.error(f"执行命令时出错: {command_class.__name__} - {e}")
+                        logger.error(traceback.format_exc())
+
+                        try:
+                            await command_instance.send_text(f"命令执行出错: {str(e)}")
+                        except Exception as send_error:
+                            logger.error(f"发送错误消息失败: {send_error}")
+
+                        # 命令出错时，根据命令的拦截设置决定是否继续处理消息
+                        return True, str(e), False
+
+                finally:
+                    # [生命周期] Teardown
+                    if plugin_instance:
+                        try:
+                            plugin_instance.teardown()
+                        except Exception as e:
+                            logger.error(f"插件 {plugin_name} teardown 失败: {e}")
 
             # 没有找到命令，继续处理消息
             return False, None, True

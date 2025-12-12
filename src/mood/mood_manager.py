@@ -179,6 +179,7 @@ class MoodRegressionTask(AsyncTask):
         logger.debug("开始情绪回归任务...")
         now = time.time()
         for mood in self.mood_manager.mood_list:
+            # ContextAwareMap automatically filters by tenant/agent
             if mood.last_change_time == 0:
                 continue
 
@@ -190,9 +191,11 @@ class MoodRegressionTask(AsyncTask):
                 await mood.regress_mood()
 
 
+from src.common.structure.context_aware_map import ContextAwareMap
+
 class MoodManager:
     def __init__(self):
-        self.mood_list: list[ChatMood] = []
+        self.mood_list: ContextAwareMap[str, ChatMood] = ContextAwareMap()
         """当前情绪状态"""
         self.task_started: bool = False
 
@@ -207,21 +210,40 @@ class MoodManager:
         logger.info("情绪回归任务已启动")
 
     def get_mood_by_chat_id(self, chat_id: str) -> ChatMood:
-        for mood in self.mood_list:
-            if mood.chat_id == chat_id:
-                return mood
-
+        # 尝试直接从 ContextAwareMap 中获取
+        try:
+             return self.mood_list[chat_id]
+        except KeyError:
+             pass
+        
+        # 这里的 chat_id 是 key?
+        # 原逻辑是遍历 list finding by key. Now using Map.
+        
         new_mood = ChatMood(chat_id)
-        self.mood_list.append(new_mood)
+        # 需要获取 chat_stream 以确定 tenant
+        if new_mood.chat_stream:
+             if new_mood.chat_stream.tenant_id:
+                 self.mood_list.set_with_context(
+                     chat_id, 
+                     new_mood, 
+                     new_mood.chat_stream.tenant_id, 
+                     new_mood.chat_stream.agent_id or ""
+                 )
+             else:
+                 self.mood_list[chat_id] = new_mood
+        else:
+             self.mood_list[chat_id] = new_mood
+             
         return new_mood
 
     def reset_mood_by_chat_id(self, chat_id: str):
-        for mood in self.mood_list:
-            if mood.chat_id == chat_id:
-                mood.mood_state = "感觉很平静"
-                mood.regression_count = 0
-                return
-        self.mood_list.append(ChatMood(chat_id))
+        if chat_id in self.mood_list:
+            mood = self.mood_list[chat_id]
+            mood.mood_state = "感觉很平静"
+            mood.regression_count = 0
+            return
+
+        self.get_mood_by_chat_id(chat_id)
 
 
 init_prompt()

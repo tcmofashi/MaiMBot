@@ -129,6 +129,19 @@ class BetterFrequencyPlugin(BasePlugin):
         },
     }
 
+    def setup(self):
+        """生命周期: 插件实例化 setup"""
+        # 使用 self.log_prefix 记录日志
+        from src.common.logger import get_logger
+        logger = get_logger("ChatFrequency")
+        logger.info(f"{self.log_prefix} ChatFrequency Plugin Setup (Context: {self.context})")
+
+    def teardown(self):
+        """生命周期: 插件销毁 teardown"""
+        from src.common.logger import get_logger
+        logger = get_logger("ChatFrequency")
+        logger.info(f"{self.log_prefix} ChatFrequency Plugin Teardown")
+
     def get_plugin_components(self) -> List[Tuple[ComponentInfo, Type]]:
         components = []
 

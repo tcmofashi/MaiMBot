@@ -17,6 +17,7 @@ from enum import Enum
 
 from src.common.logger import get_logger
 from src.chat.message_receive.chat_stream import ChatStream, get_chat_manager
+from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id
 
 logger = get_logger("chat_api")
 
@@ -30,24 +31,27 @@ class SpecialTypes(Enum):
 class ChatManager:
     """聊天管理器 - 专门负责聊天信息的查询和管理"""
 
+
+
     @staticmethod
     def get_all_streams(platform: Optional[str] | SpecialTypes = "qq") -> List[ChatStream]:
         # sourcery skip: for-append-to-extend
         """获取所有聊天流
-
-        Args:
-            platform: 平台筛选，默认为"qq", 可以使用 SpecialTypes.ALL_PLATFORMS 获取所有平台的群聊流
-
-        Returns:
-            List[ChatStream]: 聊天流列表
-
-        Raises:
-            TypeError: 如果 platform 不是字符串或 SpecialTypes 枚举类型
+        
+        注意：仅返回当前租户/Agent可见的聊天流
         """
+        if not isinstance(platform, (str, SpecialTypes)):
+            raise TypeError("platform 必须是字符串或是 SpecialTypes 枚举")
+            
+    @staticmethod
+    def get_all_streams(platform: Optional[str] | SpecialTypes = "qq") -> List[ChatStream]:
+        # sourcery skip: for-append-to-extend
+        """获取所有聊天流"""
         if not isinstance(platform, (str, SpecialTypes)):
             raise TypeError("platform 必须是字符串或是 SpecialTypes 枚举")
         streams = []
         try:
+            # ContextAwareMap 会自动处理租户上下文过滤
             for _, stream in get_chat_manager().streams.items():
                 if platform == SpecialTypes.ALL_PLATFORMS or stream.platform == platform:
                     streams.append(stream)

@@ -37,6 +37,10 @@ def get_current_agent_id() -> Optional[str]:
     return _STATE.get().agent_id
 
 
+def get_current_context() -> TenantContextState:
+    return _STATE.get()
+
+
 @contextmanager
 def tenant_context(tenant_id: str, agent_id: Optional[str] = None):
     token = set_current_tenant(tenant_id, agent_id)

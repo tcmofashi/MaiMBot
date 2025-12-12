@@ -196,7 +196,7 @@ class PluginManager:
         return total_success, total_fail
 
     def get_plugin_instance(self, plugin_name: str) -> Optional["PluginBase"]:
-        """获取插件实例
+        """获取插件实例（单例/元数据实例）
 
         Args:
             plugin_name: 插件名称
@@ -205,6 +205,17 @@ class PluginManager:
             Optional[BasePlugin]: 插件实例或None
         """
         return self.loaded_plugins.get(plugin_name)
+
+    def get_plugin_class(self, plugin_name: str) -> Optional[Type[PluginBase]]:
+        """获取插件类（用于工厂实例化）
+
+        Args:
+            plugin_name: 插件名称
+
+        Returns:
+            Optional[Type[PluginBase]]: 插件类
+        """
+        return self.plugin_classes.get(plugin_name)
 
     # === 查询方法 ===
     def list_loaded_plugins(self) -> List[str]:

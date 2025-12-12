@@ -10,6 +10,7 @@ from src.common.logger import get_logger
 from src.common.database.database import db
 from src.common.database.database_model import ChatStreams  # 新增导入
 from src.common.message.tenant_context import get_current_agent_id, get_current_tenant_id, tenant_context
+from src.common.structure.context_aware_map import ContextAwareMap
 
 # 避免循环导入，使用TYPE_CHECKING进行类型提示
 if TYPE_CHECKING:
@@ -141,7 +142,7 @@ class ChatManager:
 
     def __init__(self):
         if not self._initialized:
-            self.streams: Dict[str, ChatStream] = {}  # stream_id -> ChatStream
+            self.streams: ContextAwareMap[str, ChatStream] = ContextAwareMap()  # stream_id -> ChatStream
             self.last_messages: Dict[str, "MessageRecv"] = {}  # stream_id -> last_message
             try:
                 db.connect(reuse_if_open=True)
@@ -155,6 +156,21 @@ class ChatManager:
             # asyncio.create_task(self._initialize())
             # # 启动自动保存任务
             # asyncio.create_task(self._auto_save_task())
+
+    def _cache_stream(self, stream: ChatStream):
+        """缓存聊天流"""
+        if stream.tenant_id:
+            self.streams.set_with_context(stream.stream_id, stream, stream.tenant_id, stream.agent_id or "")
+        else:
+            # 如果没有 tenant_id，通常是不应该的，除非是旧数据。
+            # 这里可能会触发 ContextAwareMap 的警告/错误，如果直接 setitem
+            # 但既然我们在这个方法里，我们就显式处理
+            logger.warning(f"Caching stream {stream.stream_id} without tenant_id!")
+            # 尝试 setitem (会依赖当前上下文，如果没有则失败)
+            try:
+                self.streams[stream.stream_id] = stream
+            except Exception as e:
+                logger.error(f"Failed to cache stream {stream.stream_id}: {e}")
 
     async def _initialize(self):
         """异步初始化"""
@@ -318,7 +334,8 @@ class ChatManager:
         else:
             logger.error(f"聊天流 {stream_id} 不在最后消息列表中，可能是新创建的")
         # 保存到内存和数据库
-        self.streams[stream_id] = stream
+        # 保存到内存和数据库
+        self._cache_stream(stream)
         await self._save_stream(stream)
         return stream
 
@@ -453,7 +470,7 @@ class ChatManager:
             for data in all_streams_data_list:
                 stream = ChatStream.from_dict(data)
                 stream.saved = True
-                self.streams[stream.stream_id] = stream
+                self._cache_stream(stream)
                 if stream.stream_id in self.last_messages:
                     stream.set_context(self.last_messages[stream.stream_id])
         except Exception as e:
