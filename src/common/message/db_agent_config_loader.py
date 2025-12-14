@@ -22,6 +22,17 @@ try:
         PluginConfigOverrides as DBPluginConfigOverrides,
         KeywordReactionConfigOverrides as DBKeywordReactionConfigOverrides,
         RelationshipConfigOverrides as DBRelationshipConfigOverrides,
+        LPMMKnowledgeConfig as DBLPMMKnowledgeConfig,
+        DreamConfig as DBDreamConfig,
+        JargonConfig as DBJargonConfig,
+        ResponsePostProcessConfig as DBResponsePostProcessConfig,
+        ChineseTypoConfig as DBChineseTypoConfig,
+        ResponseSplitterConfig as DBResponseSplitterConfig,
+        DebugConfig as DBDebugConfig,
+        ExperimentalConfig as DBExperimentalConfig,
+        MaimMessageConfig as DBMaimMessageConfig,
+        TelemetryConfig as DBTelemetryConfig,
+        ModelConfigOverrides as DBModelConfigOverrides,
         parse_json_field,
     )
 
@@ -40,6 +51,17 @@ except ImportError:
     DBPluginConfigOverrides = None
     DBKeywordReactionConfigOverrides = None
     DBRelationshipConfigOverrides = None
+    DBLPMMKnowledgeConfig = None
+    DBDreamConfig = None
+    DBJargonConfig = None
+    DBResponsePostProcessConfig = None
+    DBChineseTypoConfig = None
+    DBResponseSplitterConfig = None
+    DBDebugConfig = None
+    DBExperimentalConfig = None
+    DBMaimMessageConfig = None
+    DBTelemetryConfig = None
+    DBModelConfigOverrides = None
 
 
 class DatabaseAgentConfigLoader:
@@ -191,6 +213,141 @@ class DatabaseAgentConfigLoader:
             state_probability=db_config.state_probability,
         )
 
+    def _convert_db_lpmm_overrides_to_agent_config(self, db_config: DBLPMMKnowledgeConfig):
+        from .agent_config import LPMMKnowledgeConfigOverrides
+        return LPMMKnowledgeConfigOverrides(
+            enable=db_config.enable,
+            lpmm_mode=db_config.lpmm_mode,
+            rag_synonym_search_top_k=db_config.rag_synonym_search_top_k,
+            rag_synonym_threshold=db_config.rag_synonym_threshold,
+            info_extraction_workers=db_config.info_extraction_workers,
+            qa_relation_search_top_k=db_config.qa_relation_search_top_k,
+            qa_relation_threshold=db_config.qa_relation_threshold,
+            qa_paragraph_search_top_k=db_config.qa_paragraph_search_top_k,
+            qa_paragraph_node_weight=db_config.qa_paragraph_node_weight,
+            qa_ent_filter_top_k=db_config.qa_ent_filter_top_k,
+            qa_ppr_damping=db_config.qa_ppr_damping,
+            qa_res_top_k=db_config.qa_res_top_k,
+            embedding_dimension=db_config.embedding_dimension,
+        )
+
+    def _convert_db_dream_overrides_to_agent_config(self, db_config: DBDreamConfig):
+        from .agent_config import DreamConfigOverrides
+        return DreamConfigOverrides(
+            interval_minutes=db_config.interval_minutes,
+            max_iterations=db_config.max_iterations,
+        )
+
+    def _convert_db_jargon_overrides_to_agent_config(self, db_config: DBJargonConfig):
+        from .agent_config import JargonConfigOverrides
+        return JargonConfigOverrides(
+            all_global=db_config.all_global,
+        )
+
+    def _convert_db_resp_pp_overrides_to_agent_config(self, db_config: DBResponsePostProcessConfig):
+        from .agent_config import ResponsePostProcessConfigOverrides
+        return ResponsePostProcessConfigOverrides(
+            enable_response_post_process=db_config.enable_response_post_process,
+        )
+
+    def _convert_db_chinese_typo_overrides_to_agent_config(self, db_config: DBChineseTypoConfig):
+        from .agent_config import ChineseTypoConfigOverrides
+        return ChineseTypoConfigOverrides(
+            enable=db_config.enable,
+            error_rate=db_config.error_rate,
+            min_freq=db_config.min_freq,
+            tone_error_rate=db_config.tone_error_rate,
+            word_replace_rate=db_config.word_replace_rate,
+        )
+
+    def _convert_db_splitter_overrides_to_agent_config(self, db_config: DBResponseSplitterConfig):
+        from .agent_config import ResponseSplitterConfigOverrides
+        return ResponseSplitterConfigOverrides(
+            enable=db_config.enable,
+            max_length=db_config.max_length,
+            max_sentence_num=db_config.max_sentence_num,
+            enable_kaomoji_protection=db_config.enable_kaomoji_protection,
+            enable_overflow_return_all=db_config.enable_overflow_return_all,
+        )
+
+    def _convert_db_debug_overrides_to_agent_config(self, db_config: DBDebugConfig):
+        from .agent_config import DebugConfigOverrides
+        return DebugConfigOverrides(
+            show_prompt=db_config.show_prompt,
+            show_replyer_prompt=db_config.show_replyer_prompt,
+            show_replyer_reasoning=db_config.show_replyer_reasoning,
+            show_jargon_prompt=db_config.show_jargon_prompt,
+            show_memory_prompt=db_config.show_memory_prompt,
+            show_planner_prompt=db_config.show_planner_prompt,
+            show_lpmm_paragraph=db_config.show_lpmm_paragraph,
+        )
+
+    def _convert_db_experimental_overrides_to_agent_config(self, db_config: DBExperimentalConfig):
+        from .agent_config import ExperimentalConfigOverrides
+        return ExperimentalConfigOverrides(
+            enable_friend_chat=db_config.enable_friend_chat,
+            chat_prompts=parse_json_field(db_config.chat_prompts, []),
+        )
+
+    def _convert_db_maim_message_overrides_to_agent_config(self, db_config: DBMaimMessageConfig):
+        from .agent_config import MaimMessageConfigOverrides
+        return MaimMessageConfigOverrides(
+            use_custom=db_config.use_custom,
+            host=db_config.host,
+            port=db_config.port,
+            mode=db_config.mode,
+            use_wss=db_config.use_wss,
+            cert_file=db_config.cert_file,
+            key_file=db_config.key_file,
+            auth_token=parse_json_field(db_config.auth_token, []),
+        )
+
+    def _convert_db_telemetry_overrides_to_agent_config(self, db_config: DBTelemetryConfig):
+        from .agent_config import TelemetryConfigOverrides
+        return TelemetryConfigOverrides(
+            enable=db_config.enable,
+        )
+
+    def _convert_db_model_overrides_to_agent_config(self, db_config: DBModelConfigOverrides):
+        from .agent_config import (
+            ModelConfigOverrides, ModelTaskConfigOverrides, TaskConfigOverrides
+        )
+        from src.config.api_ada_configs import ModelInfo, APIProvider
+        from dataclasses import fields
+
+        # 1. Models
+        models_data = parse_json_field(db_config.models, [])
+        models = [ModelInfo.from_dict(m) for m in models_data]
+
+        # 2. API Providers
+        providers_data = parse_json_field(db_config.api_providers, [])
+        api_providers = [APIProvider.from_dict(p) for p in providers_data]
+
+        # 3. Model Task Config
+        mt_data = parse_json_field(db_config.model_task_config, {})
+        model_task_config = None
+        if mt_data:
+            model_task_config = ModelTaskConfigOverrides()
+            # 遍历 ModelTaskConfigOverrides 的字段
+            for f in fields(ModelTaskConfigOverrides):
+                if f.name in mt_data:
+                    task_data = mt_data[f.name]
+                    # task_data 应该是 dict
+                    if isinstance(task_data, dict):
+                        # 过滤掉非 TaskConfigOverrides 字段的 key ? 
+                        # 或者直接解包，假设数据合法
+                        # 为了安全，这里做一个简单的key过滤，或者 ConfigBase.from_dict 风格的加载
+                        # 但 TaskConfigOverrides 是简单 dataclass
+                        valid_keys = {tf.name for tf in fields(TaskConfigOverrides)}
+                        clean_task_data = {k: v for k, v in task_data.items() if k in valid_keys}
+                        setattr(model_task_config, f.name, TaskConfigOverrides(**clean_task_data))
+
+        return ModelConfigOverrides(
+            models=models,
+            api_providers=api_providers,
+            model_task_config=model_task_config
+        )
+
     async def load_agent_config_from_database(self, agent_id: str) -> Optional[AgentConfig]:
         """从数据库加载Agent配置"""
         if not self.is_available():
@@ -235,6 +392,18 @@ class DatabaseAgentConfigLoader:
             keyword_overrides = None
             relationship_overrides = None
             personality_overrides = None
+            lpmm_overrides = None
+            dream_overrides = None
+            jargon_overrides = None
+            resp_pp_overrides = None
+            chinese_typo_overrides = None
+            splitter_overrides = None
+            debug_overrides = None
+            experimental_overrides = None
+            maim_message_overrides = None
+            maim_message_overrides = None
+            telemetry_overrides = None
+            model_overrides = None
 
             try:
                 db_chat_config = DBChatConfigOverrides.get_or_none(DBChatConfigOverrides.agent_id == agent_id)
@@ -285,6 +454,51 @@ class DatabaseAgentConfigLoader:
                         db_relationship_config
                     )
 
+                db_lpmm = DBLPMMKnowledgeConfig.get_or_none(DBLPMMKnowledgeConfig.agent_id == agent_id)
+                if db_lpmm:
+                    lpmm_overrides = self._convert_db_lpmm_overrides_to_agent_config(db_lpmm)
+
+                db_dream = DBDreamConfig.get_or_none(DBDreamConfig.agent_id == agent_id)
+                if db_dream:
+                    dream_overrides = self._convert_db_dream_overrides_to_agent_config(db_dream)
+
+                db_jargon = DBJargonConfig.get_or_none(DBJargonConfig.agent_id == agent_id)
+                if db_jargon:
+                    jargon_overrides = self._convert_db_jargon_overrides_to_agent_config(db_jargon)
+
+                db_resp_pp = DBResponsePostProcessConfig.get_or_none(DBResponsePostProcessConfig.agent_id == agent_id)
+                if db_resp_pp:
+                    resp_pp_overrides = self._convert_db_resp_pp_overrides_to_agent_config(db_resp_pp)
+
+                db_typo = DBChineseTypoConfig.get_or_none(DBChineseTypoConfig.agent_id == agent_id)
+                if db_typo:
+                    chinese_typo_overrides = self._convert_db_chinese_typo_overrides_to_agent_config(db_typo)
+
+                db_splitter = DBResponseSplitterConfig.get_or_none(DBResponseSplitterConfig.agent_id == agent_id)
+                if db_splitter:
+                    splitter_overrides = self._convert_db_splitter_overrides_to_agent_config(db_splitter)
+
+                db_debug = DBDebugConfig.get_or_none(DBDebugConfig.agent_id == agent_id)
+                if db_debug:
+                    debug_overrides = self._convert_db_debug_overrides_to_agent_config(db_debug)
+
+                db_exp = DBExperimentalConfig.get_or_none(DBExperimentalConfig.agent_id == agent_id)
+                if db_exp:
+                    experimental_overrides = self._convert_db_experimental_overrides_to_agent_config(db_exp)
+
+                db_msg = DBMaimMessageConfig.get_or_none(DBMaimMessageConfig.agent_id == agent_id)
+                if db_msg:
+                    maim_message_overrides = self._convert_db_maim_message_overrides_to_agent_config(db_msg)
+
+                db_telemetry = DBTelemetryConfig.get_or_none(DBTelemetryConfig.agent_id == agent_id)
+                if db_telemetry:
+                    telemetry_overrides = self._convert_db_telemetry_overrides_to_agent_config(db_telemetry)
+
+                db_model = DBModelConfigOverrides.get_or_none(DBModelConfigOverrides.agent_id == agent_id)
+                if db_model:
+                    model_overrides = self._convert_db_model_overrides_to_agent_config(db_model)
+
+
                 # 人格覆盖与基础人格配置相同
                 personality_overrides = personality_overrides
 
@@ -304,6 +518,17 @@ class DatabaseAgentConfigLoader:
                 keyword_reaction=keyword_overrides,
                 relationship=relationship_overrides,
                 personality=personality_overrides,
+                lpmm_knowledge=lpmm_overrides,
+                dream=dream_overrides,
+                jargon=jargon_overrides,
+                response_post_process=resp_pp_overrides,
+                chinese_typo=chinese_typo_overrides,
+                response_splitter=splitter_overrides,
+                debug=debug_overrides,
+                experimental=experimental_overrides,
+                maim_message=maim_message_overrides,
+                telemetry=telemetry_overrides,
+                model=model_overrides,
             )
 
             # 创建AgentConfig对象

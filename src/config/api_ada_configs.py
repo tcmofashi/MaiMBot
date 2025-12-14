@@ -61,7 +61,7 @@ class ModelInfo(ConfigBase):
     price_out: float = field(default=0.0)
     """每M token输出价格"""
 
-    temperature: float | None = field(default=None)
+    temperature: Optional[float] = field(default=None)
     """模型级别温度（可选），会覆盖任务配置中的温度"""
 
     force_stream_mode: bool = field(default=False)

@@ -21,6 +21,16 @@ from src.config.official_configs import (
     ToolConfig,
     VoiceConfig,
     KeywordReactionConfig,
+    LPMMKnowledgeConfig,
+    DreamConfig,
+    JargonConfig,
+    ResponsePostProcessConfig,
+    ResponseSplitterConfig,
+    ChineseTypoConfig,
+    DebugConfig,
+    ExperimentalConfig,
+    MaimMessageConfig,
+    TelemetryConfig,
 )
 
 
@@ -35,10 +45,11 @@ class ConfigMerger:
     def _load_base_configs(self) -> None:
         """加载基础配置"""
         try:
-            from src.config.config import base_global_config
-
+            from src.config.config import base_global_config, base_model_config
+ 
             # 使用预先保存的、包含环境变量但无代理逻辑的基础配置副本
             self._base_global_config = base_global_config
+            self._base_model_config = base_model_config
             self.logger.info("基础配置加载成功")
         except Exception as e:
             self.logger.error(f"加载基础配置失败: {e}")
@@ -482,6 +493,119 @@ class ConfigMerger:
 
         return self._merge_config_object(base_keyword_config, overrides)
 
+    def merge_lpmm_knowledge_config(self, agent_config: AgentConfig) -> LPMMKnowledgeConfig:
+        """融合LPMM知识库配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.lpmm_knowledge
+        overrides = {}
+        if agent_config.config_overrides.lpmm_knowledge:
+             # 使用 dict comprehension 动态提取非空字段, 避免手写所有字段
+             # 前提是 agent_config...lpmm_knowledge 是 dataclass 且字段名一致
+             src = agent_config.config_overrides.lpmm_knowledge
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_dream_config(self, agent_config: AgentConfig) -> DreamConfig:
+        """融合Dream配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.dream
+        overrides = {}
+        if agent_config.config_overrides.dream:
+             src = agent_config.config_overrides.dream
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_jargon_config(self, agent_config: AgentConfig) -> JargonConfig:
+        """融合Jargon配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.jargon
+        overrides = {}
+        if agent_config.config_overrides.jargon:
+             src = agent_config.config_overrides.jargon
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_response_post_process_config(self, agent_config: AgentConfig) -> ResponsePostProcessConfig:
+        """融合回复后处理配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.response_post_process
+        overrides = {}
+        if agent_config.config_overrides.response_post_process:
+             src = agent_config.config_overrides.response_post_process
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_response_splitter_config(self, agent_config: AgentConfig) -> ResponseSplitterConfig:
+        """融合回复分割器配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.response_splitter
+        overrides = {}
+        if agent_config.config_overrides.response_splitter:
+             src = agent_config.config_overrides.response_splitter
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_chinese_typo_config(self, agent_config: AgentConfig) -> ChineseTypoConfig:
+        """融合中文错别字配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.chinese_typo
+        overrides = {}
+        if agent_config.config_overrides.chinese_typo:
+             src = agent_config.config_overrides.chinese_typo
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_debug_config(self, agent_config: AgentConfig) -> DebugConfig:
+        """融合调试配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.debug
+        overrides = {}
+        if agent_config.config_overrides.debug:
+             src = agent_config.config_overrides.debug
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_experimental_config(self, agent_config: AgentConfig) -> ExperimentalConfig:
+        """融合实验功能配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.experimental
+        overrides = {}
+        if agent_config.config_overrides.experimental:
+             src = agent_config.config_overrides.experimental
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_maim_message_config(self, agent_config: AgentConfig) -> MaimMessageConfig:
+        """融合maim_message配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.maim_message
+        overrides = {}
+        if agent_config.config_overrides.maim_message:
+             src = agent_config.config_overrides.maim_message
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+    def merge_telemetry_config(self, agent_config: AgentConfig) -> TelemetryConfig:
+        """融合遥测配置"""
+        if not self._base_global_config:
+            self._load_base_configs()
+        base_config = self._base_global_config.telemetry
+        overrides = {}
+        if agent_config.config_overrides.telemetry:
+             src = agent_config.config_overrides.telemetry
+             overrides = {k: v for k, v in asdict(src).items() if v is not None}
+        return self._merge_config_object(base_config, overrides)
+
+
     def create_merged_config(self, agent_config: AgentConfig) -> Dict[str, Any]:
         """创建完整的融合配置"""
         if not self._base_global_config:
@@ -550,12 +674,65 @@ class ConfigMerger:
                 self.logger.error(f"merge_voice_config 失败: {e}")
                 raise
 
-            # "plugin": self.merge_plugin_config(agent_config),  # 暂时跳过插件配置
+
+            try:
+                merged_config["lpmm_knowledge"] = self.merge_lpmm_knowledge_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_lpmm_knowledge_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["dream"] = self.merge_dream_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_dream_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["jargon"] = self.merge_jargon_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_jargon_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["response_post_process"] = self.merge_response_post_process_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_response_post_process_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["response_splitter"] = self.merge_response_splitter_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_response_splitter_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["chinese_typo"] = self.merge_chinese_typo_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_chinese_typo_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["debug"] = self.merge_debug_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_debug_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["experimental"] = self.merge_experimental_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_experimental_config 失败: {e}")
+                raise
+
+            try:
+                merged_config["maim_message"] = self.merge_maim_message_config(agent_config)
+            except Exception as e:
+                self.logger.error(f"merge_maim_message_config 失败: {e}")
+                raise
             
             try:
-                merged_config["keyword_reaction"] = self.merge_keyword_reaction_config(agent_config)
+                merged_config["telemetry"] = self.merge_telemetry_config(agent_config)
             except Exception as e:
-                self.logger.error(f"merge_keyword_reaction_config 失败: {e}")
+                self.logger.error(f"merge_telemetry_config 失败: {e}")
                 raise
 
             # 复制其他不需要修改的配置
@@ -586,6 +763,51 @@ class ConfigMerger:
         except Exception as e:
             self.logger.error(f"配置融合失败: {e}")
             raise
+
+    def merge_model_config(self, agent_config: AgentConfig) -> Any:
+        """
+        融合Model配置
+        覆盖规则:
+        1. models/api_providers 列表: 同名覆盖，不同名追加
+        2. model_task_config: 递归覆盖
+        """
+        if not self._base_model_config:
+            self._load_base_configs()
+            
+        from src.config.config import APIAdapterConfig
+        
+        # 1. 净化基础配置 (DeepCopy)
+        clean_model_config: APIAdapterConfig = self._sanitize_recursive_copy(self._base_model_config)
+        
+        if not agent_config.config_overrides or not agent_config.config_overrides.model:
+            return clean_model_config
+            
+        overrides = agent_config.config_overrides.model
+        
+        # 2. 处理 Models 列表 (同名覆盖，不同名追加)
+        if overrides.models:
+            current_models_map = {m.name: m for m in clean_model_config.models}
+            for model_override in overrides.models:
+                # 直接替换或添加
+                current_models_map[model_override.name] = self._deep_copy_sanitize(model_override)
+            clean_model_config.models = list(current_models_map.values())
+            # 更新内部dict缓存 (APIAdapterConfig post_init 会做，但最好保持一致)
+            clean_model_config.models_dict = current_models_map
+            
+        # 3. 处理 API Providers 列表 (同名覆盖，不同名追加)
+        if overrides.api_providers:
+            current_providers_map = {p.name: p for p in clean_model_config.api_providers}
+            for provider_override in overrides.api_providers:
+                current_providers_map[provider_override.name] = self._deep_copy_sanitize(provider_override)
+            clean_model_config.api_providers = list(current_providers_map.values())
+            clean_model_config.api_providers_dict = current_providers_map
+
+        # 4. 处理 Model Task Config (递归覆盖)
+        if overrides.model_task_config:
+            # model_task_config 是 dataclass，使用 _apply_overrides_recursive
+            self._apply_overrides_recursive(clean_model_config.model_task_config, overrides.model_task_config)
+
+        return clean_model_config
 
 
 # 全局配置融合器实例
@@ -660,15 +882,8 @@ async def create_agent_model_config(agent_id: str) -> Optional[Any]:
         return None
 
     try:
-        # 尝试加载模型配置
-        from src.config.config import base_model_config
-
-        # 如果有Agent特定的模型配置覆盖，在这里处理
-        # 目前直接返回基础模型配置
-        # 未来可以从Agent配置中读取模型相关设置
-
-        # 使用预先保存的基础配置副本
-        return base_model_config
+        merger = get_config_merger()
+        return merger.merge_model_config(agent_config)
 
     except Exception as e:
         merger = get_config_merger()

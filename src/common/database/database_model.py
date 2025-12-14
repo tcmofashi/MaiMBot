@@ -8,6 +8,12 @@ from src.common.message.tenant_context import get_current_tenant_id, get_current
 
 logger = get_logger("database_model")
 
+try:
+    from maim_db.core.models.agent_config import AGENT_CONFIG_MODELS
+except ImportError:
+    logger.warning("无法导入maim_db Agent配置模型，配置相关表结构将不会被创建")
+    AGENT_CONFIG_MODELS = []
+
 # ORM基座替换：尝试导入SaaS版本的BusinessBaseModel
 try:
     if SAAS_MODE:
@@ -17,7 +23,7 @@ try:
         sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "maim_db", "src"))
         from src.core.models import BusinessBaseModel
 
-        def _require_ids(require_agent: bool) -> tuple[str | None, str | None]:
+        def _require_ids(require_agent: bool) -> tuple[Optional[str], Optional[str]]:
             tenant_id = get_current_tenant_id()
             agent_id = get_current_agent_id()
             if not tenant_id:
@@ -94,7 +100,7 @@ try:
 
 except ImportError:
     # 最终回退选项（本地 SQLite 模式），仍然强制 tenant/agent 上下文
-    def _require_ids_fallback(require_agent: bool) -> tuple[str | None, str | None]:
+    def _require_ids_fallback(require_agent: bool) -> tuple[Optional[str], Optional[str]]:
         tenant_id = get_current_tenant_id()
         agent_id = get_current_agent_id()
         if not tenant_id:
@@ -586,7 +592,7 @@ MODELS = [
     Jargon,
     ChatHistory,
     ThinkingBack,
-]
+] + AGENT_CONFIG_MODELS
 
 
 def create_tables():

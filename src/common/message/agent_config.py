@@ -6,6 +6,7 @@ Agent配置数据类
 
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
+from src.config.api_ada_configs import ModelInfo, APIProvider
 
 
 @dataclass
@@ -228,34 +229,152 @@ class KeywordReactionConfigOverrides:
     """正则规则，基于正则表达式匹配的反应规则"""
 
 
+
 @dataclass
 class PersonalityConfigOverrides:
     """人格配置覆盖"""
-
     personality: Optional[str] = None
-    """人格描述，覆盖Agent的基础人格描述"""
-
     reply_style: Optional[str] = None
-    """回复风格，覆盖基础的回复风格设置"""
-
     interest: Optional[str] = None
-    """兴趣领域，覆盖基础的兴趣设置"""
-
     plan_style: Optional[str] = None
-    """群聊风格，覆盖基础的群聊行为风格"""
-
     private_plan_style: Optional[str] = None
-    """私聊风格，覆盖基础的私聊行为风格"""
-
     visual_style: Optional[str] = None
-    """视觉风格，覆盖基础的图片生成风格"""
-
     states: Optional[List[str]] = None
-    """状态列表，覆盖基础的人格状态列表"""
-
     state_probability: Optional[float] = None
-    """状态概率，覆盖基础的状态切换概率"""
 
+
+@dataclass
+class LPMMKnowledgeConfigOverrides:
+    """LPMM知识库配置覆盖"""
+    enable: Optional[bool] = None
+    lpmm_mode: Optional[str] = None
+    rag_synonym_search_top_k: Optional[int] = None
+    rag_synonym_threshold: Optional[float] = None
+    info_extraction_workers: Optional[int] = None
+    qa_relation_search_top_k: Optional[int] = None
+    qa_relation_threshold: Optional[float] = None
+    qa_paragraph_search_top_k: Optional[int] = None
+    qa_paragraph_node_weight: Optional[float] = None
+    qa_ent_filter_top_k: Optional[int] = None
+    qa_ppr_damping: Optional[float] = None
+    qa_res_top_k: Optional[int] = None
+    embedding_dimension: Optional[int] = None
+
+
+@dataclass
+class DreamConfigOverrides:
+    """Dream配置覆盖"""
+    interval_minutes: Optional[int] = None
+    max_iterations: Optional[int] = None
+
+
+@dataclass
+class JargonConfigOverrides:
+    """Jargon配置覆盖"""
+    all_global: Optional[bool] = None
+
+
+@dataclass
+class ResponsePostProcessConfigOverrides:
+    """回复后处理配置覆盖"""
+    enable_response_post_process: Optional[bool] = None
+
+
+@dataclass
+class ChineseTypoConfigOverrides:
+    """中文错别字配置覆盖"""
+    enable: Optional[bool] = None
+    error_rate: Optional[float] = None
+    min_freq: Optional[int] = None
+    tone_error_rate: Optional[float] = None
+    word_replace_rate: Optional[float] = None
+
+
+@dataclass
+class ResponseSplitterConfigOverrides:
+    """回复分割器配置覆盖"""
+    enable: Optional[bool] = None
+    max_length: Optional[int] = None
+    max_sentence_num: Optional[int] = None
+    enable_kaomoji_protection: Optional[bool] = None
+    enable_overflow_return_all: Optional[bool] = None
+
+
+@dataclass
+class DebugConfigOverrides:
+    """调试配置覆盖"""
+    show_prompt: Optional[bool] = None
+    show_replyer_prompt: Optional[bool] = None
+    show_replyer_reasoning: Optional[bool] = None
+    show_jargon_prompt: Optional[bool] = None
+    show_memory_prompt: Optional[bool] = None
+    show_planner_prompt: Optional[bool] = None
+    show_lpmm_paragraph: Optional[bool] = None
+
+
+@dataclass
+class ExperimentalConfigOverrides:
+    """实验功能配置覆盖"""
+    enable_friend_chat: Optional[bool] = None
+    chat_prompts: Optional[List[str]] = None
+
+
+@dataclass
+class MaimMessageConfigOverrides:
+    """maim_message配置覆盖"""
+    use_custom: Optional[bool] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    mode: Optional[str] = None
+    use_wss: Optional[bool] = None
+    cert_file: Optional[str] = None
+    key_file: Optional[str] = None
+    auth_token: Optional[List[str]] = None
+
+
+@dataclass
+class TelemetryConfigOverrides:
+    """遥测配置覆盖"""
+    enable: Optional[bool] = None
+
+
+
+@dataclass
+class TaskConfigOverrides:
+    """任务配置覆盖"""
+    model_list: Optional[List[str]] = None
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
+    slow_threshold: Optional[float] = None
+
+
+@dataclass
+class ModelTaskConfigOverrides:
+    """模型任务配置覆盖"""
+    utils: Optional[TaskConfigOverrides] = None
+    utils_small: Optional[TaskConfigOverrides] = None
+    replyer: Optional[TaskConfigOverrides] = None
+    vlm: Optional[TaskConfigOverrides] = None
+    voice: Optional[TaskConfigOverrides] = None
+    tool_use: Optional[TaskConfigOverrides] = None
+    planner: Optional[TaskConfigOverrides] = None
+    embedding: Optional[TaskConfigOverrides] = None
+    lpmm_entity_extract: Optional[TaskConfigOverrides] = None
+    lpmm_rdf_build: Optional[TaskConfigOverrides] = None
+    lpmm_qa: Optional[TaskConfigOverrides] = None
+
+
+@dataclass
+class ModelConfigOverrides:
+    """模型配置覆盖"""
+    models: Optional[List[ModelInfo]] = None
+    """模型列表覆盖（同名覆盖，不同名追加）"""
+    
+    api_providers: Optional[List[APIProvider]] = None
+    """API提供商列表覆盖（同名覆盖，不同名追加）"""
+    
+    model_task_config: Optional[ModelTaskConfigOverrides] = None
+    """任务模型分配覆盖"""
 
 @dataclass
 class ConfigOverrides:
@@ -293,6 +412,40 @@ class ConfigOverrides:
 
     personality: Optional[PersonalityConfigOverrides] = None
     """人格配置覆盖"""
+
+    lpmm_knowledge: Optional[LPMMKnowledgeConfigOverrides] = None
+    """LPMM知识库配置覆盖"""
+
+    dream: Optional[DreamConfigOverrides] = None
+    """Dream配置覆盖"""
+    
+    model: Optional[ModelConfigOverrides] = None
+    """模型配置覆盖"""
+
+    jargon: Optional[JargonConfigOverrides] = None
+    """Jargon配置覆盖"""
+
+    response_post_process: Optional[ResponsePostProcessConfigOverrides] = None
+    """回复后处理配置覆盖"""
+
+    chinese_typo: Optional[ChineseTypoConfigOverrides] = None
+    """中文错别字配置覆盖"""
+
+    response_splitter: Optional[ResponseSplitterConfigOverrides] = None
+    """回复分割器配置覆盖"""
+
+    debug: Optional[DebugConfigOverrides] = None
+    """调试配置覆盖"""
+
+    experimental: Optional[ExperimentalConfigOverrides] = None
+    """实验功能配置覆盖"""
+
+    maim_message: Optional[MaimMessageConfigOverrides] = None
+    """maim_message配置覆盖"""
+
+    telemetry: Optional[TelemetryConfigOverrides] = None
+    """遥测配置覆盖"""
+
 
 
 @dataclass
@@ -438,6 +591,88 @@ def parse_agent_config_from_json(json_data: Dict[str, Any]) -> AgentConfig:
         state_probability=personality_data.get("state_probability"),
     )
 
+    lpmm_data = config_data.get("lpmm_knowledge", {})
+    lpmm_config = LPMMKnowledgeConfigOverrides(
+        enable=lpmm_data.get("enable"),
+        lpmm_mode=lpmm_data.get("lpmm_mode"),
+        rag_synonym_search_top_k=lpmm_data.get("rag_synonym_search_top_k"),
+        rag_synonym_threshold=lpmm_data.get("rag_synonym_threshold"),
+        info_extraction_workers=lpmm_data.get("info_extraction_workers"),
+        qa_relation_search_top_k=lpmm_data.get("qa_relation_search_top_k"),
+        qa_relation_threshold=lpmm_data.get("qa_relation_threshold"),
+        qa_paragraph_search_top_k=lpmm_data.get("qa_paragraph_search_top_k"),
+        qa_paragraph_node_weight=lpmm_data.get("qa_paragraph_node_weight"),
+        qa_ent_filter_top_k=lpmm_data.get("qa_ent_filter_top_k"),
+        qa_ppr_damping=lpmm_data.get("qa_ppr_damping"),
+        qa_res_top_k=lpmm_data.get("qa_res_top_k"),
+        embedding_dimension=lpmm_data.get("embedding_dimension"),
+    )
+
+    dream_config = DreamConfigOverrides(
+        interval_minutes=config_data.get("dream", {}).get("interval_minutes"),
+        max_iterations=config_data.get("dream", {}).get("max_iterations"),
+    )
+
+    jargon_config = JargonConfigOverrides(
+        all_global=config_data.get("jargon", {}).get("all_global")
+    )
+
+    resp_pp_config = ResponsePostProcessConfigOverrides(
+        enable_response_post_process=config_data.get("response_post_process", {}).get("enable_response_post_process")
+    )
+
+    typo_data = config_data.get("chinese_typo", {})
+    typo_config = ChineseTypoConfigOverrides(
+        enable=typo_data.get("enable"),
+        error_rate=typo_data.get("error_rate"),
+        min_freq=typo_data.get("min_freq"),
+        tone_error_rate=typo_data.get("tone_error_rate"),
+        word_replace_rate=typo_data.get("word_replace_rate"),
+    )
+
+    splitter_data = config_data.get("response_splitter", {})
+    splitter_config = ResponseSplitterConfigOverrides(
+        enable=splitter_data.get("enable"),
+        max_length=splitter_data.get("max_length"),
+        max_sentence_num=splitter_data.get("max_sentence_num"),
+        enable_kaomoji_protection=splitter_data.get("enable_kaomoji_protection"),
+        enable_overflow_return_all=splitter_data.get("enable_overflow_return_all"),
+    )
+
+    debug_data = config_data.get("debug", {})
+    debug_config = DebugConfigOverrides(
+        show_prompt=debug_data.get("show_prompt"),
+        show_replyer_prompt=debug_data.get("show_replyer_prompt"),
+        show_replyer_reasoning=debug_data.get("show_replyer_reasoning"),
+        show_jargon_prompt=debug_data.get("show_jargon_prompt"),
+        show_memory_prompt=debug_data.get("show_memory_prompt"),
+        show_planner_prompt=debug_data.get("show_planner_prompt"),
+        show_lpmm_paragraph=debug_data.get("show_lpmm_paragraph"),
+    )
+
+    exp_data = config_data.get("experimental", {})
+    experimental_config = ExperimentalConfigOverrides(
+        enable_friend_chat=exp_data.get("enable_friend_chat"),
+        chat_prompts=exp_data.get("chat_prompts"),
+    )
+
+    msg_data = config_data.get("maim_message", {})
+    message_config = MaimMessageConfigOverrides(
+        use_custom=msg_data.get("use_custom"),
+        host=msg_data.get("host"),
+        port=msg_data.get("port"),
+        mode=msg_data.get("mode"),
+        use_wss=msg_data.get("use_wss"),
+        cert_file=msg_data.get("cert_file"),
+        key_file=msg_data.get("key_file"),
+        auth_token=msg_data.get("auth_token"),
+    )
+
+    telemetry_config = TelemetryConfigOverrides(
+        enable=config_data.get("telemetry", {}).get("enable")
+    )
+
+
     config_overrides = ConfigOverrides(
         chat=chat_config,
         relationship=relationship_config,
@@ -450,6 +685,17 @@ def parse_agent_config_from_json(json_data: Dict[str, Any]) -> AgentConfig:
         plugin=plugin_config,
         keyword_reaction=keyword_config,
         personality=personality_config,
+        lpmm_knowledge=lpmm_config,
+        dream=dream_config,
+        jargon=jargon_config,
+        response_post_process=resp_pp_config,
+        chinese_typo=typo_config,
+        response_splitter=splitter_config,
+        debug=debug_config,
+        experimental=experimental_config,
+        maim_message=message_config,
+        telemetry=telemetry_config,
+
     )
 
     return AgentConfig(
@@ -503,6 +749,16 @@ def agent_config_to_dict(agent_config: AgentConfig) -> Dict[str, Any]:
                     ("plugin", agent_config.config_overrides.plugin),
                     ("keyword_reaction", agent_config.config_overrides.keyword_reaction),
                     ("personality", agent_config.config_overrides.personality),
+                    ("lpmm_knowledge", agent_config.config_overrides.lpmm_knowledge),
+                    ("dream", agent_config.config_overrides.dream),
+                    ("jargon", agent_config.config_overrides.jargon),
+                    ("response_post_process", agent_config.config_overrides.response_post_process),
+                    ("chinese_typo", agent_config.config_overrides.chinese_typo),
+                    ("response_splitter", agent_config.config_overrides.response_splitter),
+                    ("debug", agent_config.config_overrides.debug),
+                    ("experimental", agent_config.config_overrides.experimental),
+                    ("maim_message", agent_config.config_overrides.maim_message),
+                    ("telemetry", agent_config.config_overrides.telemetry),
                 ]
                 if v is not None and hasattr(v, "__dict__")
             }
