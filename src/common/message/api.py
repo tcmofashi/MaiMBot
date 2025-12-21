@@ -118,6 +118,14 @@ def load_message_config() -> Dict[str, Any]:
         config_path = os.path.join(os.path.dirname(__file__), "config.toml")
         with open(config_path, "r", encoding="utf-8") as f:
             _config_cache = toml.load(f)
+        
+        # 环境变量覆盖
+        env_maimconfig_url = os.getenv("MAIMCONFIG_URL")
+        if env_maimconfig_url:
+            if "maimconfig" not in _config_cache:
+                _config_cache["maimconfig"] = {}
+            _config_cache["maimconfig"]["url"] = env_maimconfig_url
+            
     return _config_cache
 
 
@@ -215,11 +223,12 @@ class MaimConfigClient:
             raise RuntimeError("MaimConfigClient must be used as async context manager")
 
         url = f"{self.url}/api/v1/usage/log"
+        import time
         data = {
             "user_id": user_id,
-            "platform": platform,
             "action": action,
-            "timestamp": asyncio.get_event_loop().time(),
+            "details": {"platform": platform},
+            "timestamp": None,
         }
 
         try:

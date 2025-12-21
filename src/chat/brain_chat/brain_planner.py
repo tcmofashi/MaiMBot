@@ -302,6 +302,7 @@ class BrainPlanner:
             else:
                 actions_before_now_block = ""
 
+            chat_context_description = "你正在进行聊天"
             if chat_target_info:
                 # 构建聊天上下文描述
                 chat_context_description = (
