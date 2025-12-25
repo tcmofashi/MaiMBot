@@ -608,8 +608,8 @@ class _ConfigRuntimeAdapter:
         try:
             return getattr(config_obj, attr_name)
         except AttributeError:
-            self._logger.debug("Attribute %s missing on tenant config", attr_name)
             return None
+
 
 
 class _RuntimeAwareConfig(Config):

@@ -124,6 +124,15 @@ class ExpressionConfigOverrides:
     expression_groups: Optional[List[Dict[str, Any]]] = None
     """表达学习互通组，定义表达学习的分组规则"""
 
+    reflect: Optional[bool] = None
+    """是否启用表达反思"""
+
+    reflect_operator_id: Optional[str] = None
+    """表达反思操作员ID"""
+
+    allow_reflect: Optional[List[str]] = None
+    """允许进行表达反思的聊天流ID列表"""
+
 
 @dataclass
 class MemoryConfigOverrides:
@@ -134,6 +143,12 @@ class MemoryConfigOverrides:
 
     memory_build_frequency: Optional[int] = None
     """记忆构建频率，每N条消息构建一次记忆"""
+
+    max_agent_iterations: Optional[int] = None
+    """Agent最多迭代轮数"""
+
+    enable_jargon_detection: Optional[bool] = None
+    """记忆检索过程中是否启用黑话识别"""
 
 
 @dataclass
@@ -216,6 +231,16 @@ class PluginConfigOverrides:
 
     blocked_plugins: Optional[List[str]] = None
     """禁止插件，黑名单插件列表"""
+
+
+@dataclass
+class MessageReceiveConfigOverrides:
+    """消息接收配置覆盖"""
+    ban_words: Optional[List[str]] = None
+    """过滤词列表"""
+
+    ban_msgs_regex: Optional[List[str]] = None
+    """过滤正则表达式列表"""
 
 
 @dataclass
@@ -446,6 +471,9 @@ class ConfigOverrides:
     telemetry: Optional[TelemetryConfigOverrides] = None
     """遥测配置覆盖"""
 
+    message_receive: Optional[MessageReceiveConfigOverrides] = None
+    """消息接收配置覆盖"""
+
 
 
 @dataclass
@@ -532,11 +560,16 @@ def parse_agent_config_from_json(json_data: Dict[str, Any]) -> AgentConfig:
         mode=config_data.get("expression", {}).get("mode"),
         learning_list=config_data.get("expression", {}).get("learning_list"),
         expression_groups=config_data.get("expression", {}).get("expression_groups"),
+        reflect=config_data.get("expression", {}).get("reflect"),
+        reflect_operator_id=config_data.get("expression", {}).get("reflect_operator_id"),
+        allow_reflect=config_data.get("expression", {}).get("allow_reflect"),
     )
 
     memory_config = MemoryConfigOverrides(
         max_memory_number=config_data.get("memory", {}).get("max_memory_number"),
         memory_build_frequency=config_data.get("memory", {}).get("memory_build_frequency"),
+        max_agent_iterations=config_data.get("memory", {}).get("max_agent_iterations"),
+        enable_jargon_detection=config_data.get("memory", {}).get("enable_jargon_detection"),
     )
 
     mood_config = MoodConfigOverrides(
@@ -672,6 +705,12 @@ def parse_agent_config_from_json(json_data: Dict[str, Any]) -> AgentConfig:
         enable=config_data.get("telemetry", {}).get("enable")
     )
 
+    msg_recv_data = config_data.get("message_receive", {})
+    message_receive_config = MessageReceiveConfigOverrides(
+        ban_words=msg_recv_data.get("ban_words"),
+        ban_msgs_regex=msg_recv_data.get("ban_msgs_regex"),
+    )
+
 
     config_overrides = ConfigOverrides(
         chat=chat_config,
@@ -695,6 +734,7 @@ def parse_agent_config_from_json(json_data: Dict[str, Any]) -> AgentConfig:
         experimental=experimental_config,
         maim_message=message_config,
         telemetry=telemetry_config,
+        message_receive=message_receive_config,
 
     )
 
@@ -759,6 +799,7 @@ def agent_config_to_dict(agent_config: AgentConfig) -> Dict[str, Any]:
                     ("experimental", agent_config.config_overrides.experimental),
                     ("maim_message", agent_config.config_overrides.maim_message),
                     ("telemetry", agent_config.config_overrides.telemetry),
+                    ("message_receive", agent_config.config_overrides.message_receive),
                 ]
                 if v is not None and hasattr(v, "__dict__")
             }

@@ -158,16 +158,28 @@ class ConfigMerger:
             
         return self._deep_copy_sanitize(obj)
 
-    def _apply_overrides_recursive(self, obj: Any, overrides: Dict[str, Any]) -> Any:
+    def _apply_overrides_recursive(self, obj: Any, overrides: Any) -> Any:
         """
         递归应用覆盖配置到对象上，保留原对象结构（不转换为字典）。
         支持 Dataclass 递归覆盖。
+        overrides 可以是字典、Mapping 或 dataclass 对象。
         """
         import dataclasses
         from collections.abc import Mapping
         
+        # 如果 overrides 是 dataclass，将其转换为字典
+        if dataclasses.is_dataclass(overrides) and not isinstance(overrides, type):
+            overrides = dataclasses.asdict(overrides)
+        
+        # 如果 overrides 不是 Mapping 类型，直接返回原对象
+        if not isinstance(overrides, Mapping):
+            return obj
+        
         if dataclasses.is_dataclass(obj):
             for key, value in overrides.items():
+                # 跳过 None 值
+                if value is None:
+                    continue
                 if not hasattr(obj, key):
                     continue
                 

@@ -556,7 +556,7 @@ class ChatHistory(BaseModel):
     forget_times = IntegerField(default=0)  # 被遗忘检查的次数
 
     class Meta:
-        table_name = "chat_history"
+        table_name = "chat_history_summary"
 
 
 class ThinkingBack(BaseModel):
