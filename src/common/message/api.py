@@ -112,19 +112,34 @@ _config_cache = None
 
 
 def load_message_config() -> Dict[str, Any]:
-    """加载消息服务器配置"""
+    """加载消息服务器配置 (从环境变量)"""
     global _config_cache
     if _config_cache is None:
-        config_path = os.path.join(os.path.dirname(__file__), "config.toml")
-        with open(config_path, "r", encoding="utf-8") as f:
-            _config_cache = toml.load(f)
-        
-        # 环境变量覆盖
-        env_maimconfig_url = os.getenv("MAIMCONFIG_URL")
-        if env_maimconfig_url:
-            if "maimconfig" not in _config_cache:
-                _config_cache["maimconfig"] = {}
-            _config_cache["maimconfig"]["url"] = env_maimconfig_url
+        # 默认配置 + 环境变量覆盖
+        _config_cache = {
+            "api_server": {
+                "host": os.getenv("MAIM_MESSAGE_HOST", "0.0.0.0"),
+                "port": int(os.getenv("MAIM_MESSAGE_PORT", "8090")),
+                "path": os.getenv("MAIM_MESSAGE_PATH", "/api/message/v1"),
+            },
+            "maimconfig": {
+                "url": os.getenv("MAIMCONFIG_URL", "http://127.0.0.1:8000"),
+                "timeout": int(os.getenv("MAIMCONFIG_TIMEOUT", "30")),
+                "retry_count": int(os.getenv("MAIMCONFIG_RETRY", "3"))
+            },
+            "logging": {
+                "log_level": os.getenv("MAIMBOT_LOG_LEVEL", "INFO"),
+                "enable_connection_log": os.getenv("MAIM_MESSAGE_LOG_CONNECTION", "true").lower() == "true",
+                "enable_message_log": os.getenv("MAIM_MESSAGE_LOG_MESSAGE", "true").lower() == "true"
+            },
+            "ssl": {
+                "enabled": os.getenv("MAIM_MESSAGE_USE_WSS", "false").lower() == "true",
+                "cert_file": os.getenv("MAIM_MESSAGE_SSL_CERT", ""),
+                "key_file": os.getenv("MAIM_MESSAGE_SSL_KEY", ""),
+                "ca_certs": os.getenv("MAIM_MESSAGE_SSL_CA", ""),
+                "verify": os.getenv("MAIM_MESSAGE_SSL_VERIFY", "true").lower() == "true"
+            }
+        }
             
     return _config_cache
 
