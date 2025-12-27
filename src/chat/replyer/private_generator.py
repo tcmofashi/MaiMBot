@@ -987,6 +987,23 @@ class PrivateReplyer:
             platform=self.chat_stream.platform,
         )
 
+        # 注册 Bot 自身到 PersonInfo，使用与消息存储相同的 platform/user_id
+        # 确保渲染聊天历史时能正确解析 Bot 身份
+        try:
+            from src.person_info.person_info import Person
+            bot_platform = self.chat_stream.platform
+            bot_user_id = str(global_config.bot.qq_account)
+            bot_nickname = global_config.bot.nickname
+            logger.info(f"[Bot自注册] 尝试注册: platform={bot_platform}, user_id={bot_user_id}, nickname={bot_nickname}")
+            result = Person.register_person(
+                platform=bot_platform,
+                user_id=bot_user_id,
+                nickname=bot_nickname,
+            )
+            logger.info(f"[Bot自注册] 注册结果: {result}")
+        except Exception as e:
+            logger.error(f"[Bot自注册] 注册失败: {e}")
+
         # await anchor_message.process()
         sender_info = anchor_message.message_info.user_info if anchor_message else None
 

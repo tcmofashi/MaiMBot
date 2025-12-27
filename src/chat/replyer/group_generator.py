@@ -1049,6 +1049,18 @@ class DefaultReplyer:
             platform=self.chat_stream.platform,
         )
 
+        # 注册 Bot 自身到 PersonInfo，使用与消息存储相同的 platform/user_id
+        # 确保渲染聊天历史时能正确解析 Bot 身份
+        try:
+            from src.person_info.person_info import Person
+            Person.register_person(
+                platform=self.chat_stream.platform,
+                user_id=str(global_config.bot.qq_account),
+                nickname=global_config.bot.nickname,
+            )
+        except Exception:
+            pass  # 非致命错误，静默忽略
+
         # await anchor_message.process()
         sender_info = anchor_message.message_info.user_info if anchor_message else None
 

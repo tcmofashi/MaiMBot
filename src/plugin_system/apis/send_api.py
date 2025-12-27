@@ -96,6 +96,22 @@ async def _send_to_target(
             platform=target_stream.platform,
         )
 
+        # 注册 Bot 自身到 PersonInfo，使用与消息存储相同的 platform/user_id
+        # 确保渲染聊天历史时能正确解析 Bot 身份
+        try:
+            from src.person_info.person_info import Person
+            bot_platform = target_stream.platform
+            bot_user_id = str(global_config.bot.qq_account)
+            bot_nickname = global_config.bot.nickname
+            if bot_platform and bot_user_id and bot_nickname:
+                Person.register_person(
+                    platform=bot_platform,
+                    user_id=bot_user_id,
+                    nickname=bot_nickname,
+                )
+        except Exception:
+            pass  # 非致命错误，静默忽略
+
         reply_to_platform_id = ""
         anchor_message: Union["MessageRecv", None] = None
         if reply_message:

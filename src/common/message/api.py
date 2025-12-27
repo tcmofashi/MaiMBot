@@ -412,6 +412,23 @@ async def message_handler(message: APIMessageBase, metadata: Dict[str, Any]) -> 
             if tenant_id and agent_id:
                 async with tenant_context_async(tenant_id, agent_id):
                     logger.info("进入 agent context, 准备调用 message_process")
+                    
+                    # 注册 Bot 自身到 PersonInfo，确保 Bot 回复在渲染时能正确显示名称
+                    try:
+                        from src.person_info.person_info import Person
+                        from src.config.config import global_config
+                        bot_platform = global_config.bot.platform
+                        bot_user_id = str(global_config.bot.qq_account)
+                        bot_nickname = global_config.bot.nickname
+                        if bot_platform and bot_user_id and bot_nickname:
+                            _ = Person.register_person(
+                                platform=bot_platform,
+                                user_id=bot_user_id,
+                                nickname=bot_nickname,
+                            )
+                    except Exception as bot_reg_e:
+                        logger.debug(f"Bot 自注册时出错 (非致命): {bot_reg_e}")
+                    
                     await handler.message_process(legacy_message)
                     logger.info("message_process 调用完成")
             else:
