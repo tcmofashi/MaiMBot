@@ -467,6 +467,7 @@ class PersonInfo(BaseModel):
     know_times = FloatField(null=True)  # 认识时间 (时间戳)
     know_since = FloatField(null=True)  # 首次印象总结时间
     last_know = FloatField(null=True)  # 最后一次印象总结时间
+    agent_id = TextField(index=True, null=True)  # Agent ID for isolation
 
     class Meta:
         # database = db # 继承自 BaseModel

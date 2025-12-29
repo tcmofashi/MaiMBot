@@ -14,6 +14,7 @@ from src.common.database.database_model import PersonInfo
 from src.llm_models.utils_model import LLMRequest
 from src.config.config import global_config, model_config
 from src.chat.message_receive.chat_stream import get_chat_manager
+from src.common.message.tenant_context import get_current_tenant_id, get_current_agent_id
 
 
 logger = get_logger("person_info")
@@ -37,7 +38,15 @@ def get_person_id(platform: str, user_id: Union[int, str]) -> str:
         platform = platform.split("-")[1]
     components = [platform, str(user_id)]
     key = "_".join(components)
-    return hashlib.md5(key.encode()).hexdigest()
+    
+    # 强制加入租户和Agent上下文隔离
+    tenant_id = get_current_tenant_id()
+    agent_id = get_current_agent_id()
+    
+    final_key = f"{tenant_id}:{agent_id}:{key}"
+    # logger.debug(f"Generating person_id from key: {final_key}")
+    
+    return hashlib.md5(final_key.encode()).hexdigest()
 
 
 def get_person_id_by_person_name(person_name: str) -> str:
@@ -519,7 +528,23 @@ class Person:
                 logger.debug(f"已创建用户 {self.person_id} 的信息到数据库")
 
         except Exception as e:
-            logger.error(f"同步用户 {self.person_id} 信息到数据库时出错: {e}")
+            # Check for unique constraint violation (race condition)
+            if "UNIQUE constraint failed" in str(e) or "duplicate key" in str(e):
+                logger.debug(f"用户 {self.person_id} 创建冲突（可能已存在），尝试更新: {e}")
+                try:
+                    record = PersonInfo.get_or_none(PersonInfo.person_id == self.person_id)
+                    if record:
+                        for field, value in data.items():
+                            if hasattr(record, field):
+                                setattr(record, field, value)
+                        record.save()
+                        logger.debug(f"已同步用户 {self.person_id} 的信息到数据库 (Retry)")
+                    else:
+                        logger.error(f"处理创建冲突时仍无法获取用户 {self.person_id} 记录")
+                except Exception as update_e:
+                     logger.error(f"处理创建冲突后的更新失败: {update_e}")
+            else:
+                logger.error(f"同步用户 {self.person_id} 信息到数据库时出错: {e}")
 
     async def build_relationship(self, chat_content: str = "", info_type=""):
         if not self.is_known:
