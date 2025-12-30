@@ -16,6 +16,7 @@ from .payload_content.resp_format import RespFormat
 from .payload_content.tool_option import ToolOption, ToolCall, ToolOptionBuilder, ToolParamType
 from .model_client.base_client import BaseClient, APIResponse, client_registry
 from .utils import compress_messages, llm_usage_recorder
+from .dataset_recorder import dataset_recorder
 from .exceptions import (
     NetworkConnectionError,
     RespNotOkException,
@@ -171,6 +172,7 @@ class LLMRequest:
         content = response.content
         reasoning_content = response.reasoning_content or ""
         tool_calls = response.tool_calls
+
         if not reasoning_content and content:
             content, extracted_reasoning = self._extract_reasoning(content)
             reasoning_content = extracted_reasoning
@@ -223,6 +225,7 @@ class LLMRequest:
         content = response.content
         reasoning_content = response.reasoning_content or ""
         tool_calls = response.tool_calls
+
         if not reasoning_content and content:
             content, extracted_reasoning = self._extract_reasoning(content)
             reasoning_content = extracted_reasoning
@@ -491,7 +494,23 @@ class LLMRequest:
                 if response_usage := response.usage:
                     total_tokens += response_usage.total_tokens
                 self.model_usage[model_info.name] = (total_tokens, penalty, usage_penalty - 1)
+
+                # 记录数据集
+                if request_type == RequestType.RESPONSE:
+                    try:
+                        dataset_recorder.record_transaction(
+                            task_name=self.task_name,
+                            messages=message_list,
+                            response_content=response.content or "",
+                            model_name=model_info.name,
+                            reasoning_content=response.reasoning_content,
+                            tool_calls=response.tool_calls
+                        )
+                    except Exception as e:
+                        logger.error(f"记录数据集失败: {e}")
+
                 return response, model_info
+
 
             except ModelAttemptFailed as e:
                 last_exception = e.original_exception or e
