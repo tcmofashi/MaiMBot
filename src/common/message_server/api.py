@@ -64,7 +64,7 @@ def get_global_api() -> MessageServer:  # sourcery skip: extract-method
             )
 
             try:
-                from maim_message.server import WebSocketServer, ServerConfig
+                from maim_message.server import APIServer, ServerConfig
                 from maim_message.message import APIMessageBase
 
                 server_config = ServerConfig(
@@ -153,31 +153,9 @@ def get_global_api() -> MessageServer:  # sourcery skip: extract-method
                 server_config.register_custom_handler("message_id_echo", custom_message_id_echo_handler)  # type: ignore # maim_message库写错类型了
 
                 # 4. Initialize Server
-                extra_server = WebSocketServer(config=server_config)
+                extra_server = APIServer(config=server_config)
 
-                # 5. Patch global_api lifecycle methods to manage both servers
-                original_run = global_api.run
-                original_stop = global_api.stop
-
-                async def patched_run():
-                    api_logger.info(
-                        f"Starting Additional API Server on {api_server_host}:{api_server_port} (WSS: {use_wss})"
-                    )
-                    # Start the extra server (non-blocking start)
-                    await extra_server.start()
-                    # Run the original legacy server (this usually keeps running)
-                    await original_run()
-
-                async def patched_stop():
-                    api_logger.info("Stopping Additional API Server...")
-                    await extra_server.stop()
-                    await original_stop()
-
-                global_api.run = patched_run
-                global_api.stop = patched_stop
-
-                # Attach for reference
-                global_api.extra_server = extra_server  # type: ignore # 这是什么
+                global_api.extra_server = extra_server  # type: ignore
 
             except ImportError:
                 get_logger("maim_message").error(
